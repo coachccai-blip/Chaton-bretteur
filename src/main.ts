@@ -44,3 +44,10 @@ const config: Phaser.Types.Core.GameConfig = {
 const game = new Phaser.Game(config);
 // exposé pour le débogage / tests
 (window as any).__game = game;
+
+// PWA : enregistre le service worker (installable + hors-ligne) en production.
+if ((import.meta as any).env?.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* non bloquant */ });
+  });
+}

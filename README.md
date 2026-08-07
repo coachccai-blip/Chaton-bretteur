@@ -28,7 +28,7 @@ Le brief prévoyait des assets PNG fournis séparément. Comme aucune image n'é
 - **Les monstres et les boss** sont générés par un **rasteriseur paramétrique** (`src/art/critters.ts`) : une « recette » (couleur, ventre, yeux, et une caractéristique — oreilles, cornes, ailes, chapeau, couronne, champignon, araignée…) est transformée en pixels nets. Cela donne 12 monstres et 4 boss distincts sans dessiner chacun à la main.
 - **Les icônes** (pouvoirs, HUD) sont des masques 8×8 monochromes teintés à l'usage (`src/art/icons.ts`).
 - **Les sols de zones** sont des tuiles bruitées procédurales, une palette par zone.
-- **L'audio** (SFX + musique) est lui aussi **synthétisé en direct via WebAudio** (`src/systems/AudioManager.ts`) — aucun fichier son requis.
+- **L'audio** est **synthétisé en direct via WebAudio** (`src/systems/AudioManager.ts`) — aucun fichier son requis, donc **100% libre de droit**. La musique est un vrai **séquenceur multi-voix** (nappe, basse, arpège, mélodie et batterie) avec une **composition par ambiance** (Menu, Camp, Forêt, Marais, Forge, Citadelle, Boss, Victoire) : progressions d'accords, gammes et tempos propres à chaque zone.
 
 Le rendu utilise `pixelArt: true` (nearest-neighbor) pour un rendu net et « croustillant ».
 
@@ -89,6 +89,16 @@ src/
 ## ☁️ Déploiement Netlify
 
 `netlify.toml` est fourni (build `npm run build`, publish `dist`, redirect SPA). Connectez le repo à Netlify, ou glissez-déposez le dossier `dist/` sur Netlify Drop. `base: './'` (Vite) garantit des chemins d'assets relatifs corrects.
+
+## 📱 Installer sur mobile (PWA — plein écran)
+
+Le jeu est une **PWA installable** (`public/manifest.webmanifest` + `public/sw.js`, icônes générées par `scripts/gen-icons.mjs`). Une fois le site en ligne (HTTPS) :
+
+- **Android (Chrome)** : menu ⋮ → **« Installer l'application »** / « Ajouter à l'écran d'accueil ». Se lance en **plein écran**, orientation paysage.
+- **iPhone/iPad (Safari)** : bouton Partager → **« Sur l'écran d'accueil »**. Se lance en plein écran sans barre du navigateur.
+- **En navigateur** : bouton **⛶** (coin haut-droit du menu) pour basculer en plein écran (desktop/Android).
+
+Le service worker met le jeu en cache, donc il reste **jouable hors-ligne** après une première visite.
 
 ## ⚡ Boons divins & combos élémentaires (façon Hades)
 

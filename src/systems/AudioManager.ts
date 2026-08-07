@@ -5,8 +5,6 @@ class Audio {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private musicGain: GainNode | null = null;
-  private musicTimer: number | null = null;
-  private step = 0;
   private currentMood = '';
 
   private ensure(): void {
@@ -33,7 +31,7 @@ class Audio {
     const s = SaveSystem.data.settings;
     const v = s.muted ? 0 : s.volume;
     this.master.gain.value = v;
-    this.musicGain.gain.value = 0.35;
+    if (this.currentMood) this.musicGain.gain.value = this.musicLevel();
   }
 
   private blip(freq: number, dur: number, type: OscillatorType, vol = 0.3, slide = 0): void {
@@ -96,63 +94,222 @@ class Audio {
     notes.forEach((n, i) => setTimeout(() => this.blip(n, 0.2, 'triangle', 0.2), i * 120));
   }
 
-  // ---- musique procédurale ----
-  private moods: Record<string, number[]> = {
-    menu: [220, 277, 330, 277],
-    foret: [196, 233, 294, 233],
-    marais: [174, 207, 261, 207],
-    forge: [220, 261, 329, 392],
-    citadelle: [155, 185, 233, 311],
-    boss: [147, 175, 220, 262, 220, 175],
-    hub: [261, 329, 392, 329],
-  };
+  // ==================================================================
+  //  Musique procédurale multi-voix — 100% générée en direct (WebAudio),
+  //  donc libre de droit. Séquenceur à lookahead pour un timing serré :
+  //  nappe (pad), basse, arpège, mélodie (lead) et batterie par ambiance.
+  // ==================================================================
+  private schedTimer: number | null = null;
+  private nextNoteTime = 0;
+  private step16 = 0;
+  private mood: MoodDef | null = null;
+
+  private static semi(root: number, s: number): number { return root * Math.pow(2, s / 12); }
+  private musicLevel(): number { return 0.42; } // le mute/volume passe par le master
 
   startMusic(mood: string): void {
     this.ensure();
-    if (!this.ctx || this.currentMood === mood) return;
+    if (!this.ctx || !this.musicGain) return;
+    if (this.currentMood === mood) return;
     this.currentMood = mood;
-    this.stopMusicTimer();
-    const seq = this.moods[mood] ?? this.moods.menu;
-    this.step = 0;
-    const tempo = mood === 'boss' ? 260 : 360;
-    this.musicTimer = window.setInterval(() => {
-      if (!this.ctx || !this.musicGain) return;
-      const s = SaveSystem.data.settings;
-      const v = s.muted ? 0 : s.volume * 0.5;
-      const t = this.ctx.currentTime;
-      const base = seq[this.step % seq.length];
-      const osc = this.ctx.createOscillator();
-      const g = this.ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.value = base;
-      g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(v * 0.4, t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-      osc.connect(g); g.connect(this.musicGain);
-      osc.start(t); osc.stop(t + 0.4);
-      // basse une octave en dessous tous les 2 temps
-      if (this.step % 2 === 0) {
-        const bass = this.ctx.createOscillator();
-        const bg = this.ctx.createGain();
-        bass.type = 'sine';
-        bass.frequency.value = base / 2;
-        bg.gain.setValueAtTime(v * 0.5, t);
-        bg.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-        bass.connect(bg); bg.connect(this.musicGain);
-        bass.start(t); bass.stop(t + 0.55);
-      }
-      this.step++;
-    }, tempo);
+    this.mood = MOODS[mood] ?? MOODS.menu;
+    this.step16 = 0;
+    if (this.schedTimer === null) {
+      this.nextNoteTime = this.ctx.currentTime + 0.08;
+      this.schedTimer = window.setInterval(() => this.scheduler(), 25);
+    }
+    // petit fondu d'entrée (évite les clics au changement de zone)
+    const g = this.musicGain.gain, now = this.ctx.currentTime;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(Math.max(0.0001, g.value), now);
+    g.linearRampToValueAtTime(this.musicLevel(), now + 0.3);
   }
 
-  private stopMusicTimer(): void {
-    if (this.musicTimer !== null) { clearInterval(this.musicTimer); this.musicTimer = null; }
+  private scheduler(): void {
+    if (!this.ctx || !this.mood) return;
+    const m = this.mood;
+    const stepDur = 60 / m.bpm / 4; // durée d'une double-croche
+    while (this.nextNoteTime < this.ctx.currentTime + 0.14) {
+      this.scheduleStep(this.step16, this.nextNoteTime, stepDur, m);
+      this.nextNoteTime += stepDur;
+      this.step16 = (this.step16 + 1) % 64; // boucle de 4 mesures (16 pas chacune)
+    }
   }
+
+  private scheduleStep(step: number, t: number, stepDur: number, m: MoodDef): void {
+    const bar = Math.floor(step / 16) % m.chords.length;
+    const chord = m.chords[bar];
+    const root = m.root;
+
+    // nappe : tenue de l'accord sur toute la mesure
+    if (step % 16 === 0) {
+      const dur = stepDur * 16;
+      for (const s of chord) this.pad(Audio.semi(root, s), t, dur, m.padVol);
+    }
+    // basse : fondamentale une octave plus bas
+    if (m.bass && step % 8 === 0) {
+      this.pluck(Audio.semi(root, chord[0] - 12), t, stepDur * 6, 'triangle', 0.24);
+    }
+    // arpège : parcourt les notes de l'accord
+    if (m.arpEvery > 0 && step % m.arpEvery === 0) {
+      const idx = Math.floor(step / m.arpEvery);
+      const seq = m.arp === 'updown' ? [...chord, ...[...chord].reverse().slice(1, -1)] : chord;
+      const note = (seq[idx % seq.length] ?? 0) + (m.arpOct ? 12 : 0);
+      this.pluck(Audio.semi(root, note), t, stepDur * 2.2, m.arpWave, 0.13);
+    }
+    // mélodie
+    if (m.lead) {
+      const n = m.lead[step % m.lead.length];
+      if (n !== null && n !== undefined) this.leadVoice(Audio.semi(root, n), t, stepDur * (m.leadLong ? 3 : 1.7));
+    }
+    // batterie
+    if (m.drums) {
+      if (step % 4 === 0) this.kick(t);
+      if (step % 8 === 4) this.snare(t);
+      if (step % 2 === 1) this.hat(t, 0.05);
+      else if (m.drums === 'busy') this.hat(t, 0.028);
+    }
+  }
+
+  private pad(freq: number, t: number, dur: number, vol: number): void {
+    if (!this.ctx || !this.musicGain) return;
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 1200;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.7);
+    g.gain.setValueAtTime(vol, t + dur - 0.7);
+    g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    lp.connect(g); g.connect(this.musicGain);
+    for (const d of [-7, 7]) {
+      const o = this.ctx.createOscillator();
+      o.type = 'sawtooth'; o.frequency.value = freq; o.detune.value = d;
+      o.connect(lp); o.start(t); o.stop(t + dur + 0.05);
+    }
+  }
+
+  private pluck(freq: number, t: number, dur: number, wave: OscillatorType, vol: number): void {
+    if (!this.ctx || !this.musicGain) return;
+    const o = this.ctx.createOscillator(); o.type = wave; o.frequency.value = freq;
+    const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(3200, t); lp.frequency.exponentialRampToValueAtTime(700, t + dur);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp); lp.connect(g); g.connect(this.musicGain);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+
+  private leadVoice(freq: number, t: number, dur: number): void {
+    if (!this.ctx || !this.musicGain) return;
+    const o = this.ctx.createOscillator(); o.type = 'square'; o.frequency.value = freq;
+    const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.11, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp); lp.connect(g); g.connect(this.musicGain);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+
+  private kick(t: number): void {
+    if (!this.ctx || !this.musicGain) return;
+    const o = this.ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.55, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+    o.connect(g); g.connect(this.musicGain); o.start(t); o.stop(t + 0.18);
+  }
+
+  private noiseBurst(t: number, dur: number, vol: number, hp: number): void {
+    if (!this.ctx || !this.musicGain) return;
+    const buf = this.ctx.createBuffer(1, Math.ceil(this.ctx.sampleRate * dur), this.ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const src = this.ctx.createBufferSource(); src.buffer = buf;
+    const f = this.ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = hp;
+    const g = this.ctx.createGain(); g.gain.value = vol;
+    src.connect(f); f.connect(g); g.connect(this.musicGain); src.start(t);
+  }
+
+  private snare(t: number): void { this.noiseBurst(t, 0.14, 0.12, 1400); }
+  private hat(t: number, vol: number): void { this.noiseBurst(t, 0.04, vol, 7000); }
 
   stopMusic(): void {
-    this.stopMusicTimer();
+    if (this.schedTimer !== null) { clearInterval(this.schedTimer); this.schedTimer = null; }
+    if (this.musicGain && this.ctx) {
+      const now = this.ctx.currentTime;
+      this.musicGain.gain.cancelScheduledValues(now);
+      this.musicGain.gain.linearRampToValueAtTime(0.0001, now + 0.2);
+    }
     this.currentMood = '';
+    this.mood = null;
   }
 }
+
+/** Définition musicale d'une ambiance (accords en demi-tons relatifs à `root`). */
+interface MoodDef {
+  bpm: number;
+  root: number;
+  chords: number[][];  // une mesure par accord (boucle)
+  padVol: number;
+  bass: boolean;
+  arp: 'up' | 'updown';
+  arpEvery: number;    // 0 = pas d'arpège ; sinon période en pas de double-croche
+  arpWave: OscillatorType;
+  arpOct: boolean;     // arpège monté d'une octave
+  lead?: (number | null)[];
+  leadLong?: boolean;
+  drums?: false | 'basic' | 'busy';
+}
+
+// Progressions mineures i–VI–III–VII (et variantes) : chaque accord = triade en demi-tons.
+const MOODS: Record<string, MoodDef> = {
+  // Menu — La mineur, rêveur
+  menu: {
+    bpm: 84, root: 220, padVol: 0.05, bass: true, arp: 'up', arpEvery: 4, arpWave: 'triangle', arpOct: true,
+    chords: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]],
+    lead: [12, null, null, 15, null, 19, null, 17, 15, null, 12, null, null, 10, null, null],
+  },
+  // Camp — Do majeur, chaleureux
+  hub: {
+    bpm: 96, root: 261.63, padVol: 0.05, bass: true, arp: 'up', arpEvery: 4, arpWave: 'triangle', arpOct: true,
+    chords: [[0, 4, 7], [-3, 0, 4], [5, 9, 12], [7, 11, 14]],
+  },
+  // Forêt — Mi mineur, mystérieux et léger
+  foret: {
+    bpm: 90, root: 164.81, padVol: 0.055, bass: true, arp: 'updown', arpEvery: 3, arpWave: 'triangle', arpOct: true,
+    chords: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]],
+  },
+  // Marais — Ré mineur, lent et poisseux
+  marais: {
+    bpm: 76, root: 146.83, padVol: 0.065, bass: true, arp: 'up', arpEvery: 8, arpWave: 'sine', arpOct: false,
+    chords: [[0, 3, 7], [5, 8, 12], [-4, 0, 3], [7, 10, 14]],
+  },
+  // Forge — La mineur grave, martelé (batterie)
+  forge: {
+    bpm: 116, root: 110, padVol: 0.045, bass: true, arp: 'up', arpEvery: 2, arpWave: 'sawtooth', arpOct: true,
+    chords: [[0, 3, 7], [0, 3, 7], [-4, 0, 3], [-2, 2, 5]], drums: 'basic',
+  },
+  // Citadelle — Do mineur, menaçant
+  citadelle: {
+    bpm: 94, root: 130.81, padVol: 0.06, bass: true, arp: 'updown', arpEvery: 4, arpWave: 'square', arpOct: true,
+    chords: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [7, 11, 14]],
+    lead: [null, null, 12, null, null, 15, null, 14, null, null, 12, null, 10, null, null, null], leadLong: true,
+  },
+  // Boss — Ré mineur, épique et rapide (batterie soutenue + stabs)
+  boss: {
+    bpm: 134, root: 146.83, padVol: 0.05, bass: true, arp: 'up', arpEvery: 2, arpWave: 'sawtooth', arpOct: true,
+    chords: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [7, 11, 14]], drums: 'busy',
+    lead: [12, null, 12, null, 15, null, 14, 12, 10, null, 10, null, 7, null, null, null],
+  },
+  // Victoire — Do majeur éclatant
+  victory: {
+    bpm: 120, root: 261.63, padVol: 0.05, bass: true, arp: 'up', arpEvery: 2, arpWave: 'triangle', arpOct: true,
+    chords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]],
+    lead: [12, 14, 16, 19, 16, 19, 24, null, 19, 16, 12, null, 14, null, null, null],
+  },
+};
 
 export const AudioManager = new Audio();

@@ -44,8 +44,24 @@ export class MenuScene extends Phaser.Scene {
     label(this, GAME_WIDTH / 2, GAME_HEIGHT - 22,
       'Clavier/souris · Manette · Tactile  —  🐾', 13, '#9a8fb0');
 
+    this.buildFullscreenButton();
+
     this.input.once('pointerdown', () => AudioManager.resume());
     AudioManager.startMusic('menu');
+  }
+
+  /** Bouton plein écran (coin haut-droit) — utile en navigateur mobile/desktop. */
+  private buildFullscreenButton(): void {
+    if (!this.scale.fullscreen.available) return;
+    const btn = label(this, GAME_WIDTH - 20, 20, '⛶', 26, '#f4e9c1', 1, 0)
+      .setInteractive({ useHandCursor: true });
+    btn.on('pointerover', () => btn.setColor('#f4c430'));
+    btn.on('pointerout', () => btn.setColor('#f4e9c1'));
+    btn.on('pointerup', () => {
+      AudioManager.resume();
+      if (this.scale.isFullscreen) this.scale.stopFullscreen();
+      else this.scale.startFullscreen();
+    });
   }
 
   private openOptions(): void {

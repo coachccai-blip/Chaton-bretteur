@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { GameScene } from '../scenes/GameScene';
+import { ARENA_RECT } from '../scenes/GameScene';
 import type { EnemyDef, EnemySignature } from '../config/enemies';
 import type { Element, IEnemyLike } from '../config/types';
 
@@ -98,7 +99,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       this.startSignature(this.def.signature, dir, dist);
       return;
     }
-    if (this.aiState === 'signature') { body.setVelocity(0, 0); this.updateHpBar(); return; }
+    if (this.aiState === 'signature') { body.setVelocity(0, 0); this.clampToArena(); this.updateHpBar(); return; }
 
     switch (this.def.behavior) {
       case 'chaser': body.setVelocity(dir.x * spd, dir.y * spd); break;
@@ -115,7 +116,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
     this.applyStatusTint(frozen);
     this.animate(dt, body);
+    this.clampToArena(); // les volants/téléporteurs ne peuvent pas sortir de l'arène
     this.updateHpBar();
+  }
+
+  /** Garde l'ancre du monstre à l'intérieur de l'arène (donc toujours frappable). */
+  private clampToArena(): void {
+    const A = ARENA_RECT, m = 10;
+    const nx = Phaser.Math.Clamp(this.x, A.x + m, A.x + A.w - m);
+    const ny = Phaser.Math.Clamp(this.y, A.y + m, A.y + A.h - m);
+    if (nx !== this.x || ny !== this.y) this.setPosition(nx, ny);
   }
 
   // ---------------- statuts & réactions ----------------
@@ -245,9 +255,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
           const q = this.gs.player;
           if (q) {
             const a = Math.random() * Math.PI * 2;
+            const A = ARENA_RECT, m = 24;
             this.setPosition(
-              Phaser.Math.Clamp(q.x + Math.cos(a) * 70, 40, 920),
-              Phaser.Math.Clamp(q.y + Math.sin(a) * 70, 80, 500),
+              Phaser.Math.Clamp(q.x + Math.cos(a) * 70, A.x + m, A.x + A.w - m),
+              Phaser.Math.Clamp(q.y + Math.sin(a) * 70, A.y + m, A.y + A.h - m),
             );
             this.gs.eruptAt(this.x, this.y, sig.radius ?? 40, color, sig.damage);
           }
