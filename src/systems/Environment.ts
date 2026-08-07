@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from '../config/game';
+import { WORLD_WIDTH, WORLD_HEIGHT } from '../config/game';
 import type { ZoneDef } from '../config/worlds';
 
 interface Rect { x: number; y: number; w: number; h: number; }
@@ -29,9 +29,10 @@ export class Environment {
     this.parallax = scene.add.graphics().setDepth(-10);
     this.fg = scene.add.graphics().setDepth(68);
     this.shadowGfx = scene.add.graphics().setDepth(5);
-    this.playerLight = scene.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'light')
+    this.playerLight = scene.add.image(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, 'light')
       .setDepth(9).setBlendMode(Phaser.BlendModes.ADD).setScale(2.8).setAlpha(0.55);
-    this.vignette = scene.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'vignette').setDepth(70).setAlpha(1);
+    this.vignette = scene.add.image(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, 'vignette').setDepth(70).setAlpha(1)
+      .setDisplaySize(WORLD_WIDTH, WORLD_HEIGHT); // couvre tout le monde dézoomé
   }
 
   setZone(zone: ZoneDef): void {
@@ -40,9 +41,9 @@ export class Environment {
 
     // fond profond : dégradé sombre, plus noir en haut
     this.bg.clear();
-    this.bg.fillStyle(0x000000, 1).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    this.bg.fillStyle(fog, 0.9).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    this.bg.fillStyle(shade(fog, -8), 1).fillRect(0, 0, GAME_WIDTH, this.arena.y);
+    this.bg.fillStyle(0x000000, 1).fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    this.bg.fillStyle(fog, 0.9).fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    this.bg.fillStyle(shade(fog, -8), 1).fillRect(0, 0, WORLD_WIDTH, this.arena.y);
 
     // mur de fond lointain (brique, derrière l'arène) — couche de profondeur
     this.drawFarWall(zone);
@@ -58,7 +59,7 @@ export class Environment {
     this.fg.clear();
     this.fgParticles?.destroy();
     this.fgParticles = undefined;
-    const W = GAME_WIDTH, H = GAME_HEIGHT;
+    const W = WORLD_WIDTH, H = WORLD_HEIGHT;
     if (zone.id === 'foret') {
       // canopée feuillue sombre en surplomb (haut) + feuilles qui tombent
       this.fg.fillStyle(0x0a1a0e, 0.92);
@@ -89,18 +90,18 @@ export class Environment {
   private drawFarWall(zone: ZoneDef): void {
     this.farWall.clear();
     const top = 0, bottom = this.arena.y + 6;
-    this.farWall.fillStyle(shade(zone.palette.wall, -18), 1).fillRect(0, top, GAME_WIDTH, bottom);
+    this.farWall.fillStyle(shade(zone.palette.wall, -18), 1).fillRect(0, top, WORLD_WIDTH, bottom);
     // rangées de briques faiblement visibles
     this.farWall.lineStyle(1, 0x000000, 0.35);
-    for (let y = top + 12; y < bottom; y += 16) this.farWall.lineBetween(0, y, GAME_WIDTH, y);
-    for (let x = 0; x < GAME_WIDTH; x += 40) {
+    for (let y = top + 12; y < bottom; y += 16) this.farWall.lineBetween(0, y, WORLD_WIDTH, y);
+    for (let x = 0; x < WORLD_WIDTH; x += 40) {
       for (let y = top; y < bottom; y += 16) {
         const off = (Math.floor(y / 16) % 2) * 20;
         this.farWall.lineBetween(x + off, y, x + off, y + 16);
       }
     }
     // halo d'horizon chaud au niveau du sol
-    this.farWall.fillStyle(zone.palette.accent, 0.06).fillRect(0, this.arena.y - 30, GAME_WIDTH, 60);
+    this.farWall.fillStyle(zone.palette.accent, 0.06).fillRect(0, this.arena.y - 30, WORLD_WIDTH, 60);
   }
 
   private drawParallax(zone: ZoneDef): void {
@@ -129,7 +130,7 @@ export class Environment {
         this.parallax.fillStyle(shade(zone.palette.wall, -12), 0.55);
         this.parallax.fillTriangle(x - 14, y0, x + w / 2, y0 - h, x + w + 14, y0);
       }
-      this.parallax.fillStyle(0xff5a1f, 0.12).fillRect(0, y0 - 42, GAME_WIDTH, 52);
+      this.parallax.fillStyle(0xff5a1f, 0.12).fillRect(0, y0 - 42, WORLD_WIDTH, 52);
     } else {
       // citadelle : tours + arches lointaines
       for (let i = 0; i < 8; i++) {
@@ -176,7 +177,7 @@ export class Environment {
 
   private setupAmbient(zone: ZoneDef): void {
     this.ambient?.destroy();
-    const base = { x: { min: 0, max: GAME_WIDTH }, y: { min: 0, max: GAME_HEIGHT }, blendMode: 'ADD' as const, quantity: 1 };
+    const base = { x: { min: 0, max: WORLD_WIDTH }, y: { min: 0, max: WORLD_HEIGHT }, blendMode: 'ADD' as const, quantity: 1 };
     let cfg: Phaser.Types.GameObjects.Particles.ParticleEmitterConfig;
     switch (zone.id) {
       case 'foret':
@@ -186,7 +187,7 @@ export class Environment {
         cfg = { ...base, speedY: { min: -30, max: -12 }, scale: { min: 0.6, max: 1.4 }, alpha: { start: 0.5, end: 0 }, lifespan: 3600, frequency: 200, tint: [0x9fe04a, 0x5a8a3a] };
         break;
       case 'forge':
-        cfg = { ...base, y: GAME_HEIGHT + 10, speedY: { min: -130, max: -50 }, speedX: { min: -22, max: 22 }, scale: { min: 0.5, max: 1.3 }, alpha: { start: 1, end: 0 }, lifespan: 2600, frequency: 80, tint: [0xff7a2a, 0xffb020, 0xff3a1f] };
+        cfg = { ...base, y: WORLD_HEIGHT + 10, speedY: { min: -130, max: -50 }, speedX: { min: -22, max: 22 }, scale: { min: 0.5, max: 1.3 }, alpha: { start: 1, end: 0 }, lifespan: 2600, frequency: 80, tint: [0xff7a2a, 0xffb020, 0xff3a1f] };
         break;
       default:
         cfg = { ...base, speedY: { min: -10, max: 12 }, speedX: { min: -12, max: 12 }, scale: { min: 0.5, max: 1.2 }, alpha: { start: 0.45, end: 0 }, lifespan: 5200, frequency: 150, tint: [0x8a5cff, 0x8fa8ff, 0xf2a53a] };

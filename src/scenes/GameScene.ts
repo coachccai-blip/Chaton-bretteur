@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, COLORS, REWARDS } from '../config/game';
+import { GAME_WIDTH, GAME_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT, WORLD_ZOOM, COLORS, REWARDS } from '../config/game';
 import { ZONES, type ZoneDef } from '../config/worlds';
 import { ENEMIES } from '../config/enemies';
 import { BOSSES } from '../config/bosses';
@@ -21,7 +21,9 @@ import { PROPS } from '../art/environment';
 import type { IEnemyLike } from '../config/types';
 import type { PowerDef } from '../config/powers';
 
-const ARENA = { x: 46, y: 108, w: 868, h: 388 };
+// Arène en coordonnées MONDE (1200×675). Centrée horizontalement (centre x=600),
+// avec une marge en haut pour l'ATH. Plus grande qu'avant -> plus d'espace.
+const ARENA = { x: 60, y: 96, w: 1080, h: 496 };
 export const ARENA_RECT = ARENA;
 
 function shade(c: number, amt: number): number {
@@ -109,13 +111,17 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(COLORS.bg);
+    // dézoom : affiche le monde 1200×675 dans le canvas 960×540 (personnage
+    // plus petit, plus d'espace). L'ATH (UIScene) reste en 960×540.
+    this.cameras.main.setZoom(WORLD_ZOOM);
+    this.cameras.main.setScroll((WORLD_WIDTH - GAME_WIDTH) / 2, (WORLD_HEIGHT - GAME_HEIGHT) / 2);
     this.physics.world.setBounds(ARENA.x, ARENA.y, ARENA.w, ARENA.h);
 
     this.juice = new JuiceManager(this);
     this.controls = new InputManager(this);
     this.env = new Environment(this, ARENA);
 
-    this.floor = this.add.tileSprite(GAME_WIDTH / 2, ARENA.y + ARENA.h / 2, ARENA.w, ARENA.h, 'floor_foret');
+    this.floor = this.add.tileSprite(WORLD_WIDTH / 2, ARENA.y + ARENA.h / 2, ARENA.w, ARENA.h, 'floor_foret');
     this.floor.setDepth(0);
     this.hazardGfx = this.add.graphics().setDepth(1);
 
@@ -125,7 +131,7 @@ export class GameScene extends Phaser.Scene {
 
     const stats = SaveSystem.computeBaseStats();
     this.reviveAvailable = SaveSystem.hasFlag('revive');
-    this.player = new Player(this, GAME_WIDTH / 2, ARENA.y + ARENA.h / 2, stats);
+    this.player = new Player(this, WORLD_WIDTH / 2, ARENA.y + ARENA.h / 2, stats);
 
     // collisions murs
     this.physics.add.collider(this.player, this.walls);
@@ -186,8 +192,8 @@ export class GameScene extends Phaser.Scene {
       const s = this.add.tileSprite(cx, cy, w, h, key).setDepth(6);
       this.roomObjects.push(s);
     };
-    mk(GAME_WIDTH / 2, ARENA.y - t / 2, ARENA.w + t * 2, t);
-    mk(GAME_WIDTH / 2, ARENA.y + ARENA.h + t / 2, ARENA.w + t * 2, t);
+    mk(WORLD_WIDTH / 2, ARENA.y - t / 2, ARENA.w + t * 2, t);
+    mk(WORLD_WIDTH / 2, ARENA.y + ARENA.h + t / 2, ARENA.w + t * 2, t);
     mk(ARENA.x - t / 2, ARENA.y + ARENA.h / 2, t, ARENA.h + t * 2);
     mk(ARENA.x + ARENA.w + t / 2, ARENA.y + ARENA.h / 2, t, ARENA.h + t * 2);
     // liseré accent intérieur
@@ -261,7 +267,7 @@ export class GameScene extends Phaser.Scene {
     this.roomType = type;
     this.buildRoom();
     // replace le joueur en bas de la salle
-    this.player.setPosition(GAME_WIDTH / 2, ARENA.y + ARENA.h - 60);
+    this.player.setPosition(WORLD_WIDTH / 2, ARENA.y + ARENA.h - 60);
 
     switch (type) {
       case 'combat': this.startCombat(); break;
@@ -358,7 +364,7 @@ export class GameScene extends Phaser.Scene {
   private startFountain(): void {
     this.roomState = 'idle';
     this.events.emit('progress', this.zone.name, this.combatDone, this.zone.rooms, false, 'Fontaine de vie');
-    const fx = GAME_WIDTH / 2, fy = ARENA.y + ARENA.h / 2;
+    const fx = WORLD_WIDTH / 2, fy = ARENA.y + ARENA.h / 2;
     const glow = this.add.image(fx, fy, 'light').setTint(0x6ad46a).setBlendMode(Phaser.BlendModes.ADD).setScale(1.6).setDepth(9).setAlpha(0.6);
     const basin = this.add.graphics().setDepth(10);
     basin.fillStyle(0x2a3a4a, 1).fillRoundedRect(fx - 44, fy - 20, 88, 44, 10);
@@ -388,7 +394,7 @@ export class GameScene extends Phaser.Scene {
   private startTreasure(): void {
     this.roomState = 'idle';
     this.events.emit('progress', this.zone.name, this.combatDone, this.zone.rooms, false, 'Trésor');
-    const fx = GAME_WIDTH / 2, fy = ARENA.y + ARENA.h / 2;
+    const fx = WORLD_WIDTH / 2, fy = ARENA.y + ARENA.h / 2;
     const glow = this.add.image(fx, fy, 'light').setTint(0xf4c430).setBlendMode(Phaser.BlendModes.ADD).setScale(1.4).setDepth(9).setAlpha(0.55);
     const chest = this.add.graphics().setDepth(10);
     chest.fillStyle(0x7a4b26, 1).fillRoundedRect(fx - 30, fy - 20, 60, 40, 6);
@@ -430,13 +436,13 @@ export class GameScene extends Phaser.Scene {
       { label: '+40 PV max', currency: 'coin', cost: 35, buy: () => { this.player.stats.maxHp += 40; this.player.heal(40); } },
     ];
     // marchand : chat noir ténébreux (halo violet sombre, yeux luisants)
-    const aura = this.add.image(GAME_WIDTH / 2, ARENA.y + 66, 'light').setTint(0x5a3a8a).setBlendMode(Phaser.BlendModes.ADD).setScale(1.1).setDepth(8).setAlpha(0.4);
+    const aura = this.add.image(WORLD_WIDTH / 2, ARENA.y + 66, 'light').setTint(0x5a3a8a).setBlendMode(Phaser.BlendModes.ADD).setScale(1.1).setDepth(8).setAlpha(0.4);
     this.tweens.add({ targets: aura, alpha: 0.2, duration: 1100, yoyo: true, repeat: -1 });
-    const npc = this.add.sprite(GAME_WIDTH / 2, ARENA.y + 70, 'cat').setScale(2.4).setTint(0x241f30).setDepth(11);
+    const npc = this.add.sprite(WORLD_WIDTH / 2, ARENA.y + 70, 'cat').setScale(2.4).setTint(0x241f30).setDepth(11);
     this.tweens.add({ targets: npc, y: ARENA.y + 62, duration: 900, yoyo: true, repeat: -1 });
     this.roomObjects.push(aura, npc);
     items.forEach((it, i) => {
-      const px = GAME_WIDTH / 2 + (i - 1) * 200;
+      const px = WORLD_WIDTH / 2 + (i - 1) * 200;
       const isCoin = it.currency === 'coin';
       const glowCol = isCoin ? 0xf4c430 : 0xe8384f;
       const glow = this.add.image(px, y, 'light').setTint(glowCol).setBlendMode(Phaser.BlendModes.ADD).setScale(0.9).setDepth(9).setAlpha(0.4);
@@ -516,7 +522,7 @@ export class GameScene extends Phaser.Scene {
     AudioManager.startMusic('boss');
     this.events.emit('progress', this.zone.name, this.zone.rooms, this.zone.rooms, true);
     this.banner(`BOSS : ${def.name}, ${def.title}`, () => {
-      this.boss = new Boss(this, GAME_WIDTH / 2, ARENA.y + 120, def, diff.enemyHp, diff.enemyDamage);
+      this.boss = new Boss(this, WORLD_WIDTH / 2, ARENA.y + 120, def, diff.enemyHp, diff.enemyDamage);
       this.physics.add.overlap(this.player, this.boss, (_p, b) => {
         const bs = b as Boss;
         if (bs.isAlive()) this.player.takeDamage(bs.contactDamage, bs.x, bs.y);
@@ -612,6 +618,11 @@ export class GameScene extends Phaser.Scene {
     this.scene.launch('Reward', { gameScene: this });
   }
 
+  /** Nombre d'exemplaires d'un boon déjà possédés (pour l'étiquette cumulable). */
+  ownedCount(id: string): number {
+    return RunState.powers.reduce((n, p) => n + (p.id === id ? 1 : 0), 0);
+  }
+
   /** appelé par RewardScene après le choix. */
   onPowerPicked(power: PowerDef | null): void {
     if (power) {
@@ -692,7 +703,7 @@ export class GameScene extends Phaser.Scene {
     // remplace toute bannière précédente (évite le chevauchement lors des
     // transitions enchaînées, ex. « Zone vaincue ! » -> nom de la zone suivante).
     if (this.activeBanner) { this.tweens.killTweensOf(this.activeBanner); this.activeBanner.destroy(); }
-    const t = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, text, {
+    const t = this.add.text(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, text, {
       fontFamily: 'monospace', fontSize: '34px', color: '#f4e9c1', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 6, align: 'center',
     }).setOrigin(0.5).setDepth(90).setAlpha(0).setScale(0.8);
@@ -973,12 +984,12 @@ export class GameScene extends Phaser.Scene {
   timeSlow(ms: number, factor: number): void {
     this.enemyTimeScale = factor;
     this.enemyTimeScaleUntil = performance.now() + ms;
-    const cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
+    const cx = WORLD_WIDTH / 2, cy = WORLD_HEIGHT / 2;
     AudioManager.play('timestop');
     this.juice.shake(220, 0.01);
 
     // voile indigo qui fige le monde (sauf le joueur, rendu au-dessus)
-    const veil = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x1a1030, 0).setDepth(40);
+    const veil = this.add.rectangle(cx, cy, WORLD_WIDTH, WORLD_HEIGHT, 0x1a1030, 0).setDepth(40);
     this.tweens.add({ targets: veil, alpha: 0.5, duration: 120, yoyo: false });
     // le joueur passe au premier plan et brille
     const prevDepth = this.player.depth;

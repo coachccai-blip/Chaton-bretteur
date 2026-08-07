@@ -57,6 +57,14 @@ export class RewardScene extends Phaser.Scene {
     c.add(badge);
     c.add(label(this, 0, -h / 2 + 146, power.name, 18, '#f4e9c1'));
     if (power.god) c.add(label(this, 0, -h / 2 + 168, `« ${power.god} »`, 11, '#f4c430'));
+    // étiquette unique / cumulable (avec le nombre déjà possédé)
+    if (!power.fallback) {
+      const owned = this.gameScene.ownedCount(power.id);
+      const tag = power.repeatable
+        ? (owned > 0 ? `↺ Cumulable (×${owned})` : '↺ Cumulable')
+        : '★ Unique';
+      c.add(label(this, 0, -h / 2 + 186, tag, 10, power.repeatable ? '#8fd0ff' : '#f4a020'));
+    }
     const desc = label(this, 0, -h / 2 + 214, power.description, 13, '#c9c0d8');
     desc.setWordWrapWidth(w - 28);
     c.add(desc);

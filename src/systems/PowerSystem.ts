@@ -15,7 +15,9 @@ export function rollChoices(count: number, luck: number, minRarity: Rarity = 'co
 
   const eligible = POWERS.filter((p) => {
     if (p.locked && !arsenal) return false;
-    if (takenIds.has(p.id)) return false;       // jamais deux fois le même boon
+    // boons CUMULABLES (repeatable) : peuvent réapparaître pour se stacker ;
+    // boons UNIQUES : jamais deux fois.
+    if (!p.repeatable && takenIds.has(p.id)) return false;
     if (RARITY_RANK[p.rarity] < minRank) return false; // rareté minimale
     return true;
   });

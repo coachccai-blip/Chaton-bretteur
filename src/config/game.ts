@@ -6,6 +6,16 @@
 export const GAME_WIDTH = 960;
 export const GAME_HEIGHT = 540;
 
+/**
+ * Dimensions du MONDE de jeu (plus grandes que le canvas) : la caméra de la
+ * scène de jeu est dézoomée (0.8) pour afficher tout ce monde, ce qui donne
+ * ~20% d'espace de jeu en plus et un personnage 20% plus petit à l'écran.
+ * L'ATH (UIScene) reste, lui, en coordonnées écran 960×540.
+ */
+export const WORLD_ZOOM = 0.8;
+export const WORLD_WIDTH = Math.round(GAME_WIDTH / WORLD_ZOOM);   // 1200
+export const WORLD_HEIGHT = Math.round(GAME_HEIGHT / WORLD_ZOOM); // 675
+
 /** Échelle du rendu pixel art : 1 "pixel" logique = PIXEL_SCALE px écran. */
 export const PIXEL_SCALE = 4;
 
