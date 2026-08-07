@@ -29,8 +29,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   dead = false;
   private lastShieldHitAt = 0;
 
-  // sword visuel
-  private sword: Phaser.GameObjects.Sprite;
+  // épées visuelles (double lame)
+  private swordR: Phaser.GameObjects.Sprite;
+  private swordL: Phaser.GameObjects.Sprite;
   private facing = 1;
   private aim = new Phaser.Math.Vector2(0, 1);
   private bobT = 0;
@@ -63,10 +64,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     body.setOffset((this.width - 28) / 2, this.height - 34);
     body.setCollideWorldBounds(true);
 
-    this.sword = scene.add.sprite(x, y, 'sword');
-    this.sword.setOrigin(0.5, 0.85);
-    this.sword.setDepth(21);
-    this.sword.setScale(0.7);
+    this.swordR = scene.add.sprite(x, y, 'sword').setOrigin(0.5, 0.85).setDepth(21).setScale(0.62);
+    this.swordL = scene.add.sprite(x, y, 'sword').setOrigin(0.5, 0.85).setDepth(21).setScale(0.62).setFlipX(true);
   }
 
   // ---------- IPlayerContext ----------
@@ -192,19 +191,32 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   }
 
   private updateSword(now: number): void {
-    const baseAngle = Math.atan2(this.aim.y, this.aim.x) + Math.PI / 2;
-    const off = 16;
-    this.sword.x = this.x + this.aim.x * off;
-    this.sword.y = this.y - 14 + this.aim.y * off;
-    this.sword.setDepth(this.aim.y < 0 ? 19 : 22);
+    const aimA = Math.atan2(this.aim.y, this.aim.x);
+    const baseAngle = aimA + Math.PI / 2;
+    const handOff = 13, handY = -8;
+    const rx = this.x + this.facing * handOff, ly = this.y + handY;
+    const lx = this.x - this.facing * handOff;
+    // au repos : lames tenues vers l'extérieur-bas
+    const restR = Math.PI / 2 + 0.55 * this.facing;
+    const restL = Math.PI / 2 - 0.55 * this.facing;
+    const depth = this.aim.y < 0 ? 19 : 22;
+    this.swordR.setDepth(depth);
+    this.swordL.setDepth(depth);
+
     if (this.attacking) {
       const p = 1 - Math.max(0, (this.attackEndAt - now) / this.attackDuration());
-      const swing = Phaser.Math.Linear(-1.2, 1.2, p) * (this.comboIndex % 2 === 0 ? 1 : -1);
-      this.sword.setRotation(baseAngle + swing);
-      this.sword.setScale(0.85);
+      const swing = Phaser.Math.Linear(-1.3, 1.3, p);
+      const ax = this.x + this.aim.x * 16, ay = this.y - 10 + this.aim.y * 16;
+      if (this.comboIndex % 2 === 0) {
+        this.swordR.setPosition(ax, ay).setRotation(baseAngle + swing).setScale(0.82);
+        this.swordL.setPosition(lx, ly).setRotation(restL).setScale(0.58);
+      } else {
+        this.swordL.setPosition(ax, ay).setRotation(baseAngle - swing).setScale(0.82);
+        this.swordR.setPosition(rx, ly).setRotation(restR).setScale(0.58);
+      }
     } else {
-      this.sword.setRotation(baseAngle - 0.5 * this.facing);
-      this.sword.setScale(0.7);
+      this.swordR.setPosition(rx, ly).setRotation(restR).setScale(0.62);
+      this.swordL.setPosition(lx, ly).setRotation(restL).setScale(0.62);
     }
   }
 
@@ -418,12 +430,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     this.setTint(0x888888);
     this.gs.sfx('dead');
-    this.gs.tweens.add({ targets: [this, this.sword], alpha: 0, angle: 90, duration: 800 });
+    this.gs.tweens.add({ targets: [this, this.swordR, this.swordL], alpha: 0, angle: 90, duration: 800 });
     this.gs.onPlayerDead();
   }
 
   destroy(fromScene?: boolean): void {
-    this.sword?.destroy();
+    this.swordR?.destroy(); this.swordL?.destroy();
     super.destroy(fromScene);
   }
 }

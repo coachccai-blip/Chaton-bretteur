@@ -6,7 +6,9 @@ Développé en **Phaser 3 + Vite + TypeScript**.
 
 ## 🐱 Direction artistique (inspiration Dead Cells)
 
-- **Héros** : chat-guerrier à l'armure cramoisie, casque d'acier à crête rouge, yeux turquoise, épée dentelée cramoisie à gemme.
+- **Héros** : chat-guerrier à l'armure cramoisie, casque à crête noire-rouge, crinière grise, yeux ambrés, **maniant deux épées** dentelées cramoisies (double lame, frappes alternées).
+- **Mondes visuellement uniques** (pas de simple recoloration) : Forêt (sol herbeux, canopée feuillue en surplomb, arbres en fond), Marais (eau boueuse ondulante, murs moussus, brume dérivante), Forge (sol veiné de lave, obsidienne, pics volcaniques), Citadelle (dalles de pierre, tours à créneaux, chaînes suspendues). Chaque monde a ses couches **arrière-plan / map / avant-plan** pour la profondeur.
+- **Rôles de monstres uniques par zone** : Fée soigneuse (Forêt), Vase bombardier à bombes télégraphiées (Marais), Gardien porte-bouclier (Forge), Sorcier invocateur (Citadelle) — en plus des archétypes chaser/charger/shooter/exploder/tank. Attaques à **hitbox prévisionnelle** (bombes, bonds, sceaux).
 - **Ambiance de donjon en couches** : mur de fond lointain (briques), silhouettes en parallaxe, **torches** à flammes animées + halo chaud, **bannières** à tête de mort teintées par la zone, brume, vignette et **lumière dynamique** autour du héros — vue légèrement dézoomée pour un vrai sentiment de profondeur (sans réduire le gameplay).
 - **Palettes cohérentes par monde** : Forêt (émeraude/mousse), Marais (vert acide toxique), Forge (charbon + braise orangée), Citadelle (pierre bleu-nuit + spectres violets + torches chaudes). Monstres et boss recolorés pour s'accorder à chaque monde.
 

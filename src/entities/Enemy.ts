@@ -37,6 +37,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
   private statuses: Partial<Record<Element, StatusInfo>> = {};
   private sigNextAt = 0;
+  private shieldedUntil = 0;
 
   private hpBg?: Phaser.GameObjects.Rectangle;
   private hpFill?: Phaser.GameObjects.Rectangle;
@@ -106,6 +107,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       case 'shooter': this.updateShooter(now, dir, dist, spd, false); break;
       case 'summoner': this.updateShooter(now, dir, dist, spd, true); break;
       case 'charger': this.updateCharger(now, dir, dist, spd); break;
+      case 'healer': this.updateHealer(now, dir, dist, spd); break;
+      case 'shielder': this.updateShielder(now, dir, dist, spd); break;
+      case 'bomber': this.updateBomber(now, dir, dist, spd); break;
     }
 
     this.applyStatusTint(frozen);
@@ -174,6 +178,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   private applyStatusTint(frozen: boolean): void {
     if (this.aiState === 'telegraph' || this.aiState === 'signature') return;
     if (frozen) this.setTint(0x8fdfff);
+    else if (performance.now() < this.shieldedUntil) this.setTint(0x8fd0ff);
     else if (this.statuses.burn) this.setTint(0xff9a5a);
     else if (this.statuses.poison) this.setTint(0xbfe86a);
     else if (this.statuses.shock) this.setTint(0xcfe0ff);
@@ -343,6 +348,74 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.gs.juice.ring(this.x, this.y, 60, 0xb26bff, 300);
   }
 
+  // -- Soigneuse : fuit le joueur, soigne l'allié le plus blessé --
+  private updateHealer(now: number, dir: Phaser.Math.Vector2, dist: number, spd: number): void {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    const range = this.def.attack?.range ?? 250;
+    if (dist < range) body.setVelocity(-dir.x * spd, -dir.y * spd);
+    else body.setVelocity(-dir.y * spd * 0.4, dir.x * spd * 0.4);
+    if (this.aiState === 'idle' && now >= this.nextActionAt) {
+      this.nextActionAt = now + (this.def.attack?.cooldown ?? 3200);
+      const allies = this.gs.getEnemies().filter((e) => e !== this && e.isAlive() && e.hp < e.maxHp);
+      if (allies.length) {
+        allies.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
+        const t = allies[0];
+        this.beginTelegraph(now, 450, 0x6ad46a, () => {
+          if (!this.alive || !t.isAlive()) return;
+          t.healBy(Math.round(t.maxHp * 0.2));
+          this.gs.beam(this.x, this.y - 10, t.x, t.y - 10, 0x6ad46a);
+        });
+      }
+    }
+  }
+
+  // -- Porte-bouclier : protège les alliés proches --
+  private updateShielder(now: number, dir: Phaser.Math.Vector2, dist: number, spd: number): void {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    const range = this.def.attack?.range ?? 170;
+    if (dist > 210) body.setVelocity(dir.x * spd, dir.y * spd);
+    else if (dist < 120) body.setVelocity(-dir.x * spd * 0.5, -dir.y * spd * 0.5);
+    else body.setVelocity(-dir.y * spd * 0.4, dir.x * spd * 0.4);
+    if (this.aiState === 'idle' && now >= this.nextActionAt) {
+      this.nextActionAt = now + (this.def.attack?.cooldown ?? 4200);
+      this.beginTelegraph(now, 450, 0x59c8ff, () => {
+        if (!this.alive) return;
+        this.gs.juice.ring(this.x, this.y, range, 0x59c8ff, 420);
+        this.applyShield(3800);
+        for (const a of this.gs.getEnemies()) {
+          if (a.isAlive() && Phaser.Math.Distance.Between(a.x, a.y, this.x, this.y) <= range) a.applyShield(3800);
+        }
+      });
+    }
+  }
+
+  // -- Bombardier : lance des bombes télégraphiées (hitbox prévisionnelle) --
+  private updateBomber(now: number, dir: Phaser.Math.Vector2, dist: number, spd: number): void {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    const range = this.def.attack?.range ?? 300;
+    if (dist < range * 0.55) body.setVelocity(-dir.x * spd, -dir.y * spd);
+    else if (dist > range) body.setVelocity(dir.x * spd, dir.y * spd);
+    else body.setVelocity(-dir.y * spd * 0.5, dir.x * spd * 0.5);
+    if (this.aiState === 'idle' && now >= this.nextActionAt) {
+      this.nextActionAt = now + (this.def.attack?.cooldown ?? 2600);
+      const p = this.gs.player;
+      const tx = p ? p.x : this.x, ty = p ? p.y : this.y;
+      const a = this.def.attack!;
+      this.gs.lobBomb(this.x, this.y - 14, tx, ty, a.explodeRadius ?? 64, a.projectileDamage ?? 16, a.status, a.telegraph ?? 700);
+    }
+  }
+
+  healBy(amount: number): void {
+    if (!this.alive) return;
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+    this.gs.juice.burst(this.x, this.y - 10, 0x6ad46a, 6, 120, 0.8);
+    this.gs.juice.popText(this.x, this.y - 26, `+${amount}`, '#6ad46a', 12);
+  }
+
+  applyShield(duration: number): void {
+    this.shieldedUntil = Math.max(this.shieldedUntil, performance.now() + duration);
+  }
+
   private updateCharger(now: number, dir: Phaser.Math.Vector2, dist: number, spd: number): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const range = this.def.attack?.range ?? 300;
@@ -396,6 +469,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   takeDamage(amount: number, fromX: number, fromY: number, opts?: { silent?: boolean }): void {
     if (!this.alive) return;
     if (this.statuses.mark) amount = Math.round(amount * 1.3); // Marque (Haki)
+    if (performance.now() < this.shieldedUntil) {
+      amount = Math.round(amount * 0.5); // protégé par un Gardien
+      if (!opts?.silent) this.gs.juice.burst(this.x, this.y - 8, 0x59c8ff, 4, 90, 0.6);
+    }
     this.hp -= amount;
     if (!opts?.silent) {
       this.gs.juice.flash(this, 80);

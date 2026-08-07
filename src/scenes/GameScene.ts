@@ -512,6 +512,42 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** Ennemis actifs (pour soigneuse/porte-bouclier). */
+  getEnemies(): Enemy[] {
+    const out: Enemy[] = [];
+    for (const e of this.activeEnemies) if (e.isAlive()) out.push(e);
+    return out;
+  }
+
+  /** Faisceau court entre deux points (soin, lien). */
+  beam(x1: number, y1: number, x2: number, y2: number, color: number): void {
+    const g = this.add.graphics().setDepth(17);
+    g.lineStyle(3, color, 0.9).lineBetween(x1, y1, x2, y2);
+    g.lineStyle(6, color, 0.3).lineBetween(x1, y1, x2, y2);
+    this.tweens.add({ targets: g, alpha: 0, duration: 320, onComplete: () => g.destroy() });
+  }
+
+  /** Bombe en cloche : projectile en arc puis zone télégraphiée (hitbox prévisionnelle). */
+  lobBomb(sx: number, sy: number, tx: number, ty: number, radius: number, damage: number, status: 'poison' | 'freeze' | undefined, telegraph: number): void {
+    tx = Phaser.Math.Clamp(tx, ARENA.x + 20, ARENA.x + ARENA.w - 20);
+    ty = Phaser.Math.Clamp(ty, ARENA.y + 20, ARENA.y + ARENA.h - 20);
+    const color = status === 'poison' ? 0x8fd94a : 0xff8a3a;
+    const bomb = this.add.sprite(sx, sy, 'orb_big').setTint(status === 'poison' ? 0x6a8a2a : 0x333842).setDepth(24).setScale(1.5);
+    const shadow = this.add.ellipse(tx, ty, 22, 10, 0x000000, 0.35).setDepth(3);
+    const flight = 620;
+    this.tweens.add({ targets: bomb, x: tx, y: ty, duration: flight, ease: 'Sine.easeIn' });
+    // effet d'arc (hauteur)
+    this.tweens.add({ targets: bomb, scale: 2.1, duration: flight / 2, yoyo: true });
+    this.tweens.add({ targets: bomb, angle: 360, duration: flight });
+    this.time.delayedCall(flight, () => {
+      bomb.destroy();
+      shadow.destroy();
+      this.telegraphCircle(tx, ty, radius, color, telegraph, () => {
+        this.eruptAt(tx, ty, radius, color, damage, status === 'poison' ? 'toxic' : undefined, 2500);
+      });
+    });
+  }
+
   // ---------------- callbacks entités ----------------
   getTargets(): IEnemyLike[] {
     const list: IEnemyLike[] = [];

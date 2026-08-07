@@ -1,4 +1,4 @@
-export type Behavior = 'chaser' | 'charger' | 'shooter' | 'exploder' | 'tank' | 'summoner';
+export type Behavior = 'chaser' | 'charger' | 'shooter' | 'exploder' | 'tank' | 'summoner' | 'healer' | 'shielder' | 'bomber';
 
 /** Attaque signature d'un monstre (télégraphiée, esquive au skill). */
 export interface EnemySignature {
@@ -125,5 +125,25 @@ export const ENEMIES: Record<string, EnemyDef> = {
     attack: { telegraph: 700, cooldown: 3000, range: 300, projectileSpeed: 200, projectileDamage: 13, summonId: 'fantome', summonCount: 2 },
     // Sceau d'ombre : fait jaillir une zone explosive sous le joueur.
     signature: { type: 'castZone', telegraph: 720, cooldown: 3600, damage: 18, range: 340, radius: 64, color: 0xb26bff },
+  },
+
+  // ---- Archétypes de soutien (rôles uniques par zone) ----
+  // Forêt : Fée sylvestre — SOIGNEUSE (rend des PV à ses alliés, fuit le joueur).
+  fee: {
+    id: 'fee', name: 'Fée Sylvestre', sprite: 'fee', behavior: 'healer',
+    hp: 26, speed: 118, damage: 6, scale: 0.8,
+    attack: { cooldown: 3200, range: 260 }, // range = distance de fuite
+  },
+  // Marais : Cracheur — BOMBARDIER (lance des bombes de poison télégraphiées).
+  bombardier: {
+    id: 'bombardier', name: 'Vase Bombardier', sprite: 'bombardier', behavior: 'bomber',
+    hp: 40, speed: 70, damage: 10, scale: 1.05,
+    attack: { telegraph: 800, cooldown: 2600, range: 300, explodeRadius: 66, projectileDamage: 16, status: 'poison' },
+  },
+  // Forge : Gardien de braise — PORTE-BOUCLIER (protège ses alliés).
+  gardien: {
+    id: 'gardien', name: 'Gardien de Braise', sprite: 'gardien', behavior: 'shielder',
+    hp: 110, speed: 52, damage: 14, scale: 1.15,
+    attack: { cooldown: 4200, range: 170 }, // range = rayon de bouclier
   },
 };

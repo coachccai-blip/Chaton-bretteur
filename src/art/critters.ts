@@ -241,6 +241,10 @@ export const MONSTER_RECIPES: Record<string, Recipe> = {
   fantome: { w: 18, h: 18, body: '#aeb8d6', outline: '#3a4258', eye: 'glow', eyeColor: '#bff7f6', feature: 'ghost', accent: '#8a94b8' },
   squelette: { w: 18, h: 20, body: '#dcd8c8', belly: '#b8b2a0', outline: '#2a2820', eye: 'glow', eyeColor: '#f2a53a', feature: 'skull', accent: '#7a8290' },
   sorcier: { w: 18, h: 20, body: '#3a2c5a', belly: '#5a4a7a', outline: '#160f28', eye: 'glow', eyeColor: '#c78aff', feature: 'hat', accent: '#8a5cff' },
+  // rôles de soutien
+  fee: { w: 15, h: 15, body: '#cdeaa8', belly: '#f2fbe0', outline: '#2a3a1a', eye: 'glow', eyeColor: '#bff7f6', feature: 'wings', accent: '#eaffc0' },
+  bombardier: { w: 20, h: 17, body: '#5a7a3a', belly: '#9fd04a', outline: '#16240e', eye: 'angry', eyeColor: '#dfff9a', feature: 'none', accent: '#3a5a24' },
+  gardien: { w: 18, h: 20, body: '#5a4038', belly: '#8a5a3a', outline: '#160d0a', eye: 'glow', eyeColor: '#ff9a3a', feature: 'spikes', accent: '#ff7a2a' },
 };
 
 /** Recettes des boss (plus grands), accordées au thème de leur zone. */

@@ -11,6 +11,104 @@ function canvasTex(scene: Phaser.Scene, key: string, w: number, h: number, draw:
   tex.refresh();
 }
 
+type RNG = () => number;
+function seeded(seed: number): RNG {
+  let s = seed >>> 0 || 1;
+  return () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+}
+function hex(c: number): string { return '#' + (c >>> 0).toString(16).padStart(6, '0'); }
+
+/** Sol thématique par zone (herbe, boue, roche, dalles) — sans grille visible. */
+export function genFloorThemed(scene: Phaser.Scene, zoneId: string, base: number, alt: number, size = 256): void {
+  const key = `floor_${zoneId}`;
+  canvasTex(scene, key, size, size, (ctx) => {
+    ctx.imageSmoothingEnabled = true;
+    ctx.fillStyle = hex(base); ctx.fillRect(0, 0, size, size);
+    const rnd = seeded(base ^ 0x51ed);
+    // nuages doux communs
+    for (let i = 0; i < 22; i++) {
+      const x = rnd() * size, y = rnd() * size, r = 40 + rnd() * 90;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      const lighter = rnd() > 0.5;
+      g.addColorStop(0, lighter ? hex(alt) : '#000000');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = lighter ? 0.1 : 0.08; ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    if (zoneId === 'foret') {
+      // touffes d'herbe + terre
+      for (let i = 0; i < 120; i++) {
+        const x = rnd() * size, y = rnd() * size;
+        ctx.strokeStyle = rnd() > 0.5 ? hex(alt + 0x0a1a0a) : hex(base + 0x081008);
+        ctx.globalAlpha = 0.5; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (rnd() - 0.5) * 4, y - 3 - rnd() * 3); ctx.stroke();
+      }
+      for (let i = 0; i < 8; i++) { const x = rnd() * size, y = rnd() * size; ctx.fillStyle = 'rgba(60,40,20,0.18)'; ctx.beginPath(); ctx.ellipse(x, y, 14 + rnd() * 16, 8 + rnd() * 10, rnd() * 3, 0, Math.PI * 2); ctx.fill(); }
+    } else if (zoneId === 'marais') {
+      // flaques / ondulations d'eau
+      for (let i = 0; i < 10; i++) { const x = rnd() * size, y = rnd() * size; ctx.strokeStyle = 'rgba(120,160,110,0.14)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y, 16 + rnd() * 24, 8 + rnd() * 12, 0, 0, Math.PI * 2); ctx.stroke(); }
+      for (let i = 0; i < 6; i++) { const x = rnd() * size, y = rnd() * size; ctx.fillStyle = 'rgba(20,40,20,0.25)'; ctx.beginPath(); ctx.arc(x, y, 8 + rnd() * 12, 0, Math.PI * 2); ctx.fill(); }
+    } else if (zoneId === 'forge') {
+      // fissures de lave incandescentes
+      for (let i = 0; i < 7; i++) {
+        let x = rnd() * size, y = rnd() * size;
+        ctx.strokeStyle = 'rgba(255,110,30,0.55)'; ctx.lineWidth = 1 + rnd() * 2; ctx.beginPath(); ctx.moveTo(x, y);
+        for (let s = 0; s < 6; s++) { x += (rnd() - 0.5) * 40; y += (rnd() - 0.5) * 40; ctx.lineTo(x, y); }
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,200,90,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+      }
+      for (let i = 0; i < 40; i++) { const x = rnd() * size, y = rnd() * size; ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(x, y, 2 + rnd() * 3, 2 + rnd() * 3); }
+    } else {
+      // citadelle : grandes dalles subtiles
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 1;
+      for (let g = 0; g <= size; g += 64) { ctx.beginPath(); ctx.moveTo(g, 0); ctx.lineTo(g, size); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, g); ctx.lineTo(size, g); ctx.stroke(); }
+      for (let i = 0; i < 30; i++) { const x = rnd() * size, y = rnd() * size; ctx.fillStyle = 'rgba(255,255,255,0.02)'; ctx.fillRect(x, y, 3, 3); }
+    }
+    ctx.globalAlpha = 1;
+  });
+}
+
+/** Mur/obstacle thématique par zone (bois, roche moussue, obsidienne, brique). */
+export function genWallThemed(scene: Phaser.Scene, zoneId: string, base: number, size = 48): void {
+  const key = `wall_${zoneId}`;
+  canvasTex(scene, key, size, size, (ctx) => {
+    ctx.imageSmoothingEnabled = false;
+    const rnd = seeded(base ^ 0x1abc);
+    ctx.fillStyle = hex(base); ctx.fillRect(0, 0, size, size);
+    if (zoneId === 'foret') {
+      // écorce verticale + mousse
+      for (let x = 0; x < size; x += 6) { ctx.fillStyle = rnd() > 0.5 ? hex(base + 0x0a0805) : hex(base - 0x080604); ctx.fillRect(x, 0, 5, size); }
+      ctx.fillStyle = 'rgba(60,120,60,0.5)'; ctx.fillRect(0, 0, size, 8);
+      ctx.fillStyle = 'rgba(80,160,80,0.35)'; for (let i = 0; i < 10; i++) ctx.fillRect(rnd() * size, rnd() * size, 4, 4);
+    } else if (zoneId === 'marais') {
+      ctx.fillStyle = hex(base - 0x060806); ctx.fillRect(0, 0, size, size);
+      for (let i = 0; i < 40; i++) { ctx.fillStyle = rnd() > 0.5 ? 'rgba(50,90,50,0.4)' : 'rgba(0,0,0,0.25)'; ctx.fillRect(rnd() * size, rnd() * size, 3 + rnd() * 4, 3 + rnd() * 4); }
+      ctx.fillStyle = 'rgba(70,130,70,0.45)'; ctx.fillRect(0, 0, size, 6);
+    } else if (zoneId === 'forge') {
+      // obsidienne + veines de lave
+      ctx.fillStyle = hex(base - 0x060402); ctx.fillRect(0, 0, size, size);
+      for (let i = 0; i < 30; i++) { ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(rnd() * size, rnd() * size, 3, 3); }
+      ctx.strokeStyle = 'rgba(255,110,30,0.7)'; ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) { let x = rnd() * size, y = 0; ctx.beginPath(); ctx.moveTo(x, y); for (let s = 0; s < 4; s++) { x += (rnd() - 0.5) * 14; y += size / 4; ctx.lineTo(x, y); } ctx.stroke(); }
+      ctx.fillStyle = 'rgba(255,90,20,0.5)'; ctx.fillRect(0, 0, size, 3);
+    } else {
+      // brique (citadelle)
+      const top = hex(base + 0x282828), dark = hex(base - 0x181818);
+      ctx.strokeStyle = dark; ctx.lineWidth = 2; const bh = 16;
+      for (let y = 0; y < size; y += bh) {
+        const off = (Math.floor(y / bh) % 2) * (size / 4);
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(size, y); ctx.stroke();
+        for (let x = 0; x < size; x += size / 2) { ctx.beginPath(); ctx.moveTo(x + off, y); ctx.lineTo(x + off, y + bh); ctx.stroke(); }
+      }
+      ctx.fillStyle = top; ctx.fillRect(0, 0, size, 5);
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(0, 0, size, 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, size - 4, size, 4);
+    }
+  });
+}
+
 /** Halo radial doux (lumière additive). */
 export function genRadialLight(scene: Phaser.Scene, key: string, color: string, size = 256): void {
   canvasTex(scene, key, size, size, (ctx) => {

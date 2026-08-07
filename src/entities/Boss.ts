@@ -109,11 +109,19 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   private enterPhase(): void {
-    this.gs.juice.shake(300, 0.012);
-    this.gs.juice.ring(this.x, this.y, 200, this.phase.tint ?? 0xffffff, 500);
-    this.gs.juice.burst(this.x, this.y, this.phase.tint ?? 0xffe0b0, 24, 220, 1.6);
+    this.gs.juice.shake(360, 0.014);
+    this.gs.juice.ring(this.x, this.y, 220, this.phase.tint ?? 0xffffff, 550);
+    this.gs.juice.burst(this.x, this.y, this.phase.tint ?? 0xffe0b0, 28, 240, 1.8);
     this.gs.sfx('special');
+    this.gs.timeSlow(500, 0.15); // court arrêt dramatique au changement de phase
     this.resetMoveCooldowns();
+    // changement de style : renfort immédiat si la nouvelle phase invoque
+    const summon = this.phase.moves.find((m) => m.type === 'summon');
+    if (summon) {
+      this.gs.time.delayedCall(500, () => {
+        if (this.alive) this.gs.summonMinions(this.x, this.y, summon.summonId ?? 'slime', summon.summonCount ?? 3);
+      });
+    }
     this.gs.events.emit('bossPhase', this.phaseIndex + 1, this.def.phases.length);
   }
 
