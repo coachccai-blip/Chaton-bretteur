@@ -86,6 +86,19 @@ class Audio {
       case 'zap': this.blip(900, 0.06, 'square', 0.16, -400); this.noise(0.05, 0.1); break;
       case 'reaction': this.blip(300, 0.2, 'sawtooth', 0.22, 500); this.noise(0.12, 0.14); break;
       case 'spike': this.blip(220, 0.08, 'square', 0.14, 180); this.noise(0.06, 0.1); break;
+      // --- éléments (appliqués sur l'ennemi) ---
+      case 'freeze': this.blip(1400, 0.12, 'sine', 0.12, 500); this.blip(2100, 0.1, 'triangle', 0.08, 300); break;
+      case 'burn': this.noise(0.16, 0.1); this.blip(160, 0.18, 'sawtooth', 0.1, 60); break;
+      case 'poison': this.blip(300, 0.14, 'sine', 0.1, -120); this.blip(220, 0.18, 'sine', 0.08, -80); break;
+      case 'shock': this.blip(1200, 0.05, 'square', 0.14, -700); this.noise(0.04, 0.08); break;
+      case 'mark': this.blip(120, 0.16, 'square', 0.16, -30); break;
+      // --- boons actifs ---
+      case 'chidori': this.blip(1600, 0.22, 'square', 0.16, -1300); this.noise(0.18, 0.12); break;
+      case 'rasengan': this.blip(420, 0.34, 'sine', 0.16, 260); this.noise(0.3, 0.1); this.blip(620, 0.28, 'triangle', 0.1, 180); break;
+      case 'getsuga': this.blip(700, 0.16, 'sawtooth', 0.18, -420); this.noise(0.1, 0.1); break;
+      case 'explosionbig': this.blip(90, 0.6, 'sawtooth', 0.3, 160); this.noise(0.5, 0.24); this.blip(60, 0.7, 'sine', 0.24, 40); break;
+      case 'clone': this.blip(520, 0.12, 'sawtooth', 0.12, -260); break;
+      case 'domain': this.blip(160, 0.4, 'sine', 0.16, 120); this.blip(240, 0.4, 'triangle', 0.1, 90); break;
     }
   }
 

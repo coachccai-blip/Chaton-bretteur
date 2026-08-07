@@ -170,8 +170,11 @@ export class GameScene extends Phaser.Scene {
     this.clearRoom();
     this.floor.setTexture(`floor_${this.zone.id}`);
     this.drawBorder();
+    // Seules les salles de combat ont des obstacles : les salles spéciales
+    // (fontaine, marchand, trésor) et de boss restent dégagées — évite les
+    // « murs invisibles » qui bloquaient l'accès à la fontaine.
     const layout = randomLayout(Math.random);
-    this.obstacles = (this.roomType === 'boss' ? [] : layout.obstacles(ARENA)).filter(Boolean);
+    this.obstacles = (this.roomType === 'combat' ? layout.obstacles(ARENA) : []).filter(Boolean);
     for (const o of this.obstacles) this.makeWall(o);
     this.scatterProps();
   }
@@ -951,6 +954,7 @@ export class GameScene extends Phaser.Scene {
     const x = this.player.x, y = this.player.y;
     this.juice.ring(x, y, radius, 0xb26bff, 360);
     this.juice.burst(x, y, 0xb26bff, 14, 200, 1.2);
+    this.sfx('domain');
     for (const e of this.getTargets()) {
       if (e.isAlive() && Phaser.Math.Distance.Between(x, y, e.x, e.y) <= radius) e.takeDamage(Math.round(damage), x, y);
     }

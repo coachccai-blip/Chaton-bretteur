@@ -115,6 +115,59 @@ export class JuiceManager {
     s.time.delayedCall(700, () => heat.destroy());
   }
 
+  /** VFX d'application d'un élément sur un ennemi (particules dédiées). */
+  elementFx(x: number, y: number, el: string): void {
+    const s = this.scene, ADD = Phaser.BlendModes.ADD, cy = y - 8;
+    switch (el) {
+      case 'freeze': {
+        this.burst(x, cy, 0xbff7f6, 9, 130, 1.0);
+        this.ring(x, cy, 24, 0x9fe6ff, 240);
+        break;
+      }
+      case 'burn': {
+        const p = s.add.particles(x, cy, 'px', { speedY: { min: -95, max: -45 }, speedX: { min: -32, max: 32 }, scale: { start: 1.3, end: 0 }, lifespan: 440, quantity: 11, tint: [0xff3a1f, 0xff8a2a, 0xffd24a], blendMode: 'ADD', emitting: false });
+        p.setDepth(60); p.explode(11); s.time.delayedCall(600, () => p.destroy());
+        break;
+      }
+      case 'poison': {
+        const p = s.add.particles(x, cy, 'px', { speedY: { min: -62, max: -22 }, speedX: { min: -26, max: 26 }, scale: { start: 1.1, end: 0 }, lifespan: 560, quantity: 9, tint: [0x8fd94a, 0xdfff9a], blendMode: 'ADD', emitting: false });
+        p.setDepth(60); p.explode(9); s.time.delayedCall(700, () => p.destroy());
+        break;
+      }
+      case 'shock': {
+        this.burst(x, cy, 0xfff27a, 8, 210, 0.9);
+        const g = s.add.graphics().setDepth(61).setBlendMode(ADD);
+        g.lineStyle(2, 0xffffff, 0.9);
+        let px = x, py = cy - 16; g.beginPath(); g.moveTo(px, py);
+        for (let i = 0; i < 4; i++) { px += (Math.random() * 2 - 1) * 11; py += 8; g.lineTo(px, py); }
+        g.strokePath();
+        s.tweens.add({ targets: g, alpha: 0, duration: 150, onComplete: () => g.destroy() });
+        break;
+      }
+      case 'mark': {
+        this.ring(x, cy, 26, 0xff5a7a, 240);
+        this.burst(x, cy, 0xff9db0, 6, 120, 0.8);
+        break;
+      }
+      default: this.burst(x, cy, 0xffffff, 6, 120, 0.8);
+    }
+  }
+
+  /** Tourbillon (Rasengan) : spirale qui tourne et s'estompe. */
+  spiral(x: number, y: number, color: number, radius: number): void {
+    const s = this.scene;
+    const g = s.add.circle(x, y, radius * 0.55, color, 0.28).setDepth(56).setBlendMode(Phaser.BlendModes.ADD);
+    s.tweens.add({ targets: g, scale: 1.5, alpha: 0, duration: 340, ease: 'Cubic.easeOut', onComplete: () => g.destroy() });
+    const p = s.add.particles(x, y, 'px', {
+      speed: { min: 40, max: radius * 2.2 }, angle: { min: 0, max: 360 },
+      scale: { start: 1.3, end: 0 }, lifespan: 360, quantity: 22,
+      tint: [color, 0xbff7f6, 0xffffff], blendMode: 'ADD', emitting: false, rotate: { start: 0, end: 360 },
+    });
+    p.setDepth(57); p.explode(22);
+    s.time.delayedCall(520, () => p.destroy());
+    this.ring(x, y, radius, color, 320);
+  }
+
   /** Texte flottant (dégâts, gains). */
   popText(x: number, y: number, text: string, color: string, size = 16): void {
     const t = this.scene.add.text(x, y, text, {

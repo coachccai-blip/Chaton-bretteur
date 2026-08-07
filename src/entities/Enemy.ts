@@ -6,6 +6,9 @@ import type { Element, IEnemyLike } from '../config/types';
 
 type State = 'idle' | 'telegraph' | 'charging' | 'recover' | 'signature';
 
+/** Limite globale du son d'élément (évite la saturation quand plusieurs ennemis sont touchés). */
+let lastElemSfxAt = 0;
+
 interface StatusInfo { expire: number; nextTick: number; }
 
 /** Réactions élémentaires (combo de deux statuts) : nom + dégâts + couleur + AoE. */
@@ -172,6 +175,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     }
     const prev = this.statuses[status];
     this.statuses[status] = { expire: Math.max(prev?.expire ?? 0, now + duration), nextTick: prev?.nextTick ?? now + this.tickInterval(status) };
+    // VFX/SFX dédiés à l'élément (le son est limité pour ne pas saturer)
+    this.gs.juice.elementFx(this.x, this.y, status);
+    if (!prev && now - lastElemSfxAt > 110) { lastElemSfxAt = now; this.gs.sfx(status); }
   }
 
   private triggerReaction(react: { name: string; base: number; hpFrac: number; color: number; aoe: number }): void {

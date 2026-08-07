@@ -20,6 +20,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   private dashSlots: number[]; // timestamps de disponibilité par charge
   private dashing = false;
   private dashEndAt = 0;
+  private nextSparkAt = 0; // cadence des étincelles de Chidori
 
   // combat
   private comboIndex = 0;
@@ -164,8 +165,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     } else if (now >= this.dashEndAt) {
       this.dashing = false;
       if (this.dashFlags.has('burst')) {
+        // Rasengan : tornade bleue tourbillonnante en fin de dash
+        this.gs.juice.spiral(this.x, this.y, 0x59c8ff, 96);
+        this.gs.sfx('rasengan');
         this.gs.explosionAt(this.x, this.y, 90, Math.max(20, this.stats.dashDamage + this.stats.swordDamage[0]));
       }
+    }
+    // Chidori : traînée électrique pendant le dash
+    if (this.dashing && this.dashFlags.has('shock') && now >= this.nextSparkAt) {
+      this.nextSparkAt = now + 26;
+      this.gs.juice.burst(this.x, this.y, 0xfff27a, 3, 90, 0.7);
     }
 
     // effets récurrents (clone, domaine…)
@@ -257,8 +266,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     this.dashEndAt = now + this.stats.dashDuration;
     this.invulnUntil = Math.max(this.invulnUntil, now + this.stats.dashIFrames);
 
-    this.gs.juice.dashTrail(this.x, this.y, 0x9fe6ff);
-    this.gs.sfx('dash');
+    const shockDash = this.dashFlags.has('shock');
+    this.gs.juice.dashTrail(this.x, this.y, shockDash ? 0xfff27a : 0x9fe6ff);
+    this.gs.sfx(shockDash ? 'chidori' : 'dash');
     for (const fn of this.onDashFns) fn();
 
     // dégâts de dash (traînée de griffes)
@@ -390,7 +400,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     // explosion de chaleur rouge autour du chaton
     this.gs.juice.heatBlast(this.x, this.y, radius);
     this.gs.juice.shake(bigExplosion ? 260 : 190, bigExplosion ? 0.014 : 0.009);
-    this.gs.sfx('special');
+    this.gs.sfx(bigExplosion ? 'explosionbig' : 'special');
     // dégâts de zone du tourbillon
     for (const e of this.gs.getTargets()) {
       if (!e.isAlive()) continue;
@@ -404,6 +414,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       const a = this.nearestTargetDir(360) ?? this.aim.clone().normalize();
       this.gs.slashWave(this.x, this.y, a.x, a.y, Math.round(this.stats.specialDamage * 0.9));
       this.gs.slashWave(this.x, this.y, a.x, a.y, Math.round(this.stats.specialDamage * 0.9)); // double lame
+      this.gs.sfx('getsuga');
     }
     if (this.specialFlags.has('timestop')) this.gs.timeSlow(2200, 0.12);
   }
