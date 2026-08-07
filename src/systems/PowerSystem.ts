@@ -1,16 +1,22 @@
 import Phaser from 'phaser';
-import { POWERS, RARITY_WEIGHTS, type PowerDef, type Rarity } from '../config/powers';
+import { POWERS, RARITY_WEIGHTS, RARITY_RANK, type PowerDef, type Rarity } from '../config/powers';
 import { RunState } from './RunState';
 import { SaveSystem } from './SaveSystem';
 
-/** Tire `count` pouvoirs distincts, pondérés par rareté (+ chance). */
-export function rollChoices(count: number, luck: number): PowerDef[] {
+/**
+ * Tire `count` pouvoirs distincts, pondérés par rareté (+ chance).
+ * Aucun doublon : un boon déjà obtenu n'est jamais reproposé.
+ * `minRarity` impose une rareté minimale (boons du marchand = rare ou +).
+ */
+export function rollChoices(count: number, luck: number, minRarity: Rarity = 'common'): PowerDef[] {
   const arsenal = SaveSystem.hasFlag('arsenal');
   const takenIds = new Set(RunState.powers.map((p) => p.id));
+  const minRank = RARITY_RANK[minRarity];
 
   const eligible = POWERS.filter((p) => {
     if (p.locked && !arsenal) return false;
-    if (!p.repeatable && takenIds.has(p.id)) return false;
+    if (takenIds.has(p.id)) return false;       // jamais deux fois le même boon
+    if (RARITY_RANK[p.rarity] < minRank) return false; // rareté minimale
     return true;
   });
 

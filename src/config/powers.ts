@@ -16,6 +16,8 @@ export interface PowerDef {
   god?: string;
   repeatable?: boolean;
   locked?: boolean;
+  /** carte de repli (PV max / soin) : appliquée mais NON enregistrée comme boon. */
+  fallback?: boolean;
   apply(p: IPlayerContext): void;
 }
 
@@ -25,8 +27,13 @@ export const RARITY_COLORS: Record<Rarity, number> = {
 export const RARITY_NAMES: Record<Rarity, string> = {
   common: 'Commun', rare: 'Rare', epic: 'Épique', legendary: 'Légendaire',
 };
+// Distribution cible par apparition : Légendaire 10%, Épique 15%, Rare 25%, Commun 50%.
 export const RARITY_WEIGHTS: Record<Rarity, number> = {
-  common: 46, rare: 32, epic: 16, legendary: 6,
+  common: 50, rare: 25, epic: 15, legendary: 10,
+};
+/** Ordre de rareté (pour un minimum de rareté, ex. boons du marchand). */
+export const RARITY_RANK: Record<Rarity, number> = {
+  common: 0, rare: 1, epic: 2, legendary: 3,
 };
 
 export const POWERS: PowerDef[] = [
@@ -244,3 +251,20 @@ export const POWERS: PowerDef[] = [
 export function getPowerById(id: string): PowerDef | undefined {
   return POWERS.find((p) => p.id === id);
 }
+
+/**
+ * Cartes de repli proposées quand on ne peut plus obtenir de boon (tous pris,
+ * ou doublon) : choix entre +25 PV max ou soin de 50 PV. Non enregistrées.
+ */
+export const FALLBACK_BOONS: PowerDef[] = [
+  {
+    id: 'fb_maxhp', name: '+25 PV max', category: 'hp', rarity: 'common', icon: 'heart', fallback: true,
+    description: 'Augmente tes PV max de 25 (et soigne d’autant).',
+    apply(p) { p.stats.maxHp += 25; p.heal(25); },
+  },
+  {
+    id: 'fb_heal', name: 'Soin +50 PV', category: 'hp', rarity: 'common', icon: 'heart', fallback: true,
+    description: 'Rends immédiatement 50 PV.',
+    apply(p) { p.heal(50); },
+  },
+];

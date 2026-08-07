@@ -420,36 +420,45 @@ export class GameScene extends Phaser.Scene {
     this.roomState = 'idle';
     this.events.emit('progress', this.zone.name, this.combatDone, this.zone.rooms, false, 'Marchand');
     const y = ARENA.y + ARENA.h / 2;
-    // Marchand de sang : paiement UNIQUEMENT en points de vie.
-    const items: { label: string; cost: number; buy: () => void }[] = [
-      { label: '+40 PV max', cost: 10, buy: () => { this.player.stats.maxHp += 40; this.player.heal(40); } },
-      { label: 'Boon', cost: 20, buy: () => { this.scene.pause(); this.scene.launch('Reward', { gameScene: this }); } },
-      { label: 'Boon', cost: 30, buy: () => { this.scene.pause(); this.scene.launch('Reward', { gameScene: this }); } },
+    // Le marchand accepte l'or (gagné en tuant des monstres) OU les PV — le
+    // logo de chaque article indique la monnaie. Les boons vendus sont rare ou +.
+    const openBoon = () => { this.scene.pause(); this.scene.launch('Reward', { gameScene: this, minRarity: 'rare' }); };
+    type ShopItem = { label: string; currency: 'coin' | 'hp'; cost: number; buy: () => void };
+    const items: ShopItem[] = [
+      { label: 'Boon', currency: 'coin', cost: 45, buy: openBoon },
+      { label: 'Boon', currency: 'hp', cost: 25, buy: openBoon },
+      { label: '+40 PV max', currency: 'coin', cost: 35, buy: () => { this.player.stats.maxHp += 40; this.player.heal(40); } },
     ];
-    // marchand (chaton PNJ)
-    const npc = this.add.sprite(GAME_WIDTH / 2, ARENA.y + 70, 'cat').setScale(2.2).setTint(0xd06a6a).setDepth(11);
+    // marchand : chat noir ténébreux (halo violet sombre, yeux luisants)
+    const aura = this.add.image(GAME_WIDTH / 2, ARENA.y + 66, 'light').setTint(0x5a3a8a).setBlendMode(Phaser.BlendModes.ADD).setScale(1.1).setDepth(8).setAlpha(0.4);
+    this.tweens.add({ targets: aura, alpha: 0.2, duration: 1100, yoyo: true, repeat: -1 });
+    const npc = this.add.sprite(GAME_WIDTH / 2, ARENA.y + 70, 'cat').setScale(2.4).setTint(0x241f30).setDepth(11);
     this.tweens.add({ targets: npc, y: ARENA.y + 62, duration: 900, yoyo: true, repeat: -1 });
-    this.roomObjects.push(npc);
+    this.roomObjects.push(aura, npc);
     items.forEach((it, i) => {
       const px = GAME_WIDTH / 2 + (i - 1) * 200;
-      const glow = this.add.image(px, y, 'light').setTint(0xf4c430).setBlendMode(Phaser.BlendModes.ADD).setScale(0.9).setDepth(9).setAlpha(0.4);
+      const isCoin = it.currency === 'coin';
+      const glowCol = isCoin ? 0xf4c430 : 0xe8384f;
+      const glow = this.add.image(px, y, 'light').setTint(glowCol).setBlendMode(Phaser.BlendModes.ADD).setScale(0.9).setDepth(9).setAlpha(0.4);
       const ped = this.add.graphics().setDepth(10);
       ped.fillStyle(0x2a2436, 1).fillRoundedRect(px - 30, y - 6, 60, 26, 6);
-      const txt = this.add.text(px, y - 30, `${it.label}\n${it.cost} ❤`, { fontFamily: 'monospace', fontSize: '13px', color: '#ffd0d0', align: 'center', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(11);
+      const txt = this.add.text(px, y - 30, `${it.label}\n${it.cost} ${isCoin ? '🥇' : '❤'}`, { fontFamily: 'monospace', fontSize: '13px', color: isCoin ? '#f4c430' : '#ffd0d0', align: 'center', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(11);
       this.roomObjects.push(glow, ped, txt);
       let bought = false;
       const check = this.time.addEvent({ delay: 120, loop: true, callback: () => {
         if (bought || this.player.dead) return;
         if (Phaser.Math.Distance.Between(this.player.x, this.player.y, px, y) < 44) {
-          if (this.player.hp > it.cost) {
+          const canPay = isCoin ? RunState.currencyEarned >= it.cost : this.player.hp > it.cost;
+          if (canPay) {
             bought = true;
-            this.player.spendLife(it.cost);
+            if (isCoin) { RunState.currencyEarned -= it.cost; this.events.emit('currency', RunState.currencyEarned); }
+            else { this.player.spendLife(it.cost); }
             it.buy();
-            this.juice.burst(px, y, 0xe8384f, 14, 180, 1.2);
+            this.juice.burst(px, y, glowCol, 14, 180, 1.2);
             AudioManager.play('coin');
             txt.setText('Acheté !');
           } else {
-            this.juice.popText(px, y - 44, 'Pas assez de PV', '#ff9db0', 12);
+            this.juice.popText(px, y - 44, isCoin ? 'Pas assez d’or' : 'Pas assez de PV', '#ff9db0', 12);
           }
         }
       }});
@@ -608,7 +617,7 @@ export class GameScene extends Phaser.Scene {
     if (power) {
       power.apply(this.player);
       this.player.syncDashCharges();
-      RunState.addPower(power);
+      if (!power.fallback) RunState.addPower(power); // les cartes de repli ne sont pas des boons
       this.events.emit('powers', RunState.powers);
     }
     this.scene.resume();

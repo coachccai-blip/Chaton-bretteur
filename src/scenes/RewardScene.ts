@@ -2,31 +2,39 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config/game';
 import { label, iconBadge } from '../ui/theme';
 import { rollChoices } from '../systems/PowerSystem';
-import { RARITY_COLORS, RARITY_NAMES, type PowerDef } from '../config/powers';
+import { RARITY_COLORS, RARITY_NAMES, FALLBACK_BOONS, type PowerDef, type Rarity } from '../config/powers';
 import { glyphTexture } from '../art/icons';
 import { AudioManager } from '../systems/AudioManager';
 import type { GameScene } from './GameScene';
 
 export class RewardScene extends Phaser.Scene {
   private gameScene!: GameScene;
+  private minRarity: Rarity = 'common';
   constructor() { super('Reward'); }
 
-  init(data: { gameScene: GameScene }): void { this.gameScene = data.gameScene; }
+  init(data: { gameScene: GameScene; minRarity?: Rarity }): void {
+    this.gameScene = data.gameScene;
+    this.minRarity = data.minRarity ?? 'common';
+  }
 
   create(): void {
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.72);
-    label(this, GAME_WIDTH / 2, 70, 'CHOISIS UN POUVOIR', 30, '#f4c430');
-    label(this, GAME_WIDTH / 2, 104, 'Les pouvoirs durent le temps du run', 13, '#9a8fb0');
 
     const luck = this.gameScene.player.stats.luck;
-    const choices = rollChoices(3, luck);
+    const boons = rollChoices(3, luck, this.minRarity);
+    // complète avec des cartes de repli (PV max / soin) si pas assez de boons neufs
+    const choices: PowerDef[] = [...boons];
+    for (const fb of FALLBACK_BOONS) { if (choices.length >= 3) break; choices.push(fb); }
+
+    const noBoon = boons.length === 0;
+    label(this, GAME_WIDTH / 2, 70, noBoon ? 'PLUS DE POUVOIR DISPONIBLE' : 'CHOISIS UN POUVOIR', 28, '#f4c430');
+    label(this, GAME_WIDTH / 2, 104, noBoon ? 'Choisis une récompense de vie' : 'Les pouvoirs durent le temps du run', 13, '#9a8fb0');
     AudioManager.play('power');
 
     const cw = 240, ch = 300, gap = 30;
     const startX = GAME_WIDTH / 2 - ((cw + gap) * choices.length - gap) / 2 + cw / 2;
     choices.forEach((power, i) => this.makeCard(power, startX + i * (cw + gap), GAME_HEIGHT / 2 + 30, cw, ch, i));
 
-    // relance : si aucun choix (cas limite), passe direct
     if (choices.length === 0) this.pick(null);
   }
 
