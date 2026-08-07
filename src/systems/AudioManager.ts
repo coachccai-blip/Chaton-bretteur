@@ -99,6 +99,9 @@ class Audio {
       case 'explosionbig': this.blip(90, 0.6, 'sawtooth', 0.3, 160); this.noise(0.5, 0.24); this.blip(60, 0.7, 'sine', 0.24, 40); break;
       case 'clone': this.blip(520, 0.12, 'sawtooth', 0.12, -260); break;
       case 'domain': this.blip(160, 0.4, 'sine', 0.16, 120); this.blip(240, 0.4, 'triangle', 0.1, 90); break;
+      // --- âmes ---
+      case 'soul': this.blip(880, 0.14, 'sine', 0.14, 420); this.blip(1320, 0.12, 'triangle', 0.1, 260); break;
+      case 'respawn': this.blip(200, 0.3, 'sawtooth', 0.2, -120); this.noise(0.16, 0.12); break;
     }
   }
 

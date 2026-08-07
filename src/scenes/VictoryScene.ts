@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config/game';
 import { button, label, panel } from '../ui/theme';
 import { RunState } from '../systems/RunState';
-import { SaveSystem } from '../systems/SaveSystem';
+import { SaveSystem, formatTime } from '../systems/SaveSystem';
+import { DIFFICULTIES } from '../config/difficulty';
 import { AudioManager } from '../systems/AudioManager';
 
 export class VictoryScene extends Phaser.Scene {
@@ -29,10 +30,17 @@ export class VictoryScene extends Phaser.Scene {
     label(this, GAME_WIDTH / 2, 292, 'Le Roi des Monstres est vaincu.', 18, '#f4e9c1');
     label(this, GAME_WIDTH / 2, 316, 'Le royaume est sauvé par le Chaton Bretteur !', 14, '#9a8fb0');
 
-    panel(this, GAME_WIDTH / 2, 410, 440, 110, COLORS.panel, COLORS.gold);
-    label(this, GAME_WIDTH / 2, 380, `Durée du run : ${RunState.durationSec().toFixed(0)} s`, 15, '#f4e9c1');
-    label(this, GAME_WIDTH / 2, 406, `Monstres vaincus : ${RunState.kills}`, 15, '#f4e9c1');
-    label(this, GAME_WIDTH / 2, 434, `+ ${RunState.currencyEarned} Croquettes Dorées`, 17, '#f4c430');
+    // chrono du run + record par difficulté
+    const time = RunState.durationSec();
+    const isRecord = SaveSystem.recordTime(RunState.difficultyId, time);
+    const best = SaveSystem.bestTime(RunState.difficultyId) ?? time;
+    const diffName = DIFFICULTIES.find((d) => d.id === RunState.difficultyId)?.name ?? RunState.difficultyId;
+
+    panel(this, GAME_WIDTH / 2, 410, 440, 120, COLORS.panel, COLORS.gold);
+    label(this, GAME_WIDTH / 2, 372, `Temps : ${formatTime(time)}${isRecord ? '   ⭐ NOUVEAU RECORD !' : ''}`, 15, isRecord ? '#f4c430' : '#f4e9c1');
+    label(this, GAME_WIDTH / 2, 396, `Record ${diffName} : ${formatTime(best)}`, 12, '#9a8fb0');
+    label(this, GAME_WIDTH / 2, 420, `Monstres vaincus : ${RunState.kills}`, 14, '#f4e9c1');
+    label(this, GAME_WIDTH / 2, 442, `+ ${RunState.currencyEarned} Croquettes Dorées`, 16, '#f4c430');
 
     // bouton à droite (les stats sont centrées) pour ne masquer aucune info
     button(this, GAME_WIDTH - 150, GAME_HEIGHT - 30, 260, 46, 'Retour au Camp', () => {

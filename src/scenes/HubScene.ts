@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config/game';
 import { button, label, panel, iconBadge } from '../ui/theme';
-import { SaveSystem } from '../systems/SaveSystem';
+import { SaveSystem, formatTime } from '../systems/SaveSystem';
 import { META_UPGRADES } from '../config/metaUpgrades';
 import { DIFFICULTIES } from '../config/difficulty';
 import { glyphTexture } from '../art/icons';
@@ -92,6 +92,11 @@ export class HubScene extends Phaser.Scene {
         this.diffLayer.add(hit);
       }
     });
+    // record de temps (clear complet) pour la difficulté sélectionnée
+    const rec = SaveSystem.bestTime(this.selectedDiff);
+    const dn = DIFFICULTIES.find((d) => d.id === this.selectedDiff)?.name ?? '';
+    const recTxt = rec !== null ? `🏆 Record ${dn} : ${formatTime(rec)}` : `🏆 ${dn} : aucun record pour l'instant`;
+    this.diffLayer.add(label(this, GAME_WIDTH / 2, 168, recTxt, 12, '#f4c430'));
   }
 
   private buildCards(): void {

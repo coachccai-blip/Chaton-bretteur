@@ -9,6 +9,7 @@ export interface SaveData {
   unlockedExtreme: boolean;
   bestZone: number;
   clears: number;
+  bestTimes: Record<string, number>; // difficultyId -> meilleur temps de clear (secondes)
   settings: { volume: number; muted: boolean };
 }
 
@@ -19,6 +20,7 @@ function defaults(): SaveData {
     unlockedExtreme: false,
     bestZone: 0,
     clears: 0,
+    bestTimes: {},
     settings: { volume: 0.7, muted: false },
   };
 }
@@ -111,6 +113,30 @@ class Save {
     this.data.unlockedExtreme = true;
     this.save();
   }
+
+  /** Meilleur temps de clear pour une difficulté (secondes), ou null. */
+  bestTime(difficultyId: string): number | null {
+    const t = this.data.bestTimes[difficultyId];
+    return typeof t === 'number' ? t : null;
+  }
+
+  /** Enregistre un temps de clear ; renvoie true si c'est un nouveau record. */
+  recordTime(difficultyId: string, seconds: number): boolean {
+    const prev = this.data.bestTimes[difficultyId];
+    if (prev === undefined || seconds < prev) {
+      this.data.bestTimes[difficultyId] = seconds;
+      this.save();
+      return true;
+    }
+    return false;
+  }
+}
+
+/** Formate un temps en m:ss. */
+export function formatTime(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2, '0')}`;
 }
 
 export const SaveSystem = new Save();

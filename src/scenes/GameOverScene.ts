@@ -3,7 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config/game';
 import { button, label, panel } from '../ui/theme';
 import { RunState } from '../systems/RunState';
 import { ZONES } from '../config/worlds';
-import { SaveSystem } from '../systems/SaveSystem';
+import { SaveSystem, formatTime } from '../systems/SaveSystem';
 import { AudioManager } from '../systems/AudioManager';
 
 export class GameOverScene extends Phaser.Scene {
@@ -27,7 +27,7 @@ export class GameOverScene extends Phaser.Scene {
       `Salle : ${Math.min(RunState.roomIndex + 1, zone.rooms)}/${zone.rooms}`,
       `Monstres vaincus : ${RunState.kills}`,
       `Pouvoirs obtenus : ${RunState.powers.length}`,
-      `Durée : ${RunState.durationSec().toFixed(0)} s`,
+      `Temps : ${formatTime(RunState.durationSec())}`,
     ];
     lines.forEach((l, i) => label(this, GAME_WIDTH / 2, 300 + i * 26, l, 15, '#f4e9c1'));
 

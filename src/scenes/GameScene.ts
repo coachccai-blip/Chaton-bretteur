@@ -56,6 +56,16 @@ interface Hazard {
   nextTick: number; activeAt: number; expireAt: number;
 }
 
+/** Âme d'un monstre tué : à ramasser en 5 s, sinon le monstre réapparaît. */
+interface Soul {
+  orb: Phaser.GameObjects.Sprite;
+  ring: Phaser.GameObjects.Graphics;
+  id: string;
+  x: number; y: number;
+  expireAt: number;
+}
+const SOUL_TTL = 5000;
+
 /** dégâts / effets par type de zone au sol. */
 const HAZARD_FX: Record<HazardType, { dmg: number; tick: number; slow: number; poison: boolean; color: number }> = {
   thorns: { dmg: 4, tick: 700, slow: 1, poison: false, color: 0x6a2a3a },
@@ -106,6 +116,7 @@ export class GameScene extends Phaser.Scene {
   enemyTimeScale = 1;
   private enemyTimeScaleUntil = 0;
   private friendlyShots: FriendlyShot[] = [];
+  private souls: Soul[] = [];
 
   constructor() { super('Game'); }
 
@@ -153,9 +164,14 @@ export class GameScene extends Phaser.Scene {
 
     this.startZone(RunState.zoneIndex);
 
+    // chronomètre : en pause quand le jeu est en pause (choix de boon, menu pause)
+    this.events.on(Phaser.Scenes.Events.PAUSE, () => RunState.pauseTimer());
+    this.events.on(Phaser.Scenes.Events.RESUME, () => RunState.resumeTimer());
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.activeEnemies.clear();
       this.boss = null;
+      this.clearSouls();
       this.env?.destroy();
     });
   }
@@ -167,6 +183,7 @@ export class GameScene extends Phaser.Scene {
     this.walls.clear(true, true);
     this.clearDoors();
     this.clearTraps();
+    this.clearSouls();
     this.hazards = [];
     this.bossHazards = [];
     this.hazardGfx.clear();
@@ -584,12 +601,15 @@ export class GameScene extends Phaser.Scene {
       this.player.notifyKill(e);
       this.addRunCurrency(REWARDS.perEnemyBonus);
     }
+    // dépose une âme à récupérer (salles de combat uniquement)
+    if (this.roomState === 'combat') this.spawnSoul(e.def.id, e.x, e.y);
     this.checkWaveCleared();
   }
 
   private checkWaveCleared(): void {
     if (this.roomState !== 'combat') return;
     if (this.activeEnemies.size > 0) return;
+    if (this.souls.length > 0) return; // des âmes restent à récupérer
     this.waveIndex++;
     if (this.waveIndex < this.wavesTotal) {
       this.time.delayedCall(600, () => { if (this.roomState === 'combat') this.spawnWave(); });
@@ -621,6 +641,62 @@ export class GameScene extends Phaser.Scene {
   /** Nombre d'exemplaires d'un boon déjà possédés (pour l'étiquette cumulable). */
   ownedCount(id: string): number {
     return RunState.powers.reduce((n, p) => n + (p.id === id ? 1 : 0), 0);
+  }
+
+  // ---------------- âmes (récupération / respawn) ----------------
+  private spawnSoul(id: string, x: number, y: number): void {
+    const orb = this.add.sprite(x, y - 8, 'orb_big').setDepth(16).setTint(0xbff7f6).setScale(1.25).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: orb, y: y - 16, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: orb, alpha: 0.55, duration: 380, yoyo: true, repeat: -1 });
+    const ring = this.add.graphics().setDepth(16);
+    this.souls.push({ orb, ring, id, x, y, expireAt: RunState.elapsedMs() + SOUL_TTL });
+    this.juice.burst(x, y - 8, 0xbff7f6, 6, 100, 0.8);
+  }
+
+  /** Met à jour les âmes : ramassage par proximité, sinon respawn après 5 s. */
+  private updateSouls(): void {
+    const t = RunState.elapsedMs(); // temps du run (en pause pendant les menus)
+    for (let i = this.souls.length - 1; i >= 0; i--) {
+      const s = this.souls[i];
+      const left = Phaser.Math.Clamp((s.expireAt - t) / SOUL_TTL, 0, 1);
+      const urgent = left < 0.3;
+      s.ring.clear();
+      s.ring.lineStyle(2.5, urgent ? 0xff5a5a : 0xbff7f6, 0.9);
+      s.ring.beginPath();
+      s.ring.arc(s.x, s.orb.y, 15, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2, false);
+      s.ring.strokePath();
+      s.orb.setTint(urgent ? 0xff8a8a : 0xbff7f6);
+      if (this.player && !this.player.dead && Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y) < 36) {
+        this.collectSoul(i); continue;
+      }
+      if (t >= s.expireAt) this.respawnFromSoul(i);
+    }
+  }
+
+  private collectSoul(i: number): void {
+    const s = this.souls[i];
+    this.juice.burst(s.x, s.orb.y, 0xbff7f6, 12, 170, 1.2);
+    this.juice.popText(s.x, s.orb.y - 18, 'Âme', '#bff7f6', 14);
+    AudioManager.play('soul');
+    this.addRunCurrency(1);
+    s.orb.destroy(); s.ring.destroy();
+    this.souls.splice(i, 1);
+    this.checkWaveCleared();
+  }
+
+  private respawnFromSoul(i: number): void {
+    const s = this.souls[i];
+    s.orb.destroy(); s.ring.destroy();
+    this.souls.splice(i, 1);
+    this.juice.ring(s.x, s.y, 32, 0xff5a5a, 320);
+    this.juice.burst(s.x, s.y - 8, 0x9a3a6a, 12, 180, 1.1);
+    AudioManager.play('respawn');
+    if (this.roomState === 'combat') this.spawnEnemy(s.id, s.x, s.y);
+  }
+
+  private clearSouls(): void {
+    for (const s of this.souls) { s.orb.destroy(); s.ring.destroy(); }
+    this.souls = [];
   }
 
   /** appelé par RewardScene après le choix. */
@@ -1176,6 +1252,7 @@ export class GameScene extends Phaser.Scene {
 
     this.updateHazards(now);
     this.updateTraps(now);
+    this.updateSouls();
 
     // fin du ralentissement temporel (The World)
     if (this.enemyTimeScale !== 1 && now >= this.enemyTimeScaleUntil) this.enemyTimeScale = 1;
