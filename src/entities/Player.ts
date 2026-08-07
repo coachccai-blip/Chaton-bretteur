@@ -395,6 +395,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const now = performance.now();
     if (now < this.specialReadyAt) return;
     this.specialReadyAt = now + this.stats.specialCooldown;
+    this.castSpecial();
+  }
+
+  /**
+   * Déclenche l'effet du Spécial avec TOUS ses bonus (dégâts/zone, Getsuga,
+   * Megumin, The World…). Sans cooldown : réutilisé par les pouvoirs qui
+   * relancent le Spécial en continu (Sanctuaire de Sukuna).
+   */
+  castSpecial(): void {
+    if (this.dead) return;
     const bigExplosion = this.specialFlags.has('explosion');
     const radius = this.stats.specialRadius * (bigExplosion ? 1.3 : 1);
     // explosion de chaleur rouge autour du chaton

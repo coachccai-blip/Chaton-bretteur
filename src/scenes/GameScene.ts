@@ -3,6 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT, WORLD_ZOOM, COLORS,
 import { ZONES, type ZoneDef } from '../config/worlds';
 import { ENEMIES } from '../config/enemies';
 import { BOSSES } from '../config/bosses';
+import { BOSS_TAUNTS } from '../config/bossTaunts';
 import { getDifficulty } from '../config/difficulty';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
@@ -536,17 +537,42 @@ export class GameScene extends Phaser.Scene {
     this.hazardGfx.clear();
     const def = BOSSES[this.zone.bossId];
     const diff = getDifficulty(RunState.difficultyId);
+    // PV des boss ×2, ×3, ×4, ×5 selon la zone (combats bien plus costauds)
+    const bossHpMult = 2 + this.zone.index;
     AudioManager.startMusic('boss');
     this.events.emit('progress', this.zone.name, this.zone.rooms, this.zone.rooms, true);
-    this.banner(`BOSS : ${def.name}, ${def.title}`, () => {
-      this.boss = new Boss(this, WORLD_WIDTH / 2, ARENA.y + 120, def, diff.enemyHp, diff.enemyDamage);
-      this.physics.add.overlap(this.player, this.boss, (_p, b) => {
-        const bs = b as Boss;
-        if (bs.isAlive()) this.player.takeDamage(bs.contactDamage, bs.x, bs.y);
+    // petit dialogue chaton ↔ boss (change à chaque run), puis la bannière et le boss
+    this.bossIntro(def, () => {
+      this.banner(`BOSS : ${def.name}, ${def.title}`, () => {
+        this.boss = new Boss(this, WORLD_WIDTH / 2, ARENA.y + 120, def, diff.enemyHp * bossHpMult, diff.enemyDamage);
+        this.physics.add.overlap(this.player, this.boss, (_p, b) => {
+          const bs = b as Boss;
+          if (bs.isAlive()) this.player.takeDamage(bs.contactDamage, bs.x, bs.y);
+        });
+        this.events.emit('bossName', `${def.name}, ${def.title}`);
+        this.events.emit('bossHp', this.boss.hp, this.boss.maxHp);
+        this.events.emit('bossPhase', 1, def.phases.length);
       });
-      this.events.emit('bossName', `${def.name}, ${def.title}`);
-      this.events.emit('bossHp', this.boss.hp, this.boss.maxHp);
-      this.events.emit('bossPhase', 1, def.phases.length);
+    });
+  }
+
+  /** Dialogue chaton ↔ boss avant le combat (tiré au hasard, fun, change par run). */
+  private bossIntro(def: typeof BOSSES[string], onDone: () => void): void {
+    const pool = BOSS_TAUNTS[def.id] ?? [];
+    if (pool.length === 0) { onDone(); return; }
+    const t = pool[Math.floor(Math.random() * pool.length)];
+    const cx = WORLD_WIDTH / 2, cy = WORLD_HEIGHT / 2;
+    const mk = (text: string, color: string, y: number) => this.add.text(cx, y, text, {
+      fontFamily: 'monospace', fontSize: '18px', color, fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4, align: 'center', wordWrap: { width: 560 },
+    }).setOrigin(0.5).setDepth(92).setAlpha(0);
+    const catLine = mk(`🐱 ${t.cat}`, '#f4e9c1', cy - 26);
+    const bossLine = mk(`${def.name} : « ${t.boss} »`, '#ff9db0', cy + 30);
+    this.tweens.add({ targets: catLine, alpha: 1, y: cy - 30, duration: 260, ease: 'Back.easeOut' });
+    this.time.delayedCall(1200, () => this.tweens.add({ targets: bossLine, alpha: 1, y: cy + 26, duration: 260, ease: 'Back.easeOut' }));
+    this.time.delayedCall(2900, () => {
+      this.tweens.add({ targets: [catLine, bossLine], alpha: 0, duration: 300, onComplete: () => { catLine.destroy(); bossLine.destroy(); } });
+      onDone();
     });
   }
 

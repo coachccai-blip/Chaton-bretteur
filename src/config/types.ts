@@ -40,6 +40,8 @@ export interface IPlayerContext {
   addPeriodic(intervalMs: number, fn: VoidFn): void;
   addSpecialFlag(flag: SpecialFlag): void;
   addDashFlag(flag: DashFlag): void;
+  /** Relance l'effet du Spécial (avec tous ses bonus), sans cooldown. */
+  castSpecial(): void;
 }
 
 /** Vue minimale d'un ennemi exposée aux hooks/boons. */

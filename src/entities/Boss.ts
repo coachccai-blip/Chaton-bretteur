@@ -147,7 +147,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.gs.juice.ring(this.x, this.y, 220, this.phase.tint ?? 0xffffff, 550);
     this.gs.juice.burst(this.x, this.y, this.phase.tint ?? 0xffe0b0, 28, 240, 1.8);
     this.gs.sfx('special');
-    this.gs.timeSlow(500, 0.15); // court arrêt dramatique au changement de phase
+    // court arrêt dramatique — hit-stop SEUL (surtout pas timeSlow, qui est
+    // l'animation « The World » et donnait l'impression que le spécial la lançait).
+    this.gs.juice.hitStop(220);
     this.resetMoveCooldowns();
     // changement de style : renfort immédiat si la nouvelle phase invoque
     const summon = this.phase.moves.find((m) => m.type === 'summon');

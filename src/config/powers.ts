@@ -193,9 +193,12 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'sukuna_domain', name: 'Sanctuaire Malfaisant', god: 'Roi des Fléaux', category: 'divine', rarity: 'legendary', icon: 'domain',
-    description: 'Ton DOMAINE se déploie sans cesse : tranche tous les ennemis autour de toi.',
+    description: 'Relance ton SPÉCIAL en continu (avec tous ses bonus) tant que des ennemis sont proches.',
     apply(p) {
-      p.addPeriodic(2200, () => p.combat.domainPulse(18 + p.stats.swordDamage[0] * 0.5, 150));
+      p.addPeriodic(2200, () => {
+        const near = p.combat.enemiesNear(p.combat.playerX(), p.combat.playerY(), p.stats.specialRadius * 1.4);
+        if (near.length > 0) p.castSpecial();
+      });
     },
   },
 
