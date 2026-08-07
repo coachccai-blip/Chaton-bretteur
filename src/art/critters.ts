@@ -245,12 +245,25 @@ export const MONSTER_RECIPES: Record<string, Recipe> = {
   fee: { w: 15, h: 15, body: '#cdeaa8', belly: '#f2fbe0', outline: '#2a3a1a', eye: 'glow', eyeColor: '#bff7f6', feature: 'wings', accent: '#eaffc0' },
   bombardier: { w: 20, h: 17, body: '#5a7a3a', belly: '#9fd04a', outline: '#16240e', eye: 'angry', eyeColor: '#dfff9a', feature: 'none', accent: '#3a5a24' },
   gardien: { w: 18, h: 20, body: '#5a4038', belly: '#8a5a3a', outline: '#160d0a', eye: 'glow', eyeColor: '#ff9a3a', feature: 'spikes', accent: '#ff7a2a' },
+  // bestiaire créatif
+  loup: { w: 22, h: 15, body: '#5a5560', belly: '#8a8490', outline: '#161318', eye: 'angry', eyeColor: '#ffd24a', feature: 'ears', accent: '#3a3640' },
+  archer: { w: 17, h: 20, body: '#3a4a58', belly: '#5a6a78', outline: '#12181e', eye: 'glow', eyeColor: '#bff7f6', feature: 'ears', accent: '#c78aff' },
+  drake: { w: 22, h: 18, body: '#7a2a20', belly: '#e0603a', outline: '#200a08', eye: 'glow', eyeColor: '#ffd24a', feature: 'horns', accent: '#ff6a1f' },
+  // adds de boss
+  druide: { w: 16, h: 19, body: '#3a5a3a', belly: '#7aae5a', outline: '#12200e', eye: 'glow', eyeColor: '#dfffa0', feature: 'hat', accent: '#9ee06a' },
+  bebeserpent: { w: 14, h: 13, body: '#7a2a14', belly: '#ff8a3a', outline: '#1a0a05', eye: 'glow', eyeColor: '#ffd24a', feature: 'spikes', accent: '#ff5522' },
+  zombie: { w: 17, h: 19, body: '#5a6a4a', belly: '#7a8a5a', outline: '#161d10', eye: 'glow', eyeColor: '#9ee06a', feature: 'none', accent: '#3a4a2a' },
+  araigneemini: { w: 16, h: 13, body: '#3a2c5a', belly: '#5a4a7a', outline: '#140f24', eye: 'glow', eyeColor: '#c78aff', feature: 'spider', accent: '#8a5cff' },
 };
 
-/** Recettes des boss (plus grands), accordées au thème de leur zone. */
+/** Recettes des boss (plus grands), accordées à leur nouvelle identité. */
 export const BOSS_RECIPES: Record<string, Recipe> = {
-  araignee: { w: 30, h: 26, body: '#3a5a4a', belly: '#5fae7a', outline: '#0f2018', eye: 'glow', eyeColor: '#bff7f6', feature: 'spider', accent: '#2a8a4e' },
-  crapaudroi: { w: 32, h: 28, body: '#4a7a3a', belly: '#b8d97a', outline: '#141f0e', eye: 'angry', eyeColor: '#dfff9a', feature: 'none', accent: '#33591f' },
-  golem: { w: 32, h: 30, body: '#2e211c', belly: '#ff7a2a', outline: '#0e0705', eye: 'glow', eyeColor: '#ffb020', feature: 'spikes', accent: '#ff5522' },
-  roi: { w: 32, h: 30, body: '#1e2436', belly: '#4a3a6a', outline: '#090d18', eye: 'glow', eyeColor: '#f2a53a', feature: 'crown', accent: '#f4c430' },
+  // Centaure archer — bête sylvestre à bois, teintes terreuses/vertes
+  centaure: { w: 30, h: 30, body: '#6a4a2e', belly: '#a67a44', outline: '#1a0f08', eye: 'glow', eyeColor: '#dfffa0', feature: 'horns', accent: '#59d9a0' },
+  // Gobu géant — énorme gobelin vert à grandes oreilles
+  gobugeant: { w: 34, h: 30, body: '#5a7a3a', belly: '#a8d06a', outline: '#16240e', eye: 'angry', eyeColor: '#dfff9a', feature: 'ears', accent: '#33591f' },
+  // Serpent de lave — créature ophidienne incandescente
+  serpentlave: { w: 30, h: 26, body: '#2a120a', belly: '#ff7a2a', outline: '#0e0503', eye: 'glow', eyeColor: '#ffe08a', feature: 'spikes', accent: '#ff5522' },
+  // Archimage mort-vivant — sorcier squelettique à chapeau
+  archimage: { w: 30, h: 32, body: '#2a2440', belly: '#5a4a7a', outline: '#0e0b1a', eye: 'glow', eyeColor: '#c78aff', feature: 'hat', accent: '#8a5cff' },
 };

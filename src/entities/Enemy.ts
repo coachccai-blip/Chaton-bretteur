@@ -110,6 +110,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       case 'healer': this.updateHealer(now, dir, dist, spd); break;
       case 'shielder': this.updateShielder(now, dir, dist, spd); break;
       case 'bomber': this.updateBomber(now, dir, dist, spd); break;
+      case 'bossheal': this.updateBossHeal(now, dir, dist, spd); break;
     }
 
     this.applyStatusTint(frozen);
@@ -364,6 +365,26 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
           if (!this.alive || !t.isAlive()) return;
           t.healBy(Math.round(t.maxHp * 0.2));
           this.gs.beam(this.x, this.y - 10, t.x, t.y - 10, 0x6ad46a);
+        });
+      }
+    }
+  }
+
+  // -- Druide : soigne le BOSS (fuit le joueur) --
+  private updateBossHeal(now: number, dir: Phaser.Math.Vector2, dist: number, spd: number): void {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    const range = this.def.attack?.range ?? 240;
+    if (dist < range) body.setVelocity(-dir.x * spd, -dir.y * spd);
+    else body.setVelocity(-dir.y * spd * 0.4, dir.x * spd * 0.4);
+    if (this.aiState === 'idle' && now >= this.nextActionAt) {
+      this.nextActionAt = now + (this.def.attack?.cooldown ?? 2600);
+      const boss = this.gs.boss;
+      if (boss && boss.isAlive()) {
+        this.beginTelegraph(now, 400, 0x6ad46a, () => {
+          const b = this.gs.boss;
+          if (!this.alive || !b || !b.isAlive()) return;
+          b.healBy(Math.round(b.maxHp * 0.03));
+          this.gs.beam(this.x, this.y - 10, b.x, b.y - 10, 0x6ad46a);
         });
       }
     }

@@ -84,9 +84,13 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     const body = this.body as Phaser.Physics.Arcade.Body;
 
     if (!this.busy && !frozen) {
-      // maintien d'une distance moyenne
       const spd = this.phase.speed * this.gs.enemyTimeScale;
-      if (dist > 220) body.setVelocity(dir.x * spd, dir.y * spd);
+      if (this.phase.movement === 'slither') {
+        // serpente : avance vers le joueur en ondulant
+        const perp = new Phaser.Math.Vector2(-dir.y, dir.x);
+        const wobble = Math.sin(this.bobT * 3) * 0.9;
+        body.setVelocity((dir.x + perp.x * wobble) * spd, (dir.y + perp.y * wobble) * spd);
+      } else if (dist > 220) body.setVelocity(dir.x * spd, dir.y * spd);
       else if (dist < 120) body.setVelocity(-dir.x * spd * 0.6, -dir.y * spd * 0.6);
       else body.setVelocity(-dir.y * spd * 0.4, dir.x * spd * 0.4);
 
@@ -130,8 +134,11 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.busy = true;
     (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     this.setTintFill(0xffffff);
-    this.gs.tweens.add({ targets: this, scaleX: this.def.scale * 1.12, scaleY: this.def.scale * 1.12, duration: m.telegraph, ease: 'Sine.easeInOut' });
-    this.gs.time.delayedCall(m.telegraph, () => {
+    // moves à télégraphe interne : brève amorce seulement
+    const selfTel = m.type === 'arrowRain' || m.type === 'mudFlood' || m.type === 'glyphs' || m.type === 'geysers' || m.type === 'diveBomb' || m.type === 'teleport';
+    const windup = selfTel ? 320 : m.telegraph;
+    this.gs.tweens.add({ targets: this, scaleX: this.def.scale * 1.12, scaleY: this.def.scale * 1.12, duration: windup, ease: 'Sine.easeInOut' });
+    this.gs.time.delayedCall(windup, () => {
       if (!this.alive) { this.busy = false; return; }
       this.clearTint();
       this.setScale(this.def.scale);
@@ -293,32 +300,79 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         done(n * 90 + tel + 200);
         break;
       }
-      case 'poolShot': {
-        const n = m.count ?? 3;
-        const r = m.radius ?? 48;
+      case 'arrowRain': {
+        // pluie de flèches télégraphiées un peu partout
+        const n = m.count ?? 6;
+        const r = m.radius ?? 46;
         for (let k = 0; k < n; k++) {
-          const tx = (p ? p.x : this.x) + Phaser.Math.Between(-90, 90);
-          const ty = (p ? p.y : this.y) + Phaser.Math.Between(-90, 90);
-          this.gs.time.delayedCall(k * 130, () => {
-            if (this.alive) this.gs.spawnHazardZone(tx, ty, r, m.hazard ?? 'toxic', 320, m.duration ?? 4000);
+          this.gs.time.delayedCall(k * 90, () => {
+            if (!this.alive) return;
+            let tx: number, ty: number;
+            if (k === 0 && p) { tx = p.x; ty = p.y; } else { const pt = this.gs.arenaPoint(50); tx = pt.x; ty = pt.y; }
+            this.gs.telegraphCircle(tx, ty, r, col, 520, () => { if (this.alive) this.gs.eruptAt(tx, ty, r, col, m.damage ?? 16); });
           });
         }
-        this.gs.juice.burst(this.x, this.y, col, 8, 140, 1);
-        done(240);
+        done(n * 90 + 300);
         break;
       }
-      case 'webTrap': {
+      case 'mudFlood': {
+        // inonde toute l'arène SAUF quelques zones d'esquive
+        this.gs.floodArena(m.safeCount ?? 3, m.radius ?? 70, m.telegraph, m.damage ?? 26, m.hazard ?? 'toxic', col);
+        done(m.telegraph + 400);
+        break;
+      }
+      case 'roll': {
+        // se met en boule et roule très vite en rebondissant
+        const dur = m.duration ?? 1800;
+        const body = this.body as Phaser.Physics.Arcade.Body;
+        body.setBounce(1, 1);
+        const d = p ? new Phaser.Math.Vector2(p.x - this.x, p.y - this.y).normalize() : dir;
+        body.setVelocity(d.x * (m.chargeSpeed ?? 600), d.y * (m.chargeSpeed ?? 600));
+        this.gs.tweens.add({ targets: this, angle: 360 * 4, duration: dur, ease: 'Linear' });
+        this.gs.juice.burst(this.x, this.y, col, 12, 160, 1.2);
+        this.gs.time.delayedCall(dur, () => {
+          if (this.alive) { (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0).setBounce(0.1, 0.1); this.setAngle(0); }
+        });
+        done(dur + 200);
+        break;
+      }
+      case 'teleport': {
+        this.gs.juice.burst(this.x, this.y, col, 14, 200, 1.4);
+        this.gs.juice.ring(this.x, this.y, 60, col, 300);
+        const pt = this.gs.arenaPoint(90);
+        this.gs.tweens.add({ targets: this, alpha: 0, duration: 160, onComplete: () => {
+          if (!this.alive) return;
+          this.setPosition(pt.x, pt.y);
+          this.gs.juice.ring(pt.x, pt.y, 60, col, 300);
+          this.gs.tweens.add({ targets: this, alpha: 1, duration: 160 });
+        }});
+        done(400);
+        break;
+      }
+      case 'glyphs': {
+        // pose des glyphes explosifs au sol (autour du joueur + aléatoire)
         const n = m.count ?? 3;
-        const r = m.radius ?? 52;
+        const r = m.radius ?? 60;
         for (let k = 0; k < n; k++) {
-          const tx = (p ? p.x : this.x) + Phaser.Math.Between(-90, 90);
-          const ty = (p ? p.y : this.y) + Phaser.Math.Between(-90, 90);
-          this.gs.spawnHazardZone(tx, ty, r, m.hazard ?? 'web', 260, m.duration ?? 5000);
+          let tx: number, ty: number;
+          if (p && k < 2) { tx = p.x + Phaser.Math.Between(-70, 70); ty = p.y + Phaser.Math.Between(-70, 70); }
+          else { const pt = this.gs.arenaPoint(60); tx = pt.x; ty = pt.y; }
+          this.gs.time.delayedCall(k * 120, () => {
+            if (!this.alive) return;
+            this.gs.glyph(tx, ty, r, col, m.telegraph, m.damage ?? 22);
+          });
         }
-        done(220);
+        done(n * 120 + m.telegraph + 200);
         break;
       }
     }
+  }
+
+  healBy(amount: number): void {
+    if (!this.alive) return;
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+    this.gs.events.emit('bossHp', this.hp, this.maxHp);
+    this.gs.juice.burst(this.x, this.y - 10, 0x6ad46a, 5, 100, 0.7);
   }
 
   // ---------- statuts & réactions (les boss résistent) ----------

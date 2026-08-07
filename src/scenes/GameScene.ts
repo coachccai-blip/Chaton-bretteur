@@ -455,9 +455,9 @@ export class GameScene extends Phaser.Scene {
 
   spawnEnemy(id: string, x: number, y: number, diff = getDifficulty(RunState.difficultyId)): Enemy {
     const def = ENEMIES[id];
-    // montée en puissance par zone : force le joueur à construire des synergies
-    const zoneHp = 1 + this.zone.index * 0.35;
-    const zoneDmg = 1 + this.zone.index * 0.2;
+    // difficulté croissante : par zone ET par salle dans la zone
+    const zoneHp = (1 + this.zone.index * 0.5) * (1 + this.combatDone * 0.05);
+    const zoneDmg = (1 + this.zone.index * 0.3) * (1 + this.combatDone * 0.03);
     const e = new Enemy(this, x, y, def, diff.enemyHp * zoneHp, diff.enemyDamage * zoneDmg);
     this.enemies.add(e);
     this.activeEnemies.add(e);
@@ -466,6 +466,7 @@ export class GameScene extends Phaser.Scene {
 
   summonMinions(x: number, y: number, id: string, count: number): void {
     if (this.roomState === 'over') return;
+    if (this.activeEnemies.size > 24) return; // évite l'accumulation d'adds
     for (let i = 0; i < count; i++) {
       const ang = (i / count) * Math.PI * 2;
       const px = Phaser.Math.Clamp(x + Math.cos(ang) * 50, ARENA.x + 20, ARENA.x + ARENA.w - 20);
@@ -1025,6 +1026,65 @@ export class GameScene extends Phaser.Scene {
     this.juice.popText(x, y - 34, name, '#ffffff', 15);
     this.juice.shake(110, 0.005);
     this.sfx('reaction');
+  }
+
+  /** Déluge : couvre l'arène de danger sauf quelques zones sûres (Gobu Géant). */
+  floodArena(safeCount: number, safeR: number, telegraph: number, damage: number, hazard: HazardType, color: number): void {
+    const safe: { x: number; y: number }[] = [];
+    for (let i = 0; i < safeCount; i++) safe.push(this.arenaPoint(safeR + 30));
+    const g = this.add.graphics().setDepth(4);
+    this.tweens.addCounter({
+      from: 0, to: 1, duration: telegraph,
+      onUpdate: (tw) => {
+        const v = tw.getValue() ?? 0;
+        g.clear();
+        g.fillStyle(color, 0.18 + 0.14 * v);
+        g.fillRect(ARENA.x, ARENA.y, ARENA.w, ARENA.h);
+        for (const s of safe) {
+          g.fillStyle(0x6ad46a, 0.28); g.fillCircle(s.x, s.y, safeR);
+          g.lineStyle(3, 0xbfffbf, 0.9); g.strokeCircle(s.x, s.y, safeR);
+        }
+      },
+      onComplete: () => {
+        g.destroy();
+        if (this.roomState === 'over') return;
+        this.juice.shake(280, 0.012);
+        this.sfx('special');
+        const p = this.player;
+        if (p && !p.dead) {
+          const inSafe = safe.some((s) => Phaser.Math.Distance.Between(p.x, p.y, s.x, s.y) < safeR);
+          if (!inSafe) p.takeDamage(damage, p.x, p.y);
+        }
+        // boue résiduelle partout sauf zones sûres
+        for (let gx = ARENA.x + 60; gx < ARENA.x + ARENA.w - 40; gx += 110) {
+          for (let gy = ARENA.y + 60; gy < ARENA.y + ARENA.h - 40; gy += 110) {
+            if (safe.some((s) => Phaser.Math.Distance.Between(gx, gy, s.x, s.y) < safeR + 30)) continue;
+            this.spawnHazardZone(gx, gy, 58, hazard, 0, 2200);
+          }
+        }
+      },
+    });
+  }
+
+  /** Glyphe explosif au sol (Archimage) : rune tournante télégraphiée puis explosion. */
+  glyph(x: number, y: number, r: number, color: number, telegraph: number, damage: number): void {
+    const g = this.add.graphics().setDepth(4);
+    this.tweens.addCounter({
+      from: 0, to: 1, duration: telegraph,
+      onUpdate: (tw) => {
+        const v = tw.getValue() ?? 0;
+        const rot = v * Math.PI * 3;
+        g.clear();
+        g.fillStyle(color, 0.1 + 0.14 * v); g.fillCircle(x, y, r * (0.4 + 0.6 * v));
+        g.lineStyle(2.5, color, 0.8); g.strokeCircle(x, y, r);
+        g.lineStyle(2, 0xffffff, 0.5); g.strokeCircle(x, y, r * 0.6);
+        for (let k = 0; k < 6; k++) {
+          const a = rot + (k / 6) * Math.PI * 2;
+          g.lineBetween(x + Math.cos(a) * r * 0.25, y + Math.sin(a) * r * 0.25, x + Math.cos(a) * r * 0.9, y + Math.sin(a) * r * 0.9);
+        }
+      },
+      onComplete: () => { g.destroy(); if (this.roomState !== 'over') this.eruptAt(x, y, r, color, damage); },
+    });
   }
 
   private updateFriendlyShots(now: number, dt: number): void {

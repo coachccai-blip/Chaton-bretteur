@@ -19,7 +19,7 @@ export const ZONES: ZoneDef[] = [
   {
     // Forêt sombre et enchantée : vert profond mousse, lueur turquoise-émeraude
     id: 'foret', name: 'La Forêt des Ronces', index: 0, rooms: 6,
-    enemyPool: ['slime', 'champignon', 'chauvesouris', 'fee'],
+    enemyPool: ['slime', 'champignon', 'chauvesouris', 'fee', 'loup'],
     bossId: 'araignee', hazard: 'thorns',
     palette: { floor: 0x1f3a2a, floorAlt: 0x18301f, wall: 0x14261a, accent: 0x59d9a0, fog: 0x0a1710 },
   },
@@ -33,14 +33,14 @@ export const ZONES: ZoneDef[] = [
   {
     // Forge de braise : charbon sombre, lave et braises orangées
     id: 'forge', name: 'La Forge de Braise', index: 2, rooms: 7,
-    enemyPool: ['diablotin', 'chienlave', 'armure', 'gardien'],
+    enemyPool: ['diablotin', 'chienlave', 'armure', 'gardien', 'drake'],
     bossId: 'golem', hazard: 'lava',
     palette: { floor: 0x2c211d, floorAlt: 0x241a16, wall: 0x1c1310, accent: 0xff7a2a, fog: 0x120a07 },
   },
   {
     // Citadelle des ombres : pierre bleu-nuit, torches chaudes, spectres violets
     id: 'citadelle', name: 'La Citadelle des Ombres', index: 3, rooms: 7,
-    enemyPool: ['fantome', 'squelette', 'sorcier'],
+    enemyPool: ['fantome', 'squelette', 'sorcier', 'archer'],
     bossId: 'roi', hazard: 'shadow',
     palette: { floor: 0x1c2436, floorAlt: 0x161d2e, wall: 0x121829, accent: 0xf2a53a, fog: 0x090d18 },
   },

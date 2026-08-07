@@ -1,4 +1,4 @@
-export type Behavior = 'chaser' | 'charger' | 'shooter' | 'exploder' | 'tank' | 'summoner' | 'healer' | 'shielder' | 'bomber';
+export type Behavior = 'chaser' | 'charger' | 'shooter' | 'exploder' | 'tank' | 'summoner' | 'healer' | 'shielder' | 'bomber' | 'bossheal';
 
 /** Attaque signature d'un monstre (télégraphiée, esquive au skill). */
 export interface EnemySignature {
@@ -145,5 +145,50 @@ export const ENEMIES: Record<string, EnemyDef> = {
     id: 'gardien', name: 'Gardien de Braise', sprite: 'gardien', behavior: 'shielder',
     hp: 110, speed: 52, damage: 14, scale: 1.15,
     attack: { cooldown: 4200, range: 170 }, // range = rayon de bouclier
+  },
+
+  // ---- Bestiaire créatif ----
+  // Forêt : Loup — chargeur rapide (bonds répétés).
+  loup: {
+    id: 'loup', name: 'Loup Sylvestre', sprite: 'loup', behavior: 'charger',
+    hp: 40, speed: 130, damage: 14, scale: 1,
+    attack: { telegraph: 480, cooldown: 1500, range: 340, chargeSpeed: 560 },
+    signature: { type: 'leap', telegraph: 460, cooldown: 3200, damage: 15, range: 320, radius: 54, speed: 1, color: 0xffd24a },
+  },
+  // Forge : Drake — cracheur de feu (salve + souffle).
+  drake: {
+    id: 'drake', name: 'Drakelin', sprite: 'drake', behavior: 'shooter',
+    hp: 46, speed: 104, damage: 12, scale: 1.05,
+    attack: { telegraph: 520, cooldown: 1800, range: 300, projectileSpeed: 240, projectileDamage: 12 },
+    signature: { type: 'spread', telegraph: 560, cooldown: 3000, damage: 12, count: 5, speed: 250, range: 320, color: 0xff6a1f },
+  },
+  // Citadelle : Archer squelette — flèches visées à hitbox prévisionnelle.
+  archer: {
+    id: 'archer', name: 'Archer Squelette', sprite: 'archer', behavior: 'shooter',
+    hp: 34, speed: 80, damage: 10, scale: 1,
+    attack: { telegraph: 620, cooldown: 2000, range: 340, projectileSpeed: 300, projectileDamage: 14 },
+    signature: { type: 'spread', telegraph: 640, cooldown: 3400, damage: 12, count: 3, speed: 300, range: 380, color: 0xbff7f6 },
+  },
+
+  // ---- Adds invoqués par les boss ----
+  druide: { // soigne le boss
+    id: 'druide', name: 'Druide', sprite: 'druide', behavior: 'bossheal',
+    hp: 30, speed: 96, damage: 6, scale: 0.9,
+    attack: { cooldown: 2600, range: 240 },
+  },
+  bebeserpent: {
+    id: 'bebeserpent', name: 'Serpenteau', sprite: 'bebeserpent', behavior: 'chaser',
+    hp: 20, speed: 150, damage: 10, scale: 0.85,
+    attack: { cooldown: 600 },
+  },
+  zombie: {
+    id: 'zombie', name: 'Zombie', sprite: 'zombie', behavior: 'chaser',
+    hp: 60, speed: 58, damage: 12, scale: 1.05,
+    attack: { cooldown: 900 },
+  },
+  araigneemini: {
+    id: 'araigneemini', name: 'Araignignon', sprite: 'araigneemini', behavior: 'chaser',
+    hp: 22, speed: 138, damage: 9, scale: 0.85,
+    attack: { cooldown: 700 },
   },
 };
