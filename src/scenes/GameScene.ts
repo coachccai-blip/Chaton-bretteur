@@ -17,8 +17,23 @@ import type { IEnemyLike } from '../config/types';
 import type { PowerDef } from '../config/powers';
 
 const ARENA = { x: 28, y: 64, w: 904, h: 452 };
+export const ARENA_RECT = ARENA;
 
-interface Hazard { x: number; y: number; r: number; type: ZoneDef['hazard']; nextTick: number; }
+type HazardType = 'thorns' | 'toxic' | 'lava' | 'shadow' | 'web' | 'fire';
+interface Hazard {
+  x: number; y: number; r: number; type: HazardType;
+  nextTick: number; activeAt: number; expireAt: number;
+}
+
+/** dégâts / effets par type de zone au sol. */
+const HAZARD_FX: Record<HazardType, { dmg: number; tick: number; slow: number; poison: boolean; color: number }> = {
+  thorns: { dmg: 4, tick: 700, slow: 1, poison: false, color: 0x6a2a3a },
+  toxic: { dmg: 3, tick: 700, slow: 0.55, poison: true, color: 0x4a7a2a },
+  lava: { dmg: 9, tick: 500, slow: 1, poison: false, color: 0xff5a1f },
+  fire: { dmg: 10, tick: 400, slow: 1, poison: false, color: 0xff8a1f },
+  web: { dmg: 0, tick: 999, slow: 0.4, poison: false, color: 0xcfc0ff },
+  shadow: { dmg: 0, tick: 999, slow: 1, poison: false, color: 0x2a1a4a },
+};
 
 export class GameScene extends Phaser.Scene {
   player!: Player;
@@ -36,6 +51,7 @@ export class GameScene extends Phaser.Scene {
   private wavesTotal = 1;
   private floor!: Phaser.GameObjects.TileSprite;
   private hazards: Hazard[] = [];
+  private bossHazards: Hazard[] = [];
   private hazardGfx!: Phaser.GameObjects.Graphics;
   private reviveAvailable = false;
   private poisonUntil = 0;
@@ -99,6 +115,8 @@ export class GameScene extends Phaser.Scene {
     this.projectiles.clear(true, true);
     this.activeEnemies.forEach((e) => e.destroy());
     this.activeEnemies.clear();
+    this.hazards = [];
+    this.bossHazards = [];
     this.zone = ZONES[index];
     RunState.zoneIndex = index;
     RunState.roomIndex = 0;
@@ -166,15 +184,24 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  spawnEnemyProjectile(x: number, y: number, dx: number, dy: number, speed: number, damage: number, status?: 'poison' | 'freeze'): void {
+  spawnEnemyProjectile(x: number, y: number, dx: number, dy: number, speed: number, damage: number, status?: 'poison' | 'freeze', tint?: number): void {
     const diff = getDifficulty(RunState.difficultyId);
-    const p = new Projectile(this, x, y, dx * speed, dy * speed, damage * diff.enemyDamage, status);
+    const p = new Projectile(this, x, y, dx * speed, dy * speed, damage * diff.enemyDamage, status, tint);
     this.projectiles.add(p);
+  }
+
+  /** Point aléatoire dans l'arène (pour geysers, etc.). */
+  arenaPoint(margin = 70): { x: number; y: number } {
+    return {
+      x: Phaser.Math.Between(ARENA.x + margin, ARENA.x + ARENA.w - margin),
+      y: Phaser.Math.Between(ARENA.y + margin, ARENA.y + ARENA.h - margin),
+    };
   }
 
   private startBoss(): void {
     this.roomState = 'boss';
     this.hazards = [];
+    this.bossHazards = [];
     this.hazardGfx.clear();
     const def = BOSSES[this.zone.bossId];
     const diff = getDifficulty(RunState.difficultyId);
@@ -253,6 +280,7 @@ export class GameScene extends Phaser.Scene {
 
   onBossKilled(b: Boss): void {
     this.boss = null;
+    this.bossHazards = [];
     AudioManager.play('bossdie');
     // slow-mo + shake + particules
     this.time.timeScale = 0.35;
@@ -348,28 +376,122 @@ export class GameScene extends Phaser.Scene {
     const n = Phaser.Math.Between(2, 4);
     for (let i = 0; i < n; i++) {
       const pos = this.randomSpawnPos();
-      this.hazards.push({ x: pos.x, y: pos.y, r: Phaser.Math.Between(30, 50), type: this.zone.hazard, nextTick: 0 });
+      this.hazards.push({ x: pos.x, y: pos.y, r: Phaser.Math.Between(30, 50), type: this.zone.hazard as HazardType, nextTick: 0, activeAt: 0, expireAt: Number.MAX_SAFE_INTEGER });
     }
+  }
+
+  /** Zone au sol dynamique (attaque de boss) : télégraphe puis active pendant `duration`. */
+  spawnHazardZone(x: number, y: number, r: number, type: HazardType, telegraphMs: number, duration: number): void {
+    const now = performance.now();
+    x = Phaser.Math.Clamp(x, ARENA.x + 10, ARENA.x + ARENA.w - 10);
+    y = Phaser.Math.Clamp(y, ARENA.y + 10, ARENA.y + ARENA.h - 10);
+    this.bossHazards.push({ x, y, r, type, nextTick: now + telegraphMs, activeAt: now + telegraphMs, expireAt: now + telegraphMs + duration });
   }
 
   private updateHazards(now: number): void {
     this.hazardGfx.clear();
-    if (this.hazards.length === 0) return;
-    const colorMap: Record<string, number> = { thorns: 0x6a2a3a, toxic: 0x4a7a2a, lava: 0xff5a1f, shadow: 0x2a1a4a };
-    let inSlow = false;
-    for (const h of this.hazards) {
-      const col = colorMap[h.type] ?? 0x333333;
-      this.hazardGfx.fillStyle(col, 0.35);
-      this.hazardGfx.fillCircle(h.x, h.y, h.r);
-      this.hazardGfx.lineStyle(2, col, 0.7);
-      this.hazardGfx.strokeCircle(h.x, h.y, h.r);
-      if (this.player && !this.player.dead && Phaser.Math.Distance.Between(this.player.x, this.player.y, h.x, h.y) < h.r) {
-        if (h.type === 'toxic') { inSlow = true; if (now >= h.nextTick) { h.nextTick = now + 700; this.player.takeHazardDamage(3); } }
-        else if (h.type === 'lava') { if (now >= h.nextTick) { h.nextTick = now + 600; this.player.takeHazardDamage(8); } }
-        else if (h.type === 'thorns') { if (now >= h.nextTick) { h.nextTick = now + 700; this.player.takeHazardDamage(4); } }
+    this.bossHazards = this.bossHazards.filter((h) => now < h.expireAt);
+    let slowMul = 1;
+    const px = this.player?.x ?? -999, py = this.player?.y ?? -999;
+    const playerAlive = this.player && !this.player.dead;
+
+    for (const h of [...this.hazards, ...this.bossHazards]) {
+      const fx = HAZARD_FX[h.type];
+      const telegraphing = now < h.activeAt;
+      if (telegraphing) {
+        // télégraphe pulsant (contour d'avertissement)
+        const pulse = 0.35 + 0.35 * Math.abs(Math.sin(now * 0.012));
+        this.hazardGfx.lineStyle(3, 0xff3a3a, pulse);
+        this.hazardGfx.strokeCircle(h.x, h.y, h.r);
+        this.hazardGfx.fillStyle(fx.color, 0.12);
+        this.hazardGfx.fillCircle(h.x, h.y, h.r * 0.9);
+      } else {
+        this.hazardGfx.fillStyle(fx.color, 0.32);
+        this.hazardGfx.fillCircle(h.x, h.y, h.r);
+        this.hazardGfx.lineStyle(2, fx.color, 0.7);
+        this.hazardGfx.strokeCircle(h.x, h.y, h.r);
+        if (playerAlive && Phaser.Math.Distance.Between(px, py, h.x, h.y) < h.r) {
+          if (fx.slow < 1) slowMul = Math.min(slowMul, fx.slow);
+          if (fx.dmg > 0 && now >= h.nextTick) {
+            h.nextTick = now + fx.tick;
+            this.player.takeHazardDamage(fx.dmg);
+            if (fx.poison) this.poisonPlayer();
+          }
+        }
       }
     }
-    if (this.player) this.player.slowFactor = inSlow ? 0.55 : 1;
+    if (this.player) this.player.slowFactor = slowMul;
+  }
+
+  // ---------------- VFX & télégraphes d'attaques (pixel art) ----------------
+  /** Cercle d'avertissement qui se remplit, puis éruption (cb) — geysers, plongeons. */
+  telegraphCircle(x: number, y: number, r: number, color: number, ms: number, cb: () => void): void {
+    const g = this.add.graphics().setDepth(4);
+    this.tweens.addCounter({
+      from: 0, to: 1, duration: ms,
+      onUpdate: (tw) => {
+        const v = tw.getValue() ?? 0;
+        g.clear();
+        g.lineStyle(3, 0xff3a3a, 0.5 + 0.4 * Math.abs(Math.sin(v * 22)));
+        g.strokeCircle(x, y, r);
+        g.fillStyle(color, 0.22);
+        g.fillCircle(x, y, r * v);
+      },
+      onComplete: () => { g.destroy(); if (this.roomState !== 'over') cb(); },
+    });
+  }
+
+  /** Éruption/impact : anneau + gerbe de pixels + dégâts dans le rayon. */
+  eruptAt(x: number, y: number, r: number, color: number, damage: number, hazard?: HazardType, hazardDur = 1200): void {
+    this.juice.ring(x, y, r, color, 280);
+    this.juice.burst(x, y, color, 16, 220, 1.4);
+    this.juice.shake(160, 0.006);
+    // colonne de pixels vers le haut
+    const col = this.add.particles(x, y, 'px', {
+      speedY: { min: -260, max: -120 }, speedX: { min: -40, max: 40 },
+      scale: { start: 1.6, end: 0 }, lifespan: 420, quantity: 14, tint: color, blendMode: 'ADD', emitting: false,
+    }).setDepth(30);
+    col.explode(14);
+    this.time.delayedCall(500, () => col.destroy());
+    if (this.player && !this.player.dead && Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) <= r) {
+      this.player.takeDamage(damage, x, y); // esquivable au dash (i-frames)
+    }
+    if (hazard) this.spawnHazardZone(x, y, r * 0.85, hazard, 0, hazardDur);
+  }
+
+  /**
+   * Attaque en ligne télégraphiée (langue, faisceau). Depuis (x,y), angle, longueur/largeur.
+   * Dessine un rail d'avertissement, puis frappe la bande.
+   */
+  telegraphLine(x: number, y: number, angle: number, length: number, width: number, color: number, ms: number, damage: number, hazard?: HazardType, hazardDur = 2000): void {
+    const rect = this.add.rectangle(x, y, length, width, color, 0.18).setOrigin(0, 0.5).setRotation(angle).setDepth(4);
+    rect.setStrokeStyle(2, 0xff3a3a, 0.8);
+    this.tweens.add({ targets: rect, alpha: 0.38, duration: ms, ease: 'Sine.easeIn' });
+    this.time.delayedCall(ms, () => {
+      if (this.roomState === 'over') { rect.destroy(); return; }
+      // flash actif
+      rect.setFillStyle(color, 0.7);
+      const cos = Math.cos(angle), sin = Math.sin(angle);
+      // dégâts si le joueur est dans la bande
+      const p = this.player;
+      if (p && !p.dead) {
+        const dx = p.x - x, dy = p.y - y;
+        const along = dx * cos + dy * sin;
+        const perp = -dx * sin + dy * cos;
+        if (along >= -10 && along <= length && Math.abs(perp) <= width / 2 + 6) p.takeDamage(damage, x, y);
+      }
+      // gerbe de pixels le long de la ligne
+      for (let d = 0; d < length; d += 40) {
+        this.juice.burst(x + cos * d, y + sin * d, color, 4, 100, 0.8);
+      }
+      // flaque persistante optionnelle (crossBeams lave)
+      if (hazard) {
+        for (let d = 40; d < length; d += 70) {
+          this.spawnHazardZone(x + cos * d, y + sin * d, width * 0.7, hazard, 0, hazardDur);
+        }
+      }
+      this.tweens.add({ targets: rect, alpha: 0, duration: 160, onComplete: () => rect.destroy() });
+    });
   }
 
   update(time: number, delta: number): void {

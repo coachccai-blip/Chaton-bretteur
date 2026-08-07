@@ -7,7 +7,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   status?: 'poison' | 'freeze';
   private dieAt: number;
 
-  constructor(scene: GameScene, x: number, y: number, vx: number, vy: number, damage: number, status?: 'poison' | 'freeze') {
+  constructor(scene: GameScene, x: number, y: number, vx: number, vy: number, damage: number, status?: 'poison' | 'freeze', tint?: number) {
     super(scene, x, y, 'orb');
     this.gs = scene;
     this.damage = damage;
@@ -15,8 +15,8 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setDepth(14);
-    this.setScale(1.1);
-    this.setTint(status === 'poison' ? 0x8fd94a : 0xff5a8a);
+    this.setScale(1.2);
+    this.setTint(tint ?? (status === 'poison' ? 0x8fd94a : 0xff5a8a));
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setCircle(5, this.width / 2 - 5, this.height / 2 - 5);
     body.setVelocity(vx, vy);

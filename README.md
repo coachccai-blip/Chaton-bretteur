@@ -65,7 +65,7 @@ src/
 
 - **Ajouter un pouvoir** : une entrée dans `src/config/powers.ts` (`apply(player)` patch de stats ou hook `onHit`/`onKill`/`onDash`/`onRoomClear`).
 - **Ajouter un monstre** : une entrée dans `src/config/enemies.ts` + une recette dans `src/art/critters.ts`.
-- **Ajouter/éditer un boss** : `src/config/bosses.ts` (phases + moves télégraphiés).
+- **Ajouter/éditer un boss** : `src/config/bosses.ts`. Chaque boss a plusieurs phases et un jeu d'**attaques signatures** télégraphiées et distinctes — éventail, anneau, spirale, nova, onde de choc, saut-plongeon, langue/faisceau en ligne, faisceaux en croix, geysers, flaques persistantes (lave/toxique), pièges de toile, invocations, charge. Les VFX (télégraphes, éruptions, rails, colonnes de pixels) sont générés par code.
 - **Équilibrage** : `src/config/game.ts` et `difficulty.ts`.
 
 ## ☁️ Déploiement Netlify
