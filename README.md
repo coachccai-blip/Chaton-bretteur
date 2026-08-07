@@ -1,0 +1,77 @@
+# 🐾 Le Chaton Bretteur
+
+Un **roguelite d'action top-down** dans l'esprit de *Hades*, jouable au **clavier/souris**, à la **manette** et au **tactile** (mobile). Vous incarnez un petit chaton chevalier qui taille les monstres à l'épée à travers 4 zones, gagne des pouvoirs, et devient plus fort de run en run grâce à une progression permanente.
+
+Développé en **Phaser 3 + Vite + TypeScript**.
+
+## 🎨 Graphismes : pixel art 100 % généré par code
+
+Le brief prévoyait des assets PNG fournis séparément. Comme aucune image n'était disponible, **tous les visuels sont générés par le code** au démarrage — aucun fichier image n'est requis :
+
+- **Le chaton et l'épée** sont des sprites pixel art dessinés à la main sous forme de grilles de pixels (`src/art/hero.ts`), rendus sur des textures canvas (`PixelArtGenerator.ts`).
+- **Les monstres et les boss** sont générés par un **rasteriseur paramétrique** (`src/art/critters.ts`) : une « recette » (couleur, ventre, yeux, et une caractéristique — oreilles, cornes, ailes, chapeau, couronne, champignon, araignée…) est transformée en pixels nets. Cela donne 12 monstres et 4 boss distincts sans dessiner chacun à la main.
+- **Les icônes** (pouvoirs, HUD) sont des masques 8×8 monochromes teintés à l'usage (`src/art/icons.ts`).
+- **Les sols de zones** sont des tuiles bruitées procédurales, une palette par zone.
+- **L'audio** (SFX + musique) est lui aussi **synthétisé en direct via WebAudio** (`src/systems/AudioManager.ts`) — aucun fichier son requis.
+
+Le rendu utilise `pixelArt: true` (nearest-neighbor) pour un rendu net et « croustillant ».
+
+> Pour remplacer un visuel par un vrai PNG plus tard : chargez-le dans `BootScene` sous la même clé de texture (`cat`, `mob_slime`, `boss_araignee`, …) et il sera utilisé automatiquement.
+
+## ▶️ Lancer le jeu
+
+```bash
+npm install
+npm run dev      # serveur de dev (http://localhost:5173)
+npm run build    # build de production -> dist/
+npm run preview  # prévisualiser le build
+```
+
+## 🎮 Contrôles
+
+| Action | Clavier/Souris | Manette | Tactile |
+|---|---|---|---|
+| Déplacement | ZQSD / WASD / flèches | stick gauche | joystick (bas-gauche) |
+| Visée | souris | stick droit | direction du déplacement |
+| Attaque épée | clic gauche | ✕ / carré | bouton ⚔ |
+| Dash (i-frames) | Espace / Shift | croix (A) | bouton dash |
+| Spécial (AoE) | clic droit / E | rond (B) / gâchette | bouton spécial |
+| Pause | Échap | — | — |
+
+Combo d'épée à 3 coups (le 3ᵉ projette), dash avec invincibilité, tourbillon spécial à cooldown.
+
+## 🧭 Boucle de jeu
+
+`Menu → Camp (Hub) → Run (Forêt → Marais → Forge → Citadelle) → Mort/Victoire → Camp`
+
+- Chaque salle nettoyée = **choix d'1 pouvoir parmi 3** (temporaire, remis à zéro au run suivant) + Croquettes Dorées.
+- Chaque zone se termine par un **boss** à phases et patterns télégraphiés.
+- **Croquettes Dorées** conservées à la mort → dépensées au Camp pour des **améliorations permanentes** (sauvegarde `localStorage`).
+- 4 difficultés (Facile / Normal / Difficile / Extrême, cette dernière débloquée après un premier clear).
+
+## 🏗️ Architecture (data-driven)
+
+Le contenu vit dans des fichiers de config ; le moteur les consomme. Ajouter du contenu = ajouter une entrée.
+
+```
+src/
+  config/      game, difficulty, powers, metaUpgrades, enemies, bosses, worlds  ← toutes les données
+  art/         génération pixel art (hero, critters, icons, tiles)
+  systems/     Save, RunState, Input, Juice, Audio, PowerSystem
+  entities/    Player, Enemy, Boss, Projectile
+  scenes/      Boot, Menu, Hub, Game, UI, Reward, Pause, GameOver, Victory
+  ui/          thème (boutons, panneaux, badges d'icônes)
+```
+
+- **Ajouter un pouvoir** : une entrée dans `src/config/powers.ts` (`apply(player)` patch de stats ou hook `onHit`/`onKill`/`onDash`/`onRoomClear`).
+- **Ajouter un monstre** : une entrée dans `src/config/enemies.ts` + une recette dans `src/art/critters.ts`.
+- **Ajouter/éditer un boss** : `src/config/bosses.ts` (phases + moves télégraphiés).
+- **Équilibrage** : `src/config/game.ts` et `difficulty.ts`.
+
+## ☁️ Déploiement Netlify
+
+`netlify.toml` est fourni (build `npm run build`, publish `dist`, redirect SPA). Connectez le repo à Netlify, ou glissez-déposez le dossier `dist/` sur Netlify Drop. `base: './'` (Vite) garantit des chemins d'assets relatifs corrects.
+
+## ✅ Contenu implémenté
+
+Combat complet (combo/dash/spécial, i-frames, knockback) · 21 pouvoirs data-driven · 8 améliorations permanentes + sauvegarde · 4 difficultés · 12 monstres (6 archétypes IA télégraphiés) · 4 zones à thème + dangers d'environnement · 4 boss à phases · HUD, Camp, récompenses, game over (résumé), victoire, pause/options · juice (screen shake, hit-stop, particules, flash, slow-mo) · audio procédural · responsive desktop + mobile.

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a1224" />
+    <title>Le Chaton Bretteur</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0c0910;
+        font-family: system-ui, -apple-system, sans-serif;
+        touch-action: none;
+        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior: none;
+      }
+      #game {
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #game canvas {
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+      #loading {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #f4e9c1;
+        gap: 16px;
+        z-index: 10;
+      }
+      #loading .title { font-size: 22px; letter-spacing: 2px; font-weight: 800; }
+      #loading .paw { font-size: 42px; animation: bob 1s ease-in-out infinite; }
+      @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="loading">
+      <div class="paw">🐾</div>
+      <div class="title">LE CHATON BRETTEUR</div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
