@@ -220,26 +220,33 @@ export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
   render(scene, key, g);
 }
 
-/** Recettes des monstres (clé sprite -> recette). */
+/**
+ * Recettes des monstres, regroupées par thème de zone (couleurs cohérentes,
+ * ambiance sombre façon Dead Cells, yeux lumineux).
+ */
 export const MONSTER_RECIPES: Record<string, Recipe> = {
-  slime: { w: 18, h: 16, body: '#5fd06a', belly: '#7ee08a', outline: '#173a20', eye: 'normal', eyeColor: '#fff', feature: 'none', accent: '#3fa84e' },
-  champignon: { w: 18, h: 18, body: '#e8d9b0', belly: '#f2e8cf', outline: '#4a3520', eye: 'normal', eyeColor: '#fff', feature: 'mushroom', accent: '#d6423f' },
-  chauvesouris: { w: 20, h: 15, body: '#4a3a6a', outline: '#1a1428', eye: 'glow', eyeColor: '#f4c430', feature: 'wings', accent: '#332852' },
-  gobelin: { w: 18, h: 18, body: '#6a9a3f', belly: '#87b356', outline: '#25381a', eye: 'angry', eyeColor: '#fff', feature: 'ears', accent: '#4a6a2a' },
-  crapaud: { w: 20, h: 16, body: '#5a8a4a', belly: '#c9d98d', outline: '#25381a', eye: 'normal', eyeColor: '#fff', feature: 'none', accent: '#3a5a2a' },
-  bulle: { w: 18, h: 17, body: '#9d6ad6', belly: '#c39bea', outline: '#3a2050', eye: 'normal', eyeColor: '#fff', feature: 'none', accent: '#7a4ab0' },
-  diablotin: { w: 17, h: 18, body: '#d6423f', belly: '#e87a5a', outline: '#3a1420', eye: 'angry', eyeColor: '#ffd24a', feature: 'horns', accent: '#8f281d' },
-  chienlave: { w: 20, h: 16, body: '#3a2420', belly: '#ff6a1f', outline: '#1a0d0a', eye: 'glow', eyeColor: '#ffb020', feature: 'spikes', accent: '#ff5522' },
-  armure: { w: 18, h: 20, body: '#7a8494', belly: '#9aa4b4', outline: '#20262e', eye: 'glow', eyeColor: '#59c8ff', feature: 'spikes', accent: '#c8d0dc' },
-  fantome: { w: 18, h: 18, body: '#dfe6f2', outline: '#5a6478', eye: 'normal', eyeColor: '#fff', feature: 'ghost', accent: '#b8c4dc' },
-  squelette: { w: 18, h: 20, body: '#e6e2d4', belly: '#cfc9b8', outline: '#3a3428', eye: 'glow', eyeColor: '#59c8ff', feature: 'skull', accent: '#9aa4b4' },
-  sorcier: { w: 18, h: 20, body: '#3a2c5a', belly: '#5a4a7a', outline: '#1a1030', eye: 'glow', eyeColor: '#b26bff', feature: 'hat', accent: '#2a1f45' },
+  // -- Forêt : émeraude / mousse, yeux turquoise --
+  slime: { w: 18, h: 16, body: '#3fae63', belly: '#6fd68f', outline: '#0f2418', eye: 'glow', eyeColor: '#bff7f6', feature: 'none', accent: '#2a8a4e' },
+  champignon: { w: 18, h: 18, body: '#d8cba8', belly: '#efe6cf', outline: '#2a2014', eye: 'normal', eyeColor: '#fff', feature: 'mushroom', accent: '#a83a34' },
+  chauvesouris: { w: 20, h: 15, body: '#2f4a52', outline: '#0e1c20', eye: 'glow', eyeColor: '#59d9a0', feature: 'wings', accent: '#1e343a' },
+  // -- Marais : vert acide toxique --
+  gobelin: { w: 18, h: 18, body: '#6a9a3f', belly: '#9fd04a', outline: '#1a2810', eye: 'angry', eyeColor: '#dfff9a', feature: 'ears', accent: '#4a6a2a' },
+  crapaud: { w: 20, h: 16, body: '#4f7a3a', belly: '#b8d97a', outline: '#16240e', eye: 'glow', eyeColor: '#dfff9a', feature: 'none', accent: '#33591f' },
+  bulle: { w: 18, h: 17, body: '#7aa83f', belly: '#c9f07a', outline: '#1e2a10', eye: 'normal', eyeColor: '#fff', feature: 'none', accent: '#557a2a' },
+  // -- Forge : charbon + braise orangée --
+  diablotin: { w: 17, h: 18, body: '#8a2a20', belly: '#e05a2a', outline: '#200a08', eye: 'glow', eyeColor: '#ffd24a', feature: 'horns', accent: '#ff6a1f' },
+  chienlave: { w: 20, h: 16, body: '#221614', belly: '#ff6a1f', outline: '#0e0705', eye: 'glow', eyeColor: '#ffb020', feature: 'spikes', accent: '#ff5522' },
+  armure: { w: 18, h: 20, body: '#4a5058', belly: '#6a727e', outline: '#12161a', eye: 'glow', eyeColor: '#ff9a3a', feature: 'spikes', accent: '#ff7a2a' },
+  // -- Citadelle : pierre bleu-nuit + spectres violets, accents chauds --
+  fantome: { w: 18, h: 18, body: '#aeb8d6', outline: '#3a4258', eye: 'glow', eyeColor: '#bff7f6', feature: 'ghost', accent: '#8a94b8' },
+  squelette: { w: 18, h: 20, body: '#dcd8c8', belly: '#b8b2a0', outline: '#2a2820', eye: 'glow', eyeColor: '#f2a53a', feature: 'skull', accent: '#7a8290' },
+  sorcier: { w: 18, h: 20, body: '#3a2c5a', belly: '#5a4a7a', outline: '#160f28', eye: 'glow', eyeColor: '#c78aff', feature: 'hat', accent: '#8a5cff' },
 };
 
-/** Recettes des boss (plus grands, plus détaillés). */
+/** Recettes des boss (plus grands), accordées au thème de leur zone. */
 export const BOSS_RECIPES: Record<string, Recipe> = {
-  araignee: { w: 30, h: 26, body: '#5a3a7a', belly: '#8a5aca', outline: '#1a1028', eye: 'glow', eyeColor: '#ff4a7a', feature: 'spider', accent: '#3a2450' },
-  crapaudroi: { w: 32, h: 28, body: '#4a7a3a', belly: '#c9d98d', outline: '#1a2810', eye: 'angry', eyeColor: '#fff', feature: 'none', accent: '#2a5a20' },
-  golem: { w: 32, h: 30, body: '#5a4a3a', belly: '#8a6a4a', outline: '#1a120a', eye: 'glow', eyeColor: '#ff6a1f', feature: 'spikes', accent: '#ff5522' },
-  roi: { w: 32, h: 30, body: '#2a2440', belly: '#4a3a6a', outline: '#0f0b1e', eye: 'glow', eyeColor: '#ff3a3a', feature: 'crown', accent: '#f4c430' },
+  araignee: { w: 30, h: 26, body: '#3a5a4a', belly: '#5fae7a', outline: '#0f2018', eye: 'glow', eyeColor: '#bff7f6', feature: 'spider', accent: '#2a8a4e' },
+  crapaudroi: { w: 32, h: 28, body: '#4a7a3a', belly: '#b8d97a', outline: '#141f0e', eye: 'angry', eyeColor: '#dfff9a', feature: 'none', accent: '#33591f' },
+  golem: { w: 32, h: 30, body: '#2e211c', belly: '#ff7a2a', outline: '#0e0705', eye: 'glow', eyeColor: '#ffb020', feature: 'spikes', accent: '#ff5522' },
+  roi: { w: 32, h: 30, body: '#1e2436', belly: '#4a3a6a', outline: '#090d18', eye: 'glow', eyeColor: '#f2a53a', feature: 'crown', accent: '#f4c430' },
 };

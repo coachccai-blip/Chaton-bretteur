@@ -21,7 +21,7 @@ import { PROPS } from '../art/environment';
 import type { IEnemyLike } from '../config/types';
 import type { PowerDef } from '../config/powers';
 
-const ARENA = { x: 28, y: 70, w: 904, h: 442 };
+const ARENA = { x: 46, y: 108, w: 868, h: 388 };
 export const ARENA_RECT = ARENA;
 
 function shade(c: number, amt: number): number {
@@ -232,6 +232,7 @@ export class GameScene extends Phaser.Scene {
     this.friendlyShots = [];
     this.enemyTimeScale = 1;
     this.combatDone = 0;
+    this.clearRoom();
     this.zone = ZONES[index];
     RunState.zoneIndex = index;
     RunState.roomIndex = 0;

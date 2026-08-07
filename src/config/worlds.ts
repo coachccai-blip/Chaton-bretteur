@@ -17,27 +17,31 @@ export interface ZoneDef {
 
 export const ZONES: ZoneDef[] = [
   {
+    // Forêt sombre et enchantée : vert profond mousse, lueur turquoise-émeraude
     id: 'foret', name: 'La Forêt des Ronces', index: 0, rooms: 6,
     enemyPool: ['slime', 'champignon', 'chauvesouris'],
     bossId: 'araignee', hazard: 'thorns',
-    palette: { floor: 0x2f5d3a, floorAlt: 0x27502f, wall: 0x1c3322, accent: 0x8a5cff, fog: 0x0d1f14 },
+    palette: { floor: 0x1f3a2a, floorAlt: 0x18301f, wall: 0x14261a, accent: 0x59d9a0, fog: 0x0a1710 },
   },
   {
+    // Marais putride : vert-gris toxique, brume malsaine, lueur acide
     id: 'marais', name: 'Les Marais Putrides', index: 1, rooms: 6,
     enemyPool: ['gobelin', 'crapaud', 'bulle'],
     bossId: 'crapaudroi', hazard: 'toxic',
-    palette: { floor: 0x4a5a3a, floorAlt: 0x3d4d30, wall: 0x2a3320, accent: 0x9d5cff, fog: 0x18200f },
+    palette: { floor: 0x2b3a2a, floorAlt: 0x233022, wall: 0x1a281a, accent: 0x9fe04a, fog: 0x0e160d },
   },
   {
+    // Forge de braise : charbon sombre, lave et braises orangées
     id: 'forge', name: 'La Forge de Braise', index: 2, rooms: 7,
     enemyPool: ['diablotin', 'chienlave', 'armure'],
     bossId: 'golem', hazard: 'lava',
-    palette: { floor: 0x3a2420, floorAlt: 0x30201c, wall: 0x241512, accent: 0xff6a1f, fog: 0x1a0d0a },
+    palette: { floor: 0x2c211d, floorAlt: 0x241a16, wall: 0x1c1310, accent: 0xff7a2a, fog: 0x120a07 },
   },
   {
+    // Citadelle des ombres : pierre bleu-nuit, torches chaudes, spectres violets
     id: 'citadelle', name: 'La Citadelle des Ombres', index: 3, rooms: 7,
     enemyPool: ['fantome', 'squelette', 'sorcier'],
     bossId: 'roi', hazard: 'shadow',
-    palette: { floor: 0x2a2440, floorAlt: 0x231e36, wall: 0x191430, accent: 0xf4c430, fog: 0x0f0b1e },
+    palette: { floor: 0x1c2436, floorAlt: 0x161d2e, wall: 0x121829, accent: 0xf2a53a, fog: 0x090d18 },
   },
 ];

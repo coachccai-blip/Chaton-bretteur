@@ -104,8 +104,21 @@ export const PROPS: SpriteDef[] = [
     rows: ['..WWWW..', '.WwwwwW.', 'WweWWeWw', 'WwwWWwwW', '.Ww##wW.', '..WwwW..', '..#..#..'] },
 ];
 
+/** Décors d'ambiance placés délibérément (torches, bannières). */
+export const DECOR: SpriteDef[] = [
+  { key: 'deco_torch', pal: { '.': null, '#': '#100e0d', 'm': '#3a3a42', 'M': '#5a5a64', 'o': '#2a1a10', 'O': '#5a3a1e' },
+    rows: ['..........', '...MMMM...', '..M####M..', '..MoOOoM..', '...####...', '....##....', '....##....', '...####...', '..M#..#M..', '.M#....#M.', '.#......#.'] },
+  { key: 'deco_banner', pal: { '.': null, 'k': '#181818', 'C': '#c8c8c8', 'd': '#888888', 'W': '#eaeaea' },
+    rows: [
+      'kkkkkkkkkkkk', 'kCCCCCCCCCCk', 'kCCCCCCCCCCk', 'kCCdddddCCCk', 'kCCdWWWWdCCk',
+      'kCCdWkkWdCCk', 'kCCdWWWWdCCk', 'kCCdWkkWdCCk', 'kCCdddddCCCk', 'kCCCCCCCCCCk',
+      'kCCCCCCCCCCk', 'kdCCCCCCCCdk', '.kCCCCCCCCk.', '.kdCCCCCCdk.', '..kCCCCCCk..',
+      '..kdCCCCdk..', '...kCCCCk...', '...kdCCdk...', '....kCCk....', '....kkkk....'] },
+];
+
 export function genProps(scene: Phaser.Scene): void {
   for (const p of PROPS) genSprite(scene, p, ART_CELL);
+  for (const d of DECOR) genSprite(scene, d, ART_CELL);
 }
 
 /** Plaque de piège (sol métallique avec fentes). */
