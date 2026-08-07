@@ -19,16 +19,16 @@ export class MenuScene extends Phaser.Scene {
       lifespan: 4000, frequency: 220, tint: 0xf4c430, blendMode: 'ADD',
     });
 
-    // héros
-    const cat = this.add.sprite(GAME_WIDTH / 2, 250, 'cat').setScale(4);
-    this.tweens.add({ targets: cat, y: 235, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    const sword = this.add.sprite(GAME_WIDTH / 2 + 60, 250, 'sword').setScale(2).setRotation(0.4);
-    this.tweens.add({ targets: sword, rotation: 0.7, y: 235, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    // héros (taille réduite + abaissé pour dégager le sous-titre au-dessus du casque)
+    const cat = this.add.sprite(GAME_WIDTH / 2, 278, 'cat').setScale(3.2);
+    this.tweens.add({ targets: cat, y: 266, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const sword = this.add.sprite(GAME_WIDTH / 2 + 52, 278, 'sword').setScale(1.6).setRotation(0.4);
+    this.tweens.add({ targets: sword, rotation: 0.7, y: 266, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
     // titre
     label(this, GAME_WIDTH / 2, 90, 'LE CHATON', 52, '#f4e9c1');
     label(this, GAME_WIDTH / 2, 140, 'BRETTEUR', 52, '#f4c430');
-    label(this, GAME_WIDTH / 2, 178, 'roguelite d’action', 16, '#9a8fb0');
+    label(this, GAME_WIDTH / 2, 170, 'roguelite d’action', 16, '#9a8fb0');
 
     button(this, GAME_WIDTH / 2, 360, 240, 56, '⚔  JOUER', () => {
       AudioManager.resume();

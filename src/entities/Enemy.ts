@@ -328,7 +328,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       else if (dist > range) body.setVelocity(dir.x * spd, dir.y * spd);
       else body.setVelocity(-dir.y * spd * 0.5, dir.x * spd * 0.5);
       if (now >= this.nextActionAt && dist <= range * 1.2) {
-        this.beginTelegraph(now, this.def.attack?.telegraph ?? 500, 0xff4a7a, () => {
+        this.beginTelegraph(now, this.def.attack?.telegraph ?? 500, 0xff5a3a, () => {
           if (summoner && Math.random() < 0.5) this.summon();
           else this.shoot(dir);
           this.nextActionAt = performance.now() + (this.def.attack?.cooldown ?? 1800);

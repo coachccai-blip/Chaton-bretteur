@@ -469,6 +469,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   destroy(fromScene?: boolean): void {
+    this.alive = false; // court-circuite les callbacks de télégraphe en attente
     this.aura?.destroy();
     this.auraEmitter?.destroy();
     this.auraRing?.destroy();

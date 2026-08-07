@@ -39,7 +39,6 @@ export class UIScene extends Phaser.Scene {
     this.add.graphics().fillStyle(COLORS.hpBack, 1).fillRoundedRect(18, 16, 264, 22, 6).setDepth(1);
     this.hpBar = this.add.graphics().setDepth(2);
     this.hpText = label(this, 150, 27, '', 13, '#ffffff').setDepth(3);
-    label(this, 30, 27, '', 12).setDepth(3);
 
     // dash / special indicators
     this.dashBadge = iconBadge(this, 310, 27, glyphTexture('dash'), COLORS.dash, COLORS.panelLight, 17).setDepth(2);
@@ -194,7 +193,6 @@ export class UIScene extends Phaser.Scene {
     mk(bx - 28, by - 78, glyphTexture('special'), COLORS.special, () => this.gs.controls.pressSpecial(), 32);
 
     // basculer visibilité selon la source d'entrée
-    this.gs.controls && this.sys.game.events; // no-op
     window.addEventListener('keydown', () => this.touchLayer.setVisible(false));
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => { if (p.wasTouch) this.touchLayer.setVisible(true); });
   }

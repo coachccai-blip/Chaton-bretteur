@@ -5,14 +5,14 @@ export const FONT = 'monospace';
 
 export function label(
   scene: Phaser.Scene, x: number, y: number, text: string,
-  size = 18, color: string = '#f4e9c1', origin = 0.5,
+  size = 18, color: string = '#f4e9c1', origin = 0.5, originY?: number,
 ): Phaser.GameObjects.Text {
   const t = scene.add.text(x, y, text, {
     fontFamily: FONT, fontSize: `${size}px`, color, fontStyle: 'bold',
     stroke: '#000000', strokeThickness: Math.max(2, size / 8),
     align: 'center', wordWrap: { width: 600 },
   });
-  t.setOrigin(origin);
+  t.setOrigin(origin, originY ?? origin);
   return t;
 }
 

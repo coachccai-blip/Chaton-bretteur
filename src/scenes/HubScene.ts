@@ -24,14 +24,14 @@ export class HubScene extends Phaser.Scene {
     label(this, GAME_WIDTH / 2, 34, 'CAMP DU CHATON', 28, '#f4c430');
     label(this, GAME_WIDTH / 2, 62, 'Dépense tes Croquettes Dorées pour devenir plus fort', 13, '#9a8fb0');
 
-    // feu de camp + chat
-    const fire = this.add.particles(90, GAME_HEIGHT - 70, 'px', {
+    // feu de camp + chat (coin bas-gauche, sous la grille de cartes)
+    const fire = this.add.particles(70, GAME_HEIGHT - 44, 'px', {
       speedY: { min: -40, max: -80 }, speedX: { min: -10, max: 10 },
-      scale: { start: 1.4, end: 0 }, lifespan: 600, frequency: 40,
+      scale: { start: 1.2, end: 0 }, lifespan: 600, frequency: 40,
       tint: [0xffd24a, 0xff6a1f, 0xe8384f], blendMode: 'ADD',
     });
     fire.setDepth(1);
-    this.add.sprite(150, GAME_HEIGHT - 78, 'cat').setScale(3).setFlipX(true);
+    this.add.sprite(128, GAME_HEIGHT - 44, 'cat').setScale(2.4).setFlipX(true);
 
     // monnaie
     const coin = iconBadge(this, GAME_WIDTH - 150, 36, glyphTexture('coin'), COLORS.gold, 0x3a2f10, 16);
@@ -109,10 +109,11 @@ export class HubScene extends Phaser.Scene {
       const canBuy = SaveSystem.canBuy(m.id);
 
       const p = panel(this, x, y, cw, ch, COLORS.panel, canBuy ? COLORS.gold : 0x4a4358, 0.95);
-      const badge = iconBadge(this, x - cw / 2 + 30, y - ch / 2 + 28, glyphTexture(m.icon), 0xf4e9c1, COLORS.panelLight, 16);
-      const name = label(this, x - cw / 2 + 52, y - ch / 2 + 22, m.name, 14, '#f4e9c1', 0);
-      const desc = label(this, x, y - 4, m.description, 11, '#c9c0d8');
-      desc.setWordWrapWidth(cw - 24);
+      const badge = iconBadge(this, x - cw / 2 + 28, y - ch / 2 + 26, glyphTexture(m.icon), 0xf4e9c1, COLORS.panelLight, 16);
+      const name = label(this, x - cw / 2 + 50, y - ch / 2 + 26, m.name, 13, '#f4e9c1', 0, 0.5);
+      // description ancrée sous le titre (grandit vers le bas -> jamais de chevauchement)
+      const desc = label(this, x, y - ch / 2 + 44, m.description, 10, '#c9c0d8', 0.5, 0);
+      desc.setWordWrapWidth(cw - 22);
       this.cardsLayer.add([p, badge, name, desc]);
 
       // pips de palier

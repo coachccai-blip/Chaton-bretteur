@@ -36,11 +36,11 @@ export const META_UPGRADES: MetaUpgradeDef[] = [
   },
   {
     id: 'lucky_cat', name: 'Chat Chanceux', icon: 'luck', maxTier: 3, costPerTier: [50, 120, 260],
-    description: 'Meilleure chance de pouvoirs rares (+8% par palier).',
+    description: 'Pouvoirs rares plus fréquents (+8% par palier).',
     apply(base, tier) { base.luck += 0.08 * tier; },
   },
   {
-    id: 'land_on_feet', name: 'Retombée sur ses Pattes', icon: 'revive', maxTier: 1, costPerTier: [300],
+    id: 'land_on_feet', name: 'Retombée Féline', icon: 'revive', maxTier: 1, costPerTier: [300],
     description: 'Une seconde chance par run (revive à 40% des PV).',
     apply() { /* lu via flag */ },
     flag: 'revive',
@@ -52,7 +52,7 @@ export const META_UPGRADES: MetaUpgradeDef[] = [
   },
   {
     id: 'arsenal', name: 'Arsenal', icon: 'combo', maxTier: 1, costPerTier: [200],
-    description: 'Débloque des pouvoirs Légendaires supplémentaires dans le pool.',
+    description: 'Ajoute des pouvoirs Légendaires au pool.',
     apply() { /* lu via flag */ },
     flag: 'arsenal',
   },

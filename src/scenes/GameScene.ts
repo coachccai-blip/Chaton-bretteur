@@ -73,6 +73,7 @@ export class GameScene extends Phaser.Scene {
   projectiles!: Phaser.Physics.Arcade.Group;
   boss: Boss | null = null;
 
+  private activeBanner?: Phaser.GameObjects.Text;
   private activeEnemies = new Set<Enemy>();
   private zone!: ZoneDef;
   private roomState: 'combat' | 'boss' | 'transition' | 'over' | 'idle' = 'transition';
@@ -226,6 +227,7 @@ export class GameScene extends Phaser.Scene {
   // ---------------- progression / salles ----------------
   private startZone(index: number): void {
     this.projectiles.clear(true, true);
+    if (this.boss) { this.boss.destroy(); this.boss = null; }
     this.activeEnemies.forEach((e) => e.destroy());
     this.activeEnemies.clear();
     this.friendlyShots.forEach((s) => s.sprite.destroy());
@@ -250,6 +252,7 @@ export class GameScene extends Phaser.Scene {
     this.roomState = 'transition';
     this.clearDoors();
     this.projectiles.clear(true, true);
+    if (this.boss) { this.boss.destroy(); this.boss = null; }
     this.activeEnemies.forEach((e) => e.destroy());
     this.activeEnemies.clear();
     this.roomType = type;
@@ -675,13 +678,18 @@ export class GameScene extends Phaser.Scene {
 
   /** Bannière de transition (nom de zone, boss…) puis callback. */
   private banner(text: string, onDone: () => void): void {
+    // remplace toute bannière précédente (évite le chevauchement lors des
+    // transitions enchaînées, ex. « Zone vaincue ! » -> nom de la zone suivante).
+    if (this.activeBanner) { this.tweens.killTweensOf(this.activeBanner); this.activeBanner.destroy(); }
     const t = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, text, {
       fontFamily: 'monospace', fontSize: '34px', color: '#f4e9c1', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 6, align: 'center',
     }).setOrigin(0.5).setDepth(90).setAlpha(0).setScale(0.8);
+    this.activeBanner = t;
     this.tweens.add({ targets: t, alpha: 1, scale: 1, duration: 350, ease: 'Back.easeOut' });
     this.time.delayedCall(1300, () => {
-      this.tweens.add({ targets: t, alpha: 0, scale: 1.2, duration: 350, onComplete: () => t.destroy() });
+      if (t.active) this.tweens.add({ targets: t, alpha: 0, scale: 1.2, duration: 350, onComplete: () => t.destroy() });
+      if (this.activeBanner === t) this.activeBanner = undefined;
       onDone();
     });
   }
