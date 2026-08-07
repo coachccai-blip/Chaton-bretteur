@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { genSprite, genMask, genOrb, genPixel } from './PixelArtGenerator';
 import { CAT, SWORD } from './hero';
 import { GLYPHS } from './icons';
-import { genCritter, MONSTER_RECIPES, BOSS_RECIPES } from './critters';
+import { genCritter, MONSTER_RECIPES } from './critters';
+import { BOSS_CATS } from './bosscats';
 import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed } from './environment';
 import { ZONES } from '../config/worlds';
 
@@ -16,9 +17,10 @@ export function generateAll(scene: Phaser.Scene): void {
   genSprite(scene, CAT);
   genSprite(scene, SWORD);
 
-  // Monstres & boss (procéduraux)
+  // Monstres (procéduraux)
   for (const [key, recipe] of Object.entries(MONSTER_RECIPES)) genCritter(scene, `mob_${key}`, recipe);
-  for (const [key, recipe] of Object.entries(BOSS_RECIPES)) genCritter(scene, `boss_${key}`, recipe);
+  // Boss : chats-champions dessinés à la main (taille du héros)
+  for (const def of BOSS_CATS) genSprite(scene, def);
 
   // Projectiles & particules
   genOrb(scene, 'orb', '#ffffff', 5);

@@ -20,6 +20,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   private busy = false;
   private bobT = 0;
   private statuses: Partial<Record<Element, StatusInfo>> = {};
+  private aura!: Phaser.GameObjects.Image;
+  private auraEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private auraRing!: Phaser.GameObjects.Graphics;
 
   constructor(scene: GameScene, x: number, y: number, def: BossDef, hpMul: number, dmgMul: number) {
     super(scene, x, y, `boss_${def.sprite}`);
@@ -42,10 +45,36 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     body.setBounce(0.1);
     body.setDrag(200, 200);
 
+    // AURA de boss : halo pulsant + étincelles orbitales (marque le champion)
+    this.aura = scene.add.image(x, y, 'light').setBlendMode(Phaser.BlendModes.ADD).setTint(def.auraColor).setDepth(14).setScale(1.7).setAlpha(0.5);
+    scene.tweens.add({ targets: this.aura, scale: 2.3, alpha: 0.25, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.auraEmitter = scene.add.particles(x, y, 'px', {
+      speed: { min: 8, max: 34 }, scale: { start: 0.9, end: 0 }, alpha: { start: 0.85, end: 0 },
+      lifespan: 520, frequency: 55, tint: def.auraColor, blendMode: 'ADD',
+      emitZone: { type: 'edge', source: new Phaser.Geom.Circle(0, 0, 26), quantity: 14 } as any,
+    }).setDepth(14);
+    this.auraRing = scene.add.graphics().setDepth(6);
+
     this.resetMoveCooldowns();
     // entrée
     this.setScale(def.scale * 0.2).setAlpha(0);
     scene.tweens.add({ targets: this, scaleX: def.scale, scaleY: def.scale, alpha: 1, duration: 500, ease: 'Back.easeOut' });
+  }
+
+  private updateAura(): void {
+    const cx = this.x, ay = this.y - this.displayHeight * 0.4;
+    this.aura.setPosition(cx, ay);
+    this.auraEmitter.setPosition(cx, ay);
+    // anneau au sol (marqueur de boss, visible sur tout fond)
+    const pulse = 0.55 + 0.45 * Math.sin(performance.now() * 0.006);
+    const rx = this.displayWidth * 0.55, ry = rx * 0.42;
+    this.auraRing.clear();
+    this.auraRing.fillStyle(this.def.auraColor, 0.12 * pulse);
+    this.auraRing.fillEllipse(cx, this.y, rx * 2, ry * 2);
+    this.auraRing.lineStyle(3, 0xffffff, 0.5 * pulse);
+    this.auraRing.strokeEllipse(cx, this.y, rx * 2, ry * 2);
+    this.auraRing.lineStyle(2, this.def.auraColor, 0.95 * pulse);
+    this.auraRing.strokeEllipse(cx, this.y, rx * 2 + 7, ry * 2 + 6);
   }
 
   private get phase(): BossPhase { return this.def.phases[this.phaseIndex]; }
@@ -110,6 +139,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     if (!this.busy) this.setScale(this.def.scale * (1 - bob * 0.4), this.def.scale * (1 + bob));
     if (Math.abs(body.velocity.x) > 5) this.setFlipX(body.velocity.x < 0);
     if (frozen) this.setTint(0x8fdfff); else if (!this.phase.tint) this.clearTint(); else this.setTint(this.phase.tint);
+    this.updateAura();
   }
 
   private enterPhase(): void {
@@ -432,6 +462,16 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     if (!this.alive) return;
     this.alive = false;
     (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+    this.auraEmitter?.destroy();
+    this.auraRing?.destroy();
+    this.gs.tweens.add({ targets: this.aura, alpha: 0, duration: 600, onComplete: () => this.aura?.destroy() });
     this.gs.onBossKilled(this);
+  }
+
+  destroy(fromScene?: boolean): void {
+    this.aura?.destroy();
+    this.auraEmitter?.destroy();
+    this.auraRing?.destroy();
+    super.destroy(fromScene);
   }
 }
