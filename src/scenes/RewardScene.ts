@@ -45,11 +45,12 @@ export class RewardScene extends Phaser.Scene {
     c.add(g);
 
     c.add(label(this, 0, -h / 2 + 17, RARITY_NAMES[power.rarity].toUpperCase(), 14, '#1a1224'));
-    const badge = iconBadge(this, 0, -h / 2 + 90, glyphTexture(power.icon), col, COLORS.panelLight, 34);
+    const badge = iconBadge(this, 0, -h / 2 + 88, glyphTexture(power.icon), col, COLORS.panelLight, 34);
     c.add(badge);
-    c.add(label(this, 0, -h / 2 + 150, power.name, 18, '#f4e9c1'));
-    const desc = label(this, 0, -h / 2 + 210, power.description, 14, '#c9c0d8');
-    desc.setWordWrapWidth(w - 30);
+    c.add(label(this, 0, -h / 2 + 146, power.name, 18, '#f4e9c1'));
+    if (power.god) c.add(label(this, 0, -h / 2 + 168, `« ${power.god} »`, 11, '#f4c430'));
+    const desc = label(this, 0, -h / 2 + 214, power.description, 13, '#c9c0d8');
+    desc.setWordWrapWidth(w - 28);
     c.add(desc);
 
     c.setSize(w, h);

@@ -1,7 +1,10 @@
 import Phaser from 'phaser';
 import type { GameScene } from '../scenes/GameScene';
 import type { BossDef, BossMove, BossPhase } from '../config/bosses';
-import type { IEnemyLike } from '../config/types';
+import type { Element, IEnemyLike } from '../config/types';
+import { REACTIONS, reactKey } from './Enemy';
+
+interface StatusInfo { expire: number; nextTick: number; }
 
 export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   gs: GameScene;
@@ -9,13 +12,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   maxHp: number;
   hp: number;
   alive = true;
+  isBoss = true;
   contactDamage: number;
 
   private phaseIndex = 0;
   private moveCooldowns: number[] = [];
   private busy = false;
   private bobT = 0;
-  private frozenUntil = 0;
+  private statuses: Partial<Record<Element, StatusInfo>> = {};
 
   constructor(scene: GameScene, x: number, y: number, def: BossDef, hpMul: number, dmgMul: number) {
     super(scene, x, y, `boss_${def.sprite}`);
@@ -71,7 +75,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       this.enterPhase();
     }
 
-    const frozen = now < this.frozenUntil;
+    this.processStatuses(now);
+    if (!this.alive) return;
+    const frozen = !!this.statuses.freeze;
     const dx = p.x - this.x, dy = p.y - this.y;
     const dist = Math.hypot(dx, dy) || 1;
     const dir = new Phaser.Math.Vector2(dx / dist, dy / dist);
@@ -79,7 +85,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
     if (!this.busy && !frozen) {
       // maintien d'une distance moyenne
-      const spd = this.phase.speed;
+      const spd = this.phase.speed * this.gs.enemyTimeScale;
       if (dist > 220) body.setVelocity(dir.x * spd, dir.y * spd);
       else if (dist < 120) body.setVelocity(-dir.x * spd * 0.6, -dir.y * spd * 0.6);
       else body.setVelocity(-dir.y * spd * 0.4, dir.x * spd * 0.4);
@@ -307,9 +313,50 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     }
   }
 
+  // ---------- statuts & réactions (les boss résistent) ----------
+  private processStatuses(now: number): void {
+    for (const key of Object.keys(this.statuses) as Element[]) {
+      const st = this.statuses[key]!;
+      if (now >= st.expire) { delete this.statuses[key]; continue; }
+      if (now >= st.nextTick) {
+        st.nextTick = now + (key === 'burn' ? 400 : 500);
+        const dmg = key === 'burn' ? 14 : key === 'poison' ? 12 : key === 'bleed' ? 10 : 0;
+        if (dmg > 0) {
+          this.hp = Math.max(0, this.hp - dmg);
+          this.gs.juice.burst(this.x, this.y - 20, key === 'burn' ? 0xff6a1f : key === 'poison' ? 0x8fd94a : 0xc0392b, 3, 60, 0.6);
+          this.gs.events.emit('bossHp', this.hp, this.maxHp);
+          if (this.hp <= 0) { this.die(); return; }
+        }
+      }
+    }
+  }
+
+  applyStatus(status: Element, duration: number): void {
+    const now = performance.now();
+    const dur = status === 'freeze' ? duration * 0.4 : duration; // résistance
+    if (status !== 'mark' && status !== 'bleed') {
+      for (const other of Object.keys(this.statuses) as Element[]) {
+        if (other === status || other === 'mark' || other === 'bleed') continue;
+        const react = REACTIONS[reactKey(status, other)];
+        if (react) { delete this.statuses[other]; this.triggerReaction(react); return; }
+      }
+    }
+    const prev = this.statuses[status];
+    this.statuses[status] = { expire: Math.max(prev?.expire ?? 0, now + dur), nextTick: prev?.nextTick ?? now + (status === 'burn' ? 400 : 500) };
+  }
+
+  private triggerReaction(react: { name: string; base: number; hpFrac: number; color: number; aoe: number }): void {
+    const bonus = Math.round(react.base + this.maxHp * react.hpFrac * 0.25); // atténué sur les boss
+    this.gs.reactionVfx(this.x, this.y, react.name, react.color);
+    this.hp = Math.max(0, this.hp - bonus);
+    this.gs.events.emit('bossHp', this.hp, this.maxHp);
+    if (this.hp <= 0) this.die();
+  }
+
   // ---------- IEnemyLike ----------
   takeDamage(amount: number, _fx: number, _fy: number, opts?: { silent?: boolean }): void {
     if (!this.alive) return;
+    if (this.statuses.mark) amount = Math.round(amount * 1.3);
     this.hp = Math.max(0, this.hp - amount);
     if (!opts?.silent) {
       this.gs.juice.flash(this, 60);
@@ -317,11 +364,6 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     }
     this.gs.events.emit('bossHp', this.hp, this.maxHp);
     if (this.hp <= 0) this.die();
-  }
-
-  applyStatus(status: 'bleed' | 'freeze' | 'poison', duration: number): void {
-    // les boss résistent : gel raccourci, saignement léger
-    if (status === 'freeze') this.frozenUntil = Math.max(this.frozenUntil, performance.now() + duration * 0.4);
   }
 
   private die(): void {

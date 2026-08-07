@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { GameScene } from '../scenes/GameScene';
 import type { PlayerStats } from '../config/game';
-import type { IPlayerContext, IEnemyLike, OnHitFn, OnKillFn, VoidFn } from '../config/types';
+import type { IPlayerContext, IEnemyLike, ICombatScene, OnHitFn, OnKillFn, VoidFn, SpecialFlag, DashFlag } from '../config/types';
 
 export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerContext {
   gs: GameScene;
@@ -42,6 +42,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   private onDashFns: VoidFn[] = [];
   private onRoomClearFns: VoidFn[] = [];
 
+  // boons divins
+  private periodics: { interval: number; nextAt: number; fn: VoidFn }[] = [];
+  private specialFlags = new Set<SpecialFlag>();
+  private dashFlags = new Set<DashFlag>();
+
   constructor(scene: GameScene, x: number, y: number, stats: PlayerStats) {
     super(scene, x, y, 'cat');
     this.gs = scene;
@@ -79,6 +84,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   addOnDash(fn: VoidFn): void { this.onDashFns.push(fn); }
   addOnRoomClear(fn: VoidFn): void { this.onRoomClearFns.push(fn); }
   addComboHit(): void { this.maxCombo += 1; }
+  get combat(): ICombatScene { return this.gs; }
+  addPeriodic(interval: number, fn: VoidFn): void { this.periodics.push({ interval, nextAt: performance.now() + interval, fn }); }
+  addSpecialFlag(flag: SpecialFlag): void { this.specialFlags.add(flag); }
+  addDashFlag(flag: DashFlag): void { this.dashFlags.add(flag); }
 
   // appelé quand le nombre de charges de dash change via pouvoir
   syncDashCharges(): void {
@@ -138,6 +147,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       body.setVelocity(move.x * spd, move.y * spd);
     } else if (now >= this.dashEndAt) {
       this.dashing = false;
+      if (this.dashFlags.has('burst')) {
+        this.gs.explosionAt(this.x, this.y, 90, Math.max(20, this.stats.dashDamage + this.stats.swordDamage[0]));
+      }
+    }
+
+    // effets récurrents (clone, domaine…)
+    for (const pe of this.periodics) {
+      if (now >= pe.nextAt) { pe.nextAt = now + pe.interval; pe.fn(); }
     }
 
     // actions
@@ -269,10 +286,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     }
   }
 
-  /** applique dégâts + crit + hooks + vol de vie + knockback. */
+  /** applique dégâts + crit + rage + hooks + vol de vie + knockback + rafale. */
   dealDamage(e: IEnemyLike, baseDmg: number, finisher: boolean): void {
+    // Poing de Saitama : élimination instantanée (hors boss)
+    if (!e.isBoss && this.stats.instakillChance > 0 && Math.random() < this.stats.instakillChance) {
+      this.gs.juice.popText(e.x, e.y - 34, 'ÉLIMINÉ !', '#ff5a5a', 20);
+      this.gs.juice.burst(e.x, e.y, 0xff5a5a, 20, 260, 1.6);
+      e.takeDamage(999999, this.x, this.y);
+      return;
+    }
     const isCrit = Math.random() < this.stats.critChance;
-    let dmg = baseDmg * (isCrit ? this.stats.critMult : 1);
+    const rage = (this.hp / this.stats.maxHp) < this.stats.rageBelow ? this.stats.rageDamageMult : 1;
+    let dmg = baseDmg * (isCrit ? this.stats.critMult : 1) * rage;
     if (finisher) dmg *= 1.15;
     dmg = Math.round(dmg);
     e.takeDamage(dmg, this.x, this.y);
@@ -280,6 +305,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     for (const fn of this.onHitFns) fn(e, dmg, isCrit);
     if (this.stats.lifesteal > 0) this.heal(dmg * this.stats.lifesteal);
     if (isCrit) this.gs.juice.popText(e.x, e.y - 30, `${dmg}!`, '#ffe066', 18);
+    // ORA ORA : coups instantanés supplémentaires (dégâts bruts)
+    for (let i = 0; i < this.stats.extraHits; i++) {
+      if (!e.isAlive()) break;
+      e.takeDamage(Math.round(baseDmg * rage * 0.5), this.x, this.y, { silent: true });
+      this.gs.juice.burst(e.x, e.y - 8, 0xffd24a, 3, 90, 0.6);
+    }
   }
 
   private applyKnockback(e: IEnemyLike, force: number): void {
@@ -296,10 +327,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (now < this.specialReadyAt) return;
     this.specialReadyAt = now + this.stats.specialCooldown;
     const radius = this.stats.specialRadius;
-    this.gs.juice.ring(this.x, this.y, radius, 0xb26bff, 320);
-    this.gs.juice.shake(160, 0.007);
-    this.gs.juice.burst(this.x, this.y, 0xb26bff, 16, 200, 1.4);
+    const bigExplosion = this.specialFlags.has('explosion');
+    this.gs.juice.ring(this.x, this.y, radius, bigExplosion ? 0xffa53a : 0xb26bff, 320);
+    this.gs.juice.shake(bigExplosion ? 240 : 160, bigExplosion ? 0.012 : 0.007);
+    this.gs.juice.burst(this.x, this.y, bigExplosion ? 0xffd24a : 0xb26bff, bigExplosion ? 24 : 16, 240, 1.6);
     this.gs.sfx('special');
+    // dégâts de zone du tourbillon
     for (const e of this.gs.getTargets()) {
       if (!e.isAlive()) continue;
       if (Math.hypot(e.x - this.x, e.y - this.y) <= radius) {
@@ -307,6 +340,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
         this.applyKnockback(e, 220);
       }
     }
+    // boons de spécial
+    if (this.specialFlags.has('wave')) {
+      const a = this.aim.clone().normalize();
+      this.gs.slashWave(this.x, this.y, a.x, a.y, Math.round(this.stats.specialDamage * 0.9));
+      this.gs.slashWave(this.x, this.y, a.x, a.y, Math.round(this.stats.specialDamage * 0.9)); // double lame
+    }
+    if (this.specialFlags.has('timestop')) this.gs.timeSlow(2200, 0.12);
   }
 
   /** appelé par la scène quand le dash traverse un ennemi. */
@@ -315,11 +355,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (this.dashHitAccumulator.has(e)) return;
     this.dashHitAccumulator.add(e);
     this.dealDamage(e, this.stats.dashDamage, false);
+    if (this.dashFlags.has('shock')) e.applyStatus('shock', 2200);
   }
 
   // ---------- dégâts subis ----------
   takeDamage(amount: number, fromX = this.x, fromY = this.y): void {
     if (this.dead || this.isInvulnerable() || amount <= 0) return;
+    // Sharingan / Ultra Instinct : esquive automatique
+    if (this.stats.dodgeChance > 0 && Math.random() < this.stats.dodgeChance) {
+      this.invulnUntil = performance.now() + 120;
+      this.gs.juice.popText(this.x, this.y - 40, 'Esquive !', '#9fe6ff', 15);
+      return;
+    }
     const now = performance.now();
     let dmg = amount * (1 - this.stats.armor);
 

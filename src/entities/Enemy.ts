@@ -1,9 +1,24 @@
 import Phaser from 'phaser';
 import type { GameScene } from '../scenes/GameScene';
-import type { EnemyDef } from '../config/enemies';
-import type { IEnemyLike } from '../config/types';
+import type { EnemyDef, EnemySignature } from '../config/enemies';
+import type { Element, IEnemyLike } from '../config/types';
 
-type State = 'idle' | 'telegraph' | 'charging' | 'recover';
+type State = 'idle' | 'telegraph' | 'charging' | 'recover' | 'signature';
+
+interface StatusInfo { expire: number; nextTick: number; }
+
+/** Réactions élémentaires (combo de deux statuts) : nom + dégâts + couleur + AoE. */
+export const REACTIONS: Record<string, { name: string; base: number; hpFrac: number; color: number; aoe: number }> = {
+  'freeze+shock': { name: 'SURCHARGE', base: 24, hpFrac: 0.20, color: 0x9fe6ff, aoe: 0 },
+  'burn+poison': { name: 'TOXINE !', base: 20, hpFrac: 0.15, color: 0x8fd94a, aoe: 70 },
+  'burn+freeze': { name: 'VAPEUR', base: 18, hpFrac: 0.14, color: 0xffffff, aoe: 0 },
+  'poison+shock': { name: 'CORROSION', base: 18, hpFrac: 0.13, color: 0xb26bff, aoe: 0 },
+  'burn+shock': { name: 'PLASMA', base: 20, hpFrac: 0.15, color: 0xffa53a, aoe: 60 },
+};
+
+export function reactKey(a: Element, b: Element): string {
+  return [a, b].sort().join('+');
+}
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   gs: GameScene;
@@ -12,6 +27,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   hp: number;
   damage: number;
   alive = true;
+  isBoss = false;
 
   private aiState: State = 'idle';
   private nextActionAt = 0;
@@ -19,12 +35,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   private chargeDir = new Phaser.Math.Vector2();
   private bobT = Math.random() * 6;
 
-  // statuts
-  private frozenUntil = 0;
-  private bleedUntil = 0;
-  private nextBleedTick = 0;
+  private statuses: Partial<Record<Element, StatusInfo>> = {};
+  private sigNextAt = 0;
 
-  // barre de vie
   private hpBg?: Phaser.GameObjects.Rectangle;
   private hpFill?: Phaser.GameObjects.Rectangle;
 
@@ -50,7 +63,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     body.setBounce(0.2);
 
     this.nextActionAt = performance.now() + 400 + Math.random() * 800;
-    // apparition
+    this.sigNextAt = performance.now() + 1800 + Math.random() * 1600;
     this.setScale(def.scale * 0.2);
     scene.tweens.add({ targets: this, scaleX: def.scale, scaleY: def.scale, duration: 220, ease: 'Back.easeOut' });
   }
@@ -66,20 +79,25 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       return;
     }
 
-    // statuts
-    const frozen = now < this.frozenUntil;
-    if (now < this.bleedUntil && now >= this.nextBleedTick) {
-      this.nextBleedTick = now + 500;
-      this.hp -= Math.max(1, Math.round(this.maxHp * 0.03));
-      this.gs.juice.burst(this.x, this.y - 12, 0xc0392b, 3, 60, 0.5);
-      if (this.hp <= 0) { this.kill(true); return; }
-    }
+    this.processStatuses(now);
+    if (!this.alive) return;
+
+    const frozen = !!this.statuses.freeze;
+    const timeScale = this.gs.enemyTimeScale;
 
     const dx = player.x - this.x, dy = player.y - this.y;
     const dist = Math.hypot(dx, dy) || 1;
     const dir = new Phaser.Math.Vector2(dx / dist, dy / dist);
     const body = this.body as Phaser.Physics.Arcade.Body;
-    const spd = this.def.speed * (frozen ? 0 : 1);
+    const spd = this.def.speed * (frozen ? 0.12 : 1) * timeScale;
+
+    // attaque signature (interrompt le comportement)
+    if (this.aiState === 'idle' && this.def.signature && !frozen && now >= this.sigNextAt
+        && dist <= (this.def.signature.range ?? 260)) {
+      this.startSignature(this.def.signature, dir, dist);
+      return;
+    }
+    if (this.aiState === 'signature') { body.setVelocity(0, 0); this.updateHpBar(); return; }
 
     switch (this.def.behavior) {
       case 'chaser': body.setVelocity(dir.x * spd, dir.y * spd); break;
@@ -90,11 +108,169 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       case 'charger': this.updateCharger(now, dir, dist, spd); break;
     }
 
-    if (frozen) this.setTint(0x8fdfff);
-    else if (this.tintTopLeft === 0x8fdfff) this.clearTint();
-
+    this.applyStatusTint(frozen);
     this.animate(dt, body);
     this.updateHpBar();
+  }
+
+  // ---------------- statuts & réactions ----------------
+  private processStatuses(now: number): void {
+    for (const key of Object.keys(this.statuses) as Element[]) {
+      const st = this.statuses[key]!;
+      if (now >= st.expire) { delete this.statuses[key]; continue; }
+      if (now >= st.nextTick) {
+        st.nextTick = now + this.tickInterval(key);
+        const dmg = this.dotDamage(key);
+        if (dmg > 0) {
+          this.hp -= dmg;
+          this.gs.juice.burst(this.x, this.y - 12, this.dotColor(key), 3, 60, 0.5);
+          if (this.hp <= 0) { this.kill(true); return; }
+        }
+      }
+    }
+  }
+  private tickInterval(e: Element): number { return e === 'burn' ? 400 : 500; }
+  private dotDamage(e: Element): number {
+    if (e === 'burn') return Math.max(2, Math.round(this.maxHp * 0.035));
+    if (e === 'poison') return Math.max(2, Math.round(this.maxHp * 0.03));
+    if (e === 'bleed') return Math.max(1, Math.round(this.maxHp * 0.03));
+    return 0;
+  }
+  private dotColor(e: Element): number {
+    return e === 'burn' ? 0xff6a1f : e === 'poison' ? 0x8fd94a : e === 'bleed' ? 0xc0392b : 0x9fe6ff;
+  }
+
+  applyStatus(status: Element, duration: number): void {
+    const now = performance.now();
+    // réaction si un autre élément réactif est présent
+    if (status !== 'mark' && status !== 'bleed') {
+      for (const other of Object.keys(this.statuses) as Element[]) {
+        if (other === status || other === 'mark' || other === 'bleed') continue;
+        const react = REACTIONS[reactKey(status, other)];
+        if (react) {
+          delete this.statuses[other];
+          this.triggerReaction(react);
+          if (!this.alive) return;
+          return; // la réaction consomme l'application
+        }
+      }
+    }
+    const prev = this.statuses[status];
+    this.statuses[status] = { expire: Math.max(prev?.expire ?? 0, now + duration), nextTick: prev?.nextTick ?? now + this.tickInterval(status) };
+  }
+
+  private triggerReaction(react: { name: string; base: number; hpFrac: number; color: number; aoe: number }): void {
+    const bonus = Math.round(react.base + this.maxHp * react.hpFrac);
+    this.gs.reactionVfx(this.x, this.y, react.name, react.color);
+    if (react.aoe > 0) {
+      for (const e of this.gs.enemiesNear(this.x, this.y, react.aoe)) {
+        if (e !== this && e.isAlive()) e.takeDamage(Math.round(bonus * 0.6), this.x, this.y, { silent: true });
+      }
+    }
+    this.hp -= bonus;
+    if (this.hp <= 0) this.kill(true);
+  }
+
+  private applyStatusTint(frozen: boolean): void {
+    if (this.aiState === 'telegraph' || this.aiState === 'signature') return;
+    if (frozen) this.setTint(0x8fdfff);
+    else if (this.statuses.burn) this.setTint(0xff9a5a);
+    else if (this.statuses.poison) this.setTint(0xbfe86a);
+    else if (this.statuses.shock) this.setTint(0xcfe0ff);
+    else if (this.statuses.mark) this.setTint(0xff9db0);
+    else this.clearTint();
+  }
+
+  // ---------------- attaque signature ----------------
+  private startSignature(sig: EnemySignature, dir: Phaser.Math.Vector2, dist: number): void {
+    this.aiState = 'signature';
+    (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+    const color = sig.color ?? 0xffd24a;
+    const p = this.gs.player;
+    this.setTintFill(0xffffff);
+    this.gs.tweens.add({ targets: this, scaleX: this.def.scale * 1.15, scaleY: this.def.scale * 1.15, duration: sig.telegraph, ease: 'Sine.easeInOut' });
+    const endSig = () => {
+      this.aiState = 'idle';
+      this.sigNextAt = performance.now() + sig.cooldown;
+      this.clearTint();
+      this.setScale(this.def.scale);
+    };
+
+    switch (sig.type) {
+      case 'leap': {
+        const tx = p ? p.x : this.x, ty = p ? p.y : this.y;
+        const r = sig.radius ?? 60;
+        this.gs.telegraphCircle(tx, ty, r, color, sig.telegraph, () => {
+          if (this.alive) this.gs.eruptAt(tx, ty, r, color, sig.damage, sig.hazard, 2200);
+          endSig();
+        });
+        this.gs.tweens.add({ targets: this, x: tx, y: ty, duration: sig.telegraph, ease: 'Quad.easeIn' });
+        break;
+      }
+      case 'spinAoE': {
+        const r = sig.radius ?? 80;
+        this.gs.telegraphCircle(this.x, this.y, r, color, sig.telegraph, () => {
+          if (!this.alive) { endSig(); return; }
+          this.gs.eruptAt(this.x, this.y, r, color, sig.damage);
+          endSig();
+        });
+        break;
+      }
+      case 'spread': {
+        this.gs.time.delayedCall(sig.telegraph, () => {
+          if (this.alive) this.fireSpread(sig);
+          endSig();
+        });
+        break;
+      }
+      case 'lobPool': {
+        const tx = p ? p.x : this.x, ty = p ? p.y : this.y;
+        const r = sig.radius ?? 48;
+        this.gs.time.delayedCall(sig.telegraph, () => {
+          if (this.alive) this.gs.spawnHazardZone(tx, ty, r, sig.hazard ?? 'toxic', 260, 4000);
+          endSig();
+        });
+        break;
+      }
+      case 'blink': {
+        this.gs.tweens.add({ targets: this, alpha: 0.2, duration: sig.telegraph * 0.6, yoyo: true });
+        this.gs.time.delayedCall(sig.telegraph, () => {
+          if (!this.alive) { endSig(); return; }
+          const q = this.gs.player;
+          if (q) {
+            const a = Math.random() * Math.PI * 2;
+            this.setPosition(
+              Phaser.Math.Clamp(q.x + Math.cos(a) * 70, 40, 920),
+              Phaser.Math.Clamp(q.y + Math.sin(a) * 70, 80, 500),
+            );
+            this.gs.eruptAt(this.x, this.y, sig.radius ?? 40, color, sig.damage);
+          }
+          endSig();
+        });
+        break;
+      }
+      case 'castZone': {
+        const tx = p ? p.x : this.x, ty = p ? p.y : this.y;
+        const r = sig.radius ?? 64;
+        this.gs.telegraphCircle(tx, ty, r, color, sig.telegraph, () => {
+          if (this.alive) this.gs.eruptAt(tx, ty, r, color, sig.damage);
+          endSig();
+        });
+        break;
+      }
+    }
+  }
+
+  private fireSpread(sig: EnemySignature): void {
+    const p = this.gs.player;
+    const base = p ? Math.atan2(p.y - this.y, p.x - this.x) : 0;
+    const n = sig.count ?? 3;
+    const spread = 0.45;
+    for (let k = 0; k < n; k++) {
+      const t = n === 1 ? 0.5 : k / (n - 1);
+      const a = base + Phaser.Math.Linear(-spread, spread, t);
+      this.gs.spawnEnemyProjectile(this.x, this.y - 14, Math.cos(a), Math.sin(a), sig.speed ?? 200, sig.damage, undefined, sig.color);
+    }
   }
 
   private animate(dt: number, body: Phaser.Physics.Arcade.Body): void {
@@ -102,7 +278,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     const moving = body.velocity.lengthSq() > 100;
     const bob = Math.sin(this.bobT) * (moving ? 0.08 : 0.04);
     const s = this.def.scale;
-    if (this.aiState !== 'telegraph') this.setScale(s * (1 - bob * 0.4), s * (1 + bob));
+    if (this.aiState !== 'telegraph' && this.aiState !== 'signature') this.setScale(s * (1 - bob * 0.4), s * (1 + bob));
     if (Math.abs(body.velocity.x) > 5) this.setFlipX(body.velocity.x < 0);
   }
 
@@ -127,6 +303,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       p.takeDamage(this.damage, this.x, this.y);
       if (this.def.attack?.status === 'poison') this.gs.poisonPlayer();
     }
+    // nuée de spores à l'explosion (signature)
+    if (this.def.signature?.type === 'spread') {
+      const n = this.def.signature.count ?? 6;
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2;
+        this.gs.spawnEnemyProjectile(this.x, this.y, Math.cos(a), Math.sin(a), this.def.signature.speed ?? 140, this.def.signature.damage, undefined, this.def.signature.color);
+      }
+    }
     this.kill(false);
   }
 
@@ -134,10 +318,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const range = this.def.attack?.range ?? 240;
     if (this.aiState === 'idle') {
-      // garder ses distances
       if (dist < range * 0.6) body.setVelocity(-dir.x * spd, -dir.y * spd);
       else if (dist > range) body.setVelocity(dir.x * spd, dir.y * spd);
-      else body.setVelocity(-dir.y * spd * 0.5, dir.x * spd * 0.5); // strafe
+      else body.setVelocity(-dir.y * spd * 0.5, dir.x * spd * 0.5);
       if (now >= this.nextActionAt && dist <= range * 1.2) {
         this.beginTelegraph(now, this.def.attack?.telegraph ?? 500, 0xff4a7a, () => {
           if (summoner && Math.random() < 0.5) this.summon();
@@ -176,7 +359,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         this.aiStateUntil = now + 600;
         body.setVelocity(0, 0);
       } else {
-        const cs = this.def.attack?.chargeSpeed ?? 440;
+        const cs = (this.def.attack?.chargeSpeed ?? 440) * this.gs.enemyTimeScale;
         body.setVelocity(this.chargeDir.x * cs, this.chargeDir.y * cs);
       }
     } else if (this.aiState === 'recover') {
@@ -209,9 +392,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     });
   }
 
-  // ---------- IEnemyLike ----------
+  // ---------------- IEnemyLike ----------------
   takeDamage(amount: number, fromX: number, fromY: number, opts?: { silent?: boolean }): void {
     if (!this.alive) return;
+    if (this.statuses.mark) amount = Math.round(amount * 1.3); // Marque (Haki)
     this.hp -= amount;
     if (!opts?.silent) {
       this.gs.juice.flash(this, 80);
@@ -219,15 +403,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       this.gs.sfx('hitmob');
     }
     if (this.hp <= 0) this.kill(true);
-  }
-
-  applyStatus(status: 'bleed' | 'freeze' | 'poison', duration: number): void {
-    const now = performance.now();
-    if (status === 'freeze') this.frozenUntil = Math.max(this.frozenUntil, now + duration);
-    else if (status === 'bleed' || status === 'poison') {
-      this.bleedUntil = Math.max(this.bleedUntil, now + duration);
-      this.nextBleedTick = Math.min(this.nextBleedTick || now, now + 500);
-    }
   }
 
   kill(byPlayer: boolean): void {

@@ -56,6 +56,13 @@ export const PLAYER_BASE = {
   greed: 1, // multiplicateur de monnaie
   dashDamage: 0,
   specialCdOnKill: 0, // ms de cooldown spécial rendu par kill
+  // --- boons divins ---
+  extraHits: 0, // coups supplémentaires par frappe (ORA ORA)
+  instakillChance: 0, // chance d'éliminer un non-boss (Poing de Saitama)
+  armorPen: 0, // ignore une fraction de l'armure ennemie (non utilisé côté ennemi, réservé)
+  dodgeChance: 0, // chance d'esquive auto (Sharingan)
+  rageBelow: 0, // seuil de PV (fraction) déclenchant la rage (Bankai)
+  rageDamageMult: 1, // multiplicateur de dégâts en rage
 };
 
 export type PlayerStats = typeof PLAYER_BASE;

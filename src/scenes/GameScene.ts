@@ -20,6 +20,16 @@ const ARENA = { x: 28, y: 64, w: 904, h: 452 };
 export const ARENA_RECT = ARENA;
 
 type HazardType = 'thorns' | 'toxic' | 'lava' | 'shadow' | 'web' | 'fire';
+
+/** Projectile allié (onde tranchante, clone, Getsuga…). */
+interface FriendlyShot {
+  sprite: Phaser.GameObjects.Sprite;
+  vx: number; vy: number;
+  damage: number;
+  dieAt: number;
+  hit: Set<IEnemyLike>;
+  pierce: boolean;
+}
 interface Hazard {
   x: number; y: number; r: number; type: HazardType;
   nextTick: number; activeAt: number; expireAt: number;
@@ -56,6 +66,11 @@ export class GameScene extends Phaser.Scene {
   private reviveAvailable = false;
   private poisonUntil = 0;
   private nextPoisonTick = 0;
+
+  // combos / boons divins
+  enemyTimeScale = 1;
+  private enemyTimeScaleUntil = 0;
+  private friendlyShots: FriendlyShot[] = [];
 
   constructor() { super('Game'); }
 
@@ -117,6 +132,9 @@ export class GameScene extends Phaser.Scene {
     this.activeEnemies.clear();
     this.hazards = [];
     this.bossHazards = [];
+    this.friendlyShots.forEach((s) => s.sprite.destroy());
+    this.friendlyShots = [];
+    this.enemyTimeScale = 1;
     this.zone = ZONES[index];
     RunState.zoneIndex = index;
     RunState.roomIndex = 0;
@@ -165,7 +183,10 @@ export class GameScene extends Phaser.Scene {
 
   spawnEnemy(id: string, x: number, y: number, diff = getDifficulty(RunState.difficultyId)): Enemy {
     const def = ENEMIES[id];
-    const e = new Enemy(this, x, y, def, diff.enemyHp, diff.enemyDamage);
+    // montée en puissance par zone : force le joueur à construire des synergies
+    const zoneHp = 1 + this.zone.index * 0.35;
+    const zoneDmg = 1 + this.zone.index * 0.2;
+    const e = new Enemy(this, x, y, def, diff.enemyHp * zoneHp, diff.enemyDamage * zoneDmg);
     this.enemies.add(e);
     this.activeEnemies.add(e);
     return e;
@@ -494,6 +515,146 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  // ============ ICombatScene (boons divins) ============
+  playerX(): number { return this.player?.x ?? 0; }
+  playerY(): number { return this.player?.y ?? 0; }
+
+  enemiesNear(x: number, y: number, r: number): IEnemyLike[] {
+    return this.getTargets().filter((e) => Phaser.Math.Distance.Between(x, y, e.x, e.y) <= r);
+  }
+
+  /** Éclair qui frappe une cible puis chaîne vers les ennemis proches. */
+  lightningChain(x: number, y: number, damage: number, jumps: number): void {
+    this.sfx('special');
+    const struck = new Set<IEnemyLike>();
+    let cx = x, cy = y;
+    const g = this.add.graphics().setDepth(45);
+    for (let j = 0; j <= jumps; j++) {
+      // dessine un éclair pixelisé depuis le haut jusqu'à la cible
+      this.drawBolt(g, cx, cy - 200, cx, cy);
+      // trouve la cible la plus proche non encore touchée
+      let target: IEnemyLike | null = null;
+      let best = j === 0 ? 40 : 200;
+      for (const e of this.getTargets()) {
+        if (struck.has(e)) continue;
+        const d = Phaser.Math.Distance.Between(cx, cy, e.x, e.y);
+        if (d < best) { best = d; target = e; }
+      }
+      if (!target && j === 0) {
+        // frappe le point initial même sans cible exacte
+        this.juice.burst(cx, cy, 0x9fe6ff, 8, 160, 1);
+      }
+      if (!target) break;
+      struck.add(target);
+      target.applyStatus('shock', 2200);
+      target.takeDamage(Math.round(damage * (j === 0 ? 1 : 0.7)), cx, cy);
+      this.juice.burst(target.x, target.y, 0x9fe6ff, 8, 160, 1);
+      cx = target.x; cy = target.y;
+    }
+    this.juice.shake(90, 0.004);
+    this.time.delayedCall(120, () => g.destroy());
+  }
+
+  private drawBolt(g: Phaser.GameObjects.Graphics, x1: number, y1: number, x2: number, y2: number): void {
+    g.lineStyle(3, 0xffffff, 0.95);
+    g.beginPath();
+    g.moveTo(x1, y1);
+    const seg = 6;
+    for (let i = 1; i <= seg; i++) {
+      const t = i / seg;
+      const nx = Phaser.Math.Linear(x1, x2, t) + (i < seg ? Phaser.Math.Between(-10, 10) : 0);
+      const ny = Phaser.Math.Linear(y1, y2, t);
+      g.lineTo(nx, ny);
+    }
+    g.strokePath();
+  }
+
+  /** Onde tranchante (Getsuga / clone) : projectile allié qui transperce. */
+  slashWave(x: number, y: number, dx: number, dy: number, damage: number): void {
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = dx / len, ny = dy / len;
+    const s = this.add.sprite(x, y, 'orb_big').setDepth(18).setTint(0x9fe6ff);
+    s.setScale(2.4, 0.9).setRotation(Math.atan2(ny, nx));
+    this.friendlyShots.push({ sprite: s, vx: nx * 520, vy: ny * 520, damage, dieAt: performance.now() + 700, hit: new Set(), pierce: true });
+    this.sfx('sword');
+  }
+
+  /** Grande explosion (Megumin / Rasengan). */
+  explosionAt(x: number, y: number, radius: number, damage: number): void {
+    this.juice.ring(x, y, radius, 0xffa53a, 360);
+    this.juice.burst(x, y, 0xffd24a, 22, 260, 1.8);
+    this.juice.shake(240, 0.012);
+    this.sfx('special');
+    for (const e of this.getTargets()) {
+      if (e.isAlive() && Phaser.Math.Distance.Between(x, y, e.x, e.y) <= radius) e.takeDamage(Math.round(damage), x, y);
+    }
+  }
+
+  /** Pulse de domaine autour du joueur (Sukuna). */
+  domainPulse(damage: number, radius: number): void {
+    if (!this.player || this.player.dead) return;
+    const x = this.player.x, y = this.player.y;
+    this.juice.ring(x, y, radius, 0xb26bff, 360);
+    this.juice.burst(x, y, 0xb26bff, 14, 200, 1.2);
+    for (const e of this.getTargets()) {
+      if (e.isAlive() && Phaser.Math.Distance.Between(x, y, e.x, e.y) <= radius) e.takeDamage(Math.round(damage), x, y);
+    }
+  }
+
+  /** Ralentit fortement les ennemis (The World). */
+  timeSlow(ms: number, factor: number): void {
+    this.enemyTimeScale = factor;
+    this.enemyTimeScaleUntil = performance.now() + ms;
+    const ov = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x2a1a4a, 0.25).setDepth(2);
+    this.tweens.add({ targets: ov, alpha: 0, duration: ms, onComplete: () => ov.destroy() });
+    this.juice.ring(this.playerX(), this.playerY(), 220, 0xb26bff, 400);
+  }
+
+  /** Clone cosmétique qui frappe (utilisé si besoin). */
+  spawnClone(ms: number): void {
+    if (!this.player) return;
+    const ghost = this.add.sprite(this.player.x - 30, this.player.y, 'cat').setAlpha(0.5).setTint(0x9fe6ff).setDepth(19).setScale(0.9);
+    const ev = this.time.addEvent({
+      delay: 600, loop: true, callback: () => {
+        if (!this.player) return;
+        ghost.setPosition(this.player.x - 34, this.player.y - 6);
+        const near = this.enemiesNear(ghost.x, ghost.y, 150);
+        if (near.length) this.slashWave(ghost.x, ghost.y, near[0].x - ghost.x, near[0].y - ghost.y, 12);
+      },
+    });
+    this.time.delayedCall(ms, () => { ev.remove(); ghost.destroy(); });
+  }
+
+  /** VFX + texte d'une réaction élémentaire. */
+  reactionVfx(x: number, y: number, name: string, color: number): void {
+    this.juice.ring(x, y, 70, color, 300);
+    this.juice.burst(x, y, color, 16, 220, 1.5);
+    this.juice.popText(x, y - 34, name, '#ffffff', 15);
+    this.juice.shake(110, 0.005);
+    this.sfx('power');
+  }
+
+  private updateFriendlyShots(now: number, dt: number): void {
+    this.friendlyShots = this.friendlyShots.filter((sh) => {
+      if (now > sh.dieAt || !sh.sprite.active) { sh.sprite.destroy(); return false; }
+      sh.sprite.x += sh.vx * dt / 1000;
+      sh.sprite.y += sh.vy * dt / 1000;
+      if (sh.sprite.x < ARENA.x - 30 || sh.sprite.x > ARENA.x + ARENA.w + 30 || sh.sprite.y < ARENA.y - 30 || sh.sprite.y > ARENA.y + ARENA.h + 30) {
+        sh.sprite.destroy(); return false;
+      }
+      for (const e of this.getTargets()) {
+        if (sh.hit.has(e) || !e.isAlive()) continue;
+        if (Phaser.Math.Distance.Between(sh.sprite.x, sh.sprite.y, e.x, e.y) < 30) {
+          sh.hit.add(e);
+          e.takeDamage(Math.round(sh.damage), sh.sprite.x, sh.sprite.y);
+          this.juice.burst(sh.sprite.x, sh.sprite.y, 0x9fe6ff, 5, 120, 0.8);
+          if (!sh.pierce) { sh.sprite.destroy(); return false; }
+        }
+      }
+      return true;
+    });
+  }
+
   update(time: number, delta: number): void {
     const now = performance.now();
     this.controls.updatePad();
@@ -512,6 +673,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.updateHazards(now);
+
+    // fin du ralentissement temporel (The World)
+    if (this.enemyTimeScale !== 1 && now >= this.enemyTimeScaleUntil) this.enemyTimeScale = 1;
+
+    // projectiles alliés (ondes tranchantes, clones)
+    this.updateFriendlyShots(now, delta);
 
     // projectiles hors zone
     this.projectiles.getChildren().forEach((o) => {

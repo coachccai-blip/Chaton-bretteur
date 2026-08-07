@@ -63,14 +63,27 @@ src/
   ui/          thème (boutons, panneaux, badges d'icônes)
 ```
 
-- **Ajouter un pouvoir** : une entrée dans `src/config/powers.ts` (`apply(player)` patch de stats ou hook `onHit`/`onKill`/`onDash`/`onRoomClear`).
-- **Ajouter un monstre** : une entrée dans `src/config/enemies.ts` + une recette dans `src/art/critters.ts`.
+- **Ajouter un pouvoir / boon divin** : une entrée dans `src/config/powers.ts`. Un boon peut patcher les stats, poser un hook (`onHit`/`onKill`/`onDash`/`onRoomClear`), déclencher un effet récurrent (`addPeriodic`), modifier le Spécial/Dash (`addSpecialFlag`/`addDashFlag`) ou appeler les effets actifs de combat via `p.combat` (éclair chaîné, onde tranchante, explosion, arrêt du temps, domaine…).
+- **Ajouter un monstre** : une entrée dans `src/config/enemies.ts` (avec son `signature` : attaque signature télégraphiée) + une recette dans `src/art/critters.ts`.
 - **Ajouter/éditer un boss** : `src/config/bosses.ts`. Chaque boss a plusieurs phases et un jeu d'**attaques signatures** télégraphiées et distinctes — éventail, anneau, spirale, nova, onde de choc, saut-plongeon, langue/faisceau en ligne, faisceaux en croix, geysers, flaques persistantes (lave/toxique), pièges de toile, invocations, charge. Les VFX (télégraphes, éruptions, rails, colonnes de pixels) sont générés par code.
 - **Équilibrage** : `src/config/game.ts` et `difficulty.ts`.
 
 ## ☁️ Déploiement Netlify
 
 `netlify.toml` est fourni (build `npm run build`, publish `dist`, redirect SPA). Connectez le repo à Netlify, ou glissez-déposez le dossier `dist/` sur Netlify Drop. `base: './'` (Vite) garantit des chemins d'assets relatifs corrects.
+
+## ⚡ Boons divins & combos élémentaires (façon Hades)
+
+Chaque salle propose 3 boons. Au-delà des stats, les **boons divins** (référencés manga/anime) ajoutent des capacités **actives qui se combinent** :
+
+- **Éléments on-hit** : Foudre d’Elektor (Choc + éclair chaîné), Flamme d’Igneel (Brûlure), Givre de Rukia (Gel), Crocs Venimeux (Poison), Haki de l’Armement (Marque : +30% de dégâts subis).
+- **Réactions de combo** : appliquer deux éléments différents déclenche une réaction dévastatrice — **Surcharge** (Gel+Choc), **Toxine** (Brûlure+Poison, AoE), **Vapeur**, **Corrosion**, **Plasma**. Empiler les bons éléments = tout fondre.
+- **Spécial** : Getsuga Tenshō (onde tranchante à distance), EXPLOSION de Megumin, The World (arrêt du temps).
+- **Dash** : Chidori (dash-choc perforant), Rasengan (explosion en fin de dash).
+- **Invocations / domaines** : Kage Bunshin (clone d’ombre), Sanctuaire Malfaisant de Sukuna (domaine récurrent).
+- **Passifs** : ORA ORA (rafale multi-coups), Poing de Saitama (élimination instantanée), Bankai (rage à bas PV), Soif d’Alucard (vol de vie), Sharingan / Ultra Instinct (esquive), Gear Second.
+
+Les monstres montent en puissance par zone et possèdent chacun une **attaque signature télégraphiée** (bond, moulinet de zone, salve en éventail, crachat de flaque, téléportation spectrale, sceau explosif…) qu’il faut esquiver au dash. Un build sans synergie ne tient pas la distance : les mauvais choix se paient.
 
 ## ✅ Contenu implémenté
 
