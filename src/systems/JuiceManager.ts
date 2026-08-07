@@ -87,6 +87,34 @@ export class JuiceManager {
     });
   }
 
+  /** Explosion de chaleur (spécial) : onde rouge incandescente + braises. */
+  heatBlast(x: number, y: number, radius: number): void {
+    const s = this.scene;
+    const ADD = Phaser.BlendModes.ADD;
+    // onde de chaleur : disque rouge qui s'étend
+    const wave = s.add.circle(x, y, radius * 0.28, 0xff4a1f, 0.4).setDepth(54).setBlendMode(ADD);
+    s.tweens.add({ targets: wave, radius: radius * 1.15, alpha: 0, duration: 400, ease: 'Cubic.easeOut', onComplete: () => wave.destroy() });
+    // cœur incandescent
+    const core = s.add.circle(x, y, radius * 0.45, 0xffe6a0, 0.6).setDepth(56).setBlendMode(ADD);
+    s.tweens.add({ targets: core, scale: 1.4, alpha: 0, duration: 240, ease: 'Quad.easeOut', onComplete: () => core.destroy() });
+    // anneaux concentriques rouge -> orange -> jaune
+    this.ring(x, y, radius, 0xff2a1f, 360);
+    this.ring(x, y, radius * 0.78, 0xff8a2a, 300);
+    this.ring(x, y, radius * 0.52, 0xffe08a, 240);
+    // braises projetées
+    this.burst(x, y, 0xff5a1f, 24, 320, 1.9);
+    this.burst(x, y, 0xffd24a, 14, 220, 1.2);
+    // vagues de chaleur montantes
+    const heat = s.add.particles(x, y, 'px', {
+      speedY: { min: -120, max: -60 }, speedX: { min: -50, max: 50 },
+      scale: { start: 1.6, end: 0 }, lifespan: 520, quantity: 16,
+      tint: [0xff3a1f, 0xff8a2a, 0xffd24a], blendMode: 'ADD', emitting: false,
+    });
+    heat.setDepth(57);
+    heat.explode(16);
+    s.time.delayedCall(700, () => heat.destroy());
+  }
+
   /** Texte flottant (dégâts, gains). */
   popText(x: number, y: number, text: string, color: string, size = 16): void {
     const t = this.scene.add.text(x, y, text, {

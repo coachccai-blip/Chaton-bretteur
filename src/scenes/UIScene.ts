@@ -28,7 +28,9 @@ export class UIScene extends Phaser.Scene {
   private bossMaxHp = 1;
 
   private touch = false;
-  private touchLayer!: Phaser.GameObjects.Container;
+  private domRoot?: HTMLDivElement;
+  private domCleanup: (() => void)[] = [];
+  private gameplayActive = true;
 
   constructor() { super('UI'); }
 
@@ -158,55 +160,131 @@ export class UIScene extends Phaser.Scene {
     if (hp <= 0) this.time.delayedCall(1500, () => this.bossLayer.setVisible(false));
   }
 
-  // ---------------- contrôles tactiles ----------------
+  // ---------------- contrôles tactiles (superposition DOM plein écran) ----------------
+  // Rendus en DOM (et non dans le canvas) : les commandes couvrent TOUT l'écran,
+  // y compris les bords letterbox — plus de « zones mortes » injouables, et les
+  // boutons sont grands et calés dans les vrais coins de l'écran.
   private setupTouch(): void {
     this.touch = this.sys.game.device.input.touch || navigator.maxTouchPoints > 0;
-    this.touchLayer = this.add.container(0, 0).setDepth(20).setVisible(this.touch);
+    if (!this.touch) return; // desktop : clavier/souris/manette via Phaser
 
-    // joystick FLOTTANT : apparaît là où le doigt se pose, déplacement relatif.
-    const jr = 62;
-    const base = this.add.circle(0, 0, jr, 0xffffff, 0.08).setStrokeStyle(3, 0xffffff, 0.25).setVisible(false);
-    const thumb = this.add.circle(0, 0, 28, 0xffffff, 0.25).setStrokeStyle(2, 0xffffff, 0.4).setVisible(false);
-    this.touchLayer.add([base, thumb]);
-    let jpid = -1, ox = 0, oy = 0;
+    document.getElementById('tc-root')?.remove(); // sécurité anti-doublon
 
-    const zone = this.add.zone(0, GAME_HEIGHT / 2, GAME_WIDTH * 0.5, GAME_HEIGHT).setOrigin(0, 0.5).setInteractive();
-    this.touchLayer.add(zone);
-    zone.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      jpid = p.id; ox = p.x; oy = p.y;
-      base.setPosition(ox, oy).setVisible(true);
-      thumb.setPosition(ox, oy).setVisible(true);
-    });
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) => { if (p.id === jpid) this.moveThumb(p, ox, oy, jr, thumb); });
-    this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
-      if (p.id === jpid) { jpid = -1; base.setVisible(false); thumb.setVisible(false); this.gs.controls.setStick(0, 0); }
-    });
+    const root = document.createElement('div');
+    root.id = 'tc-root';
 
-    // boutons d'action
-    const mk = (x: number, y: number, glyph: string, tint: number, press: () => void, r: number) => {
-      const disc = this.add.circle(x, y, r, tint, 0.22).setStrokeStyle(3, tint, 0.7).setInteractive();
-      const ic = this.add.image(x, y, glyph).setTint(tint).setScale((r * 1.2) / 24);
-      disc.on('pointerdown', () => { press(); disc.setScale(0.9); });
-      disc.on('pointerup', () => disc.setScale(1));
-      disc.on('pointerout', () => disc.setScale(1));
-      this.touchLayer.add([disc, ic]);
+    // -- joystick flottant (visuel) --
+    const base = document.createElement('div');
+    base.className = 'tc-joy';
+    Object.assign(base.style, { width: '150px', height: '150px', background: 'rgba(255,255,255,0.08)', border: '2px solid rgba(255,255,255,0.28)' });
+    const thumb = document.createElement('div');
+    thumb.className = 'tc-joy';
+    Object.assign(thumb.style, { width: '66px', height: '66px', background: 'rgba(255,255,255,0.22)', border: '2px solid rgba(255,255,255,0.45)' });
+
+    // -- boutons d'action (grands, dans les coins) --
+    const mkBtn = (glyph: string, size: number, col: string, ring: string, css: Partial<CSSStyleDeclaration>) => {
+      const el = document.createElement('div');
+      el.className = 'tc-btn';
+      el.dataset.tcbtn = '1';
+      el.textContent = glyph;
+      Object.assign(el.style, {
+        width: `${size}px`, height: `${size}px`, fontSize: `${Math.round(size * 0.42)}px`,
+        background: col, border: `3px solid ${ring}`, boxShadow: `0 0 18px ${ring}`,
+      } as CSSStyleDeclaration, css);
+      return el;
     };
-    const bx = GAME_WIDTH - 80, by = GAME_HEIGHT - 90;
-    mk(bx, by, glyphTexture('sword'), 0xffd24a, () => this.gs.controls.pressAttack(), 40);
-    mk(bx - 84, by + 6, glyphTexture('dash'), COLORS.dash, () => this.gs.controls.pressDash(), 32);
-    mk(bx - 28, by - 78, glyphTexture('special'), COLORS.special, () => this.gs.controls.pressSpecial(), 32);
+    const sbi = 'env(safe-area-inset-bottom, 0px)';
+    const sri = 'env(safe-area-inset-right, 0px)';
+    const attack = mkBtn('⚔', 104, 'rgba(244,210,48,0.22)', 'rgba(244,210,48,0.9)', { right: `calc(${sri} + 26px)`, bottom: `calc(${sbi} + 30px)` });
+    const dash = mkBtn('»', 82, 'rgba(89,200,255,0.22)', 'rgba(89,200,255,0.9)', { right: `calc(${sri} + 140px)`, bottom: `calc(${sbi} + 40px)` });
+    const special = mkBtn('✷', 82, 'rgba(178,107,255,0.22)', 'rgba(178,107,255,0.9)', { right: `calc(${sri} + 44px)`, bottom: `calc(${sbi} + 142px)` });
+    const pause = mkBtn('⏸', 46, 'rgba(20,15,30,0.55)', 'rgba(255,255,255,0.5)', { top: 'calc(env(safe-area-inset-top,0px) + 10px)', right: `calc(${sri} + 12px)`, fontSize: '18px' });
 
-    // basculer visibilité selon la source d'entrée
-    window.addEventListener('keydown', () => this.touchLayer.setVisible(false));
-    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => { if (p.wasTouch) this.touchLayer.setVisible(true); });
+    root.append(base, thumb, attack, dash, special, pause);
+    document.body.appendChild(root);
+    this.domRoot = root;
+
+    // -- déplacement : n'importe quel appui sur la moitié gauche de l'écran --
+    let moveId: number | null = null, ox = 0, oy = 0;
+    const R = 66; // rayon max (px écran)
+    const setJoy = (el: HTMLElement, x: number, y: number) => { el.style.left = `${x}px`; el.style.top = `${y}px`; };
+    const onStart = (e: TouchEvent) => {
+      if (!this.gameplayActive || moveId !== null) return;
+      for (const t of Array.from(e.changedTouches)) {
+        const el = t.target as HTMLElement | null;
+        if (el && el.dataset && el.dataset.tcbtn === '1') continue;   // c'est un bouton
+        if (t.clientX > window.innerWidth * 0.5) continue;            // moitié droite = boutons
+        moveId = t.identifier; ox = t.clientX; oy = t.clientY;
+        setJoy(base, ox, oy); setJoy(thumb, ox, oy);
+        base.style.display = thumb.style.display = 'block';
+        e.preventDefault();
+        break;
+      }
+    };
+    const onMove = (e: TouchEvent) => {
+      if (moveId === null) return;
+      for (const t of Array.from(e.changedTouches)) {
+        if (t.identifier !== moveId) continue;
+        const dx = t.clientX - ox, dy = t.clientY - oy;
+        const d = Math.hypot(dx, dy) || 1, cl = Math.min(d, R);
+        const nx = dx / d, ny = dy / d;
+        setJoy(thumb, ox + nx * cl, oy + ny * cl);
+        this.gs.controls.setStick(nx * (cl / R), ny * (cl / R));
+        e.preventDefault();
+      }
+    };
+    const onEnd = (e: TouchEvent) => {
+      for (const t of Array.from(e.changedTouches)) {
+        if (t.identifier !== moveId) continue;
+        moveId = null;
+        base.style.display = thumb.style.display = 'none';
+        this.gs.controls.setStick(0, 0);
+      }
+    };
+    window.addEventListener('touchstart', onStart, { passive: false });
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onEnd);
+    window.addEventListener('touchcancel', onEnd);
+    this.domCleanup.push(() => {
+      window.removeEventListener('touchstart', onStart);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onEnd);
+      window.removeEventListener('touchcancel', onEnd);
+    });
+
+    // -- boutons : appui = action --
+    const bind = (el: HTMLElement, fn: () => void) => {
+      const down = (e: TouchEvent) => { e.preventDefault(); e.stopPropagation(); if (this.gameplayActive) fn(); el.style.transform = 'scale(0.9)'; };
+      const up = () => { el.style.transform = 'scale(1)'; };
+      el.addEventListener('touchstart', down, { passive: false });
+      el.addEventListener('touchend', up);
+      this.domCleanup.push(() => { el.removeEventListener('touchstart', down); el.removeEventListener('touchend', up); });
+    };
+    bind(attack, () => this.gs.controls.pressAttack());
+    bind(dash, () => this.gs.controls.pressDash());
+    bind(special, () => this.gs.controls.pressSpecial());
+    // la pause reste utilisable même quand le jeu est en pause (menu pause)
+    pause.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); this.gs.controls.pressPause(); }, { passive: false });
+
+    // -- masque l'overlay quand le jeu est en pause (Récompense / Pause) --
+    const g = this.gs;
+    const onPause = () => { this.gameplayActive = false; root.style.display = 'none'; this.gs.controls.setStick(0, 0); };
+    const onResume = () => { this.gameplayActive = true; root.style.display = 'block'; };
+    g.events.on(Phaser.Scenes.Events.PAUSE, onPause);
+    g.events.on(Phaser.Scenes.Events.RESUME, onResume);
+    this.domCleanup.push(() => {
+      g.events.off(Phaser.Scenes.Events.PAUSE, onPause);
+      g.events.off(Phaser.Scenes.Events.RESUME, onResume);
+    });
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroyDomControls());
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.destroyDomControls());
   }
 
-  private moveThumb(p: Phaser.Input.Pointer, jx: number, jy: number, jr: number, thumb: Phaser.GameObjects.Arc): void {
-    const dx = p.x - jx, dy = p.y - jy;
-    const d = Math.hypot(dx, dy) || 1;
-    const cl = Math.min(d, jr);
-    const nx = (dx / d), ny = (dy / d);
-    thumb.setPosition(jx + nx * cl, jy + ny * cl);
-    this.gs.controls.setStick(nx * (cl / jr), ny * (cl / jr));
+  private destroyDomControls(): void {
+    for (const fn of this.domCleanup) fn();
+    this.domCleanup = [];
+    this.domRoot?.remove();
+    this.domRoot = undefined;
   }
 }

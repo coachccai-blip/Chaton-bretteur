@@ -68,6 +68,7 @@ export class InputManager {
   pressDash(): void { this.queuedDash = true; }
   pressAttack(): void { this.queuedAttack = true; }
   pressSpecial(): void { this.queuedSpecial = true; }
+  pressPause(): void { this.pausePressed = true; }
 
   // ---- lecture par le Player ----
   getMove(): Phaser.Math.Vector2 {

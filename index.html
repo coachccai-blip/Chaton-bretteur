@@ -20,7 +20,8 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background: #0c0910;
+        /* fond thématique qui remplit les bords (letterbox) : plus de zones noires mortes */
+        background: #0a0710 radial-gradient(130% 130% at 50% 32%, #201636 0%, #130d20 52%, #08060e 100%) fixed;
         font-family: system-ui, -apple-system, sans-serif;
         touch-action: none;
         -webkit-tap-highlight-color: transparent;
@@ -34,6 +35,14 @@
         align-items: center;
         justify-content: center;
       }
+      /* superposition des contrôles tactiles (mobile) */
+      #tc-root { position: fixed; inset: 0; z-index: 10; pointer-events: none; touch-action: none; }
+      .tc-btn {
+        position: absolute; pointer-events: auto; display: flex; align-items: center; justify-content: center;
+        border-radius: 50%; color: #fff; font-weight: 800; user-select: none; -webkit-user-select: none;
+        transition: transform .06s ease; will-change: transform;
+      }
+      .tc-joy { position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%); display: none; }
       #game canvas {
         image-rendering: pixelated;
         image-rendering: crisp-edges;

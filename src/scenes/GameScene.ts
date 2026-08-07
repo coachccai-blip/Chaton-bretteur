@@ -324,20 +324,19 @@ export class GameScene extends Phaser.Scene {
 
   private pickDoorChoices(): RoomType[] {
     if (this.combatDone >= this.zone.rooms) return ['boss'];
-    // toujours au moins un combat pour progresser
-    const bonus: RoomType[] = [];
-    const roll = () => {
-      const r = Math.random();
-      if (r < 0.5) return 'combat';
-      if (r < 0.68) return 'fountain';
-      if (r < 0.85) return 'shop';
-      return 'treasure';
-    };
-    const a = roll() as RoomType;
-    let b = roll() as RoomType;
-    if (a !== 'combat' && b !== 'combat') b = 'combat';
-    bonus.push(a, b);
-    return bonus;
+    // Une salle spéciale (fontaine / marchand / trésor) a 10% de chance CHACUNE
+    // d'apparaître, et jamais deux fois d'affilée (pas la même que la salle
+    // précédente). L'autre porte reste toujours un combat pour progresser.
+    const last = this.roomType;
+    const r = Math.random();
+    let special: RoomType | null = null;
+    if (r < 0.10) special = 'fountain';
+    else if (r < 0.20) special = 'shop';
+    else if (r < 0.30) special = 'treasure';
+    if (special === last) special = null; // pas deux fois d'affilée
+    const choices: RoomType[] = ['combat', special ?? 'combat'];
+    if (Math.random() < 0.5) choices.reverse();
+    return choices;
   }
 
   private selectDoor(d: Door): void {
@@ -418,13 +417,14 @@ export class GameScene extends Phaser.Scene {
     this.roomState = 'idle';
     this.events.emit('progress', this.zone.name, this.combatDone, this.zone.rooms, false, 'Marchand');
     const y = ARENA.y + ARENA.h / 2;
+    // Marchand de sang : paiement UNIQUEMENT en points de vie.
     const items: { label: string; cost: number; buy: () => void }[] = [
-      { label: 'Soin +50', cost: 20, buy: () => this.player.heal(50) },
-      { label: '+25 PV max', cost: 35, buy: () => { this.player.stats.maxHp += 25; this.player.heal(25); } },
-      { label: 'Boon', cost: 50, buy: () => { this.scene.pause(); this.scene.launch('Reward', { gameScene: this }); } },
+      { label: '+40 PV max', cost: 10, buy: () => { this.player.stats.maxHp += 40; this.player.heal(40); } },
+      { label: 'Boon', cost: 20, buy: () => { this.scene.pause(); this.scene.launch('Reward', { gameScene: this }); } },
+      { label: 'Boon', cost: 30, buy: () => { this.scene.pause(); this.scene.launch('Reward', { gameScene: this }); } },
     ];
     // marchand (chaton PNJ)
-    const npc = this.add.sprite(GAME_WIDTH / 2, ARENA.y + 70, 'cat').setScale(2.2).setTint(0xffe0b0).setDepth(11);
+    const npc = this.add.sprite(GAME_WIDTH / 2, ARENA.y + 70, 'cat').setScale(2.2).setTint(0xd06a6a).setDepth(11);
     this.tweens.add({ targets: npc, y: ARENA.y + 62, duration: 900, yoyo: true, repeat: -1 });
     this.roomObjects.push(npc);
     items.forEach((it, i) => {
@@ -432,22 +432,21 @@ export class GameScene extends Phaser.Scene {
       const glow = this.add.image(px, y, 'light').setTint(0xf4c430).setBlendMode(Phaser.BlendModes.ADD).setScale(0.9).setDepth(9).setAlpha(0.4);
       const ped = this.add.graphics().setDepth(10);
       ped.fillStyle(0x2a2436, 1).fillRoundedRect(px - 30, y - 6, 60, 26, 6);
-      const txt = this.add.text(px, y - 30, `${it.label}\n${it.cost} 🥇`, { fontFamily: 'monospace', fontSize: '13px', color: '#f4e9c1', align: 'center', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(11);
+      const txt = this.add.text(px, y - 30, `${it.label}\n${it.cost} ❤`, { fontFamily: 'monospace', fontSize: '13px', color: '#ffd0d0', align: 'center', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(11);
       this.roomObjects.push(glow, ped, txt);
       let bought = false;
       const check = this.time.addEvent({ delay: 120, loop: true, callback: () => {
         if (bought || this.player.dead) return;
         if (Phaser.Math.Distance.Between(this.player.x, this.player.y, px, y) < 44) {
-          if (RunState.currencyEarned >= it.cost) {
+          if (this.player.hp > it.cost) {
             bought = true;
-            RunState.currencyEarned -= it.cost;
-            this.events.emit('currency', RunState.currencyEarned);
+            this.player.spendLife(it.cost);
             it.buy();
-            this.juice.burst(px, y, 0xf4c430, 14, 180, 1.2);
+            this.juice.burst(px, y, 0xe8384f, 14, 180, 1.2);
             AudioManager.play('coin');
             txt.setText('Acheté !');
           } else {
-            this.juice.popText(px, y - 44, 'Trop cher', '#ff9db0', 12);
+            this.juice.popText(px, y - 44, 'Pas assez de PV', '#ff9db0', 12);
           }
         }
       }});

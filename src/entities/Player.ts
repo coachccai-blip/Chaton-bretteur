@@ -4,7 +4,9 @@ import type { PlayerStats } from '../config/game';
 import type { IPlayerContext, IEnemyLike, ICombatScene, OnHitFn, OnKillFn, VoidFn, SpecialFlag, DashFlag } from '../config/types';
 
 /** Portée d'auto-visée : au-delà, l'attaque suit la visée manuelle/déplacement. */
-const AUTO_AIM_RANGE = 240;
+const AUTO_AIM_RANGE = 260;
+/** Portée de la mêlée (+150% par rapport à l'ancienne valeur de 78). */
+const MELEE_RANGE = 195;
 
 export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerContext {
   gs: GameScene;
@@ -67,14 +69,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     body.setOffset((this.width - 28) / 2, this.height - 34);
     body.setCollideWorldBounds(true);
 
-    this.swordR = scene.add.sprite(x, y, 'sword').setOrigin(0.5, 0.85).setDepth(21).setScale(0.62);
-    this.swordL = scene.add.sprite(x, y, 'sword').setOrigin(0.5, 0.85).setDepth(21).setScale(0.62).setFlipX(true);
+    this.swordR = scene.add.sprite(x, y, 'sword').setOrigin(0.5, 0.85).setDepth(21).setScale(0.9);
+    this.swordL = scene.add.sprite(x, y, 'sword').setOrigin(0.5, 0.85).setDepth(21).setScale(0.9).setFlipX(true);
   }
 
   // ---------- IPlayerContext ----------
   heal(amount: number): void {
     this.hp = Math.min(this.stats.maxHp, this.hp + amount);
     this.gs.events.emit('hp', this.hp, this.stats.maxHp, this.shield, this.maxShield);
+  }
+  /** Paye un coût en points de vie (marchand). Laisse toujours au moins 1 PV. */
+  spendLife(amount: number): void {
+    this.hp = Math.max(1, this.hp - amount);
+    this.gs.events.emit('hp', this.hp, this.stats.maxHp, this.shield, this.maxShield);
+    this.gs.juice.burst(this.x, this.y - 8, 0xe8384f, 10, 160, 1);
   }
   grantMaxShield(amount: number): void {
     this.maxShield += amount;
@@ -215,17 +223,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (this.attacking) {
       const p = 1 - Math.max(0, (this.attackEndAt - now) / this.attackDuration());
       const swing = Phaser.Math.Linear(-1.3, 1.3, p);
-      const ax = this.x + this.aim.x * 16, ay = this.y - 10 + this.aim.y * 16;
+      const ax = this.x + this.aim.x * 28, ay = this.y - 10 + this.aim.y * 28;
       if (this.comboIndex % 2 === 0) {
-        this.swordR.setPosition(ax, ay).setRotation(baseAngle + swing).setScale(0.82);
-        this.swordL.setPosition(lx, ly).setRotation(restL).setScale(0.58);
+        this.swordR.setPosition(ax, ay).setRotation(baseAngle + swing).setScale(1.25);
+        this.swordL.setPosition(lx, ly).setRotation(restL).setScale(0.85);
       } else {
-        this.swordL.setPosition(ax, ay).setRotation(baseAngle - swing).setScale(0.82);
-        this.swordR.setPosition(rx, ly).setRotation(restR).setScale(0.58);
+        this.swordL.setPosition(ax, ay).setRotation(baseAngle - swing).setScale(1.25);
+        this.swordR.setPosition(rx, ly).setRotation(restR).setScale(0.85);
       }
     } else {
-      this.swordR.setPosition(rx, ly).setRotation(restR).setScale(0.62);
-      this.swordL.setPosition(lx, ly).setRotation(restL).setScale(0.62);
+      this.swordR.setPosition(rx, ly).setRotation(restR).setScale(0.9);
+      this.swordL.setPosition(lx, ly).setRotation(restL).setScale(0.9);
     }
   }
 
@@ -285,6 +293,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     });
   }
 
+  /** Croissant de coupe : visualise la portée (grande hitbox) de la mêlée. */
+  private slashVfx(aimAngle: number, finisher: boolean): void {
+    const g = this.gs.add.graphics().setDepth(23);
+    const R = MELEE_RANGE * 0.82, cx = this.x, cy = this.y - 8;
+    const col = finisher ? 0xff8a2a : 0xdff0ff;
+    g.lineStyle(finisher ? 16 : 12, col, 0.5);
+    g.beginPath(); g.arc(cx, cy, R, aimAngle - 1.15, aimAngle + 1.15, false); g.strokePath();
+    g.lineStyle(finisher ? 6 : 4, 0xffffff, 0.75);
+    g.beginPath(); g.arc(cx, cy, R, aimAngle - 1.0, aimAngle + 1.0, false); g.strokePath();
+    this.gs.tweens.add({ targets: g, alpha: 0, duration: 190, ease: 'Cubic.easeOut', onComplete: () => g.destroy() });
+  }
+
   /** Direction normalisée vers l'ennemi vivant le plus proche (ou null). */
   private nearestTargetDir(maxRange: number): Phaser.Math.Vector2 | null {
     let best: IEnemyLike | null = null;
@@ -304,8 +324,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const idxForDamage = Math.min(this.comboIndex, dmgTable.length - 1);
     const isFinisher = this.comboIndex === this.maxCombo - 1 || this.comboIndex >= dmgTable.length - 1;
     const baseDmg = dmgTable[idxForDamage] ?? dmgTable[dmgTable.length - 1];
-    const range = 78;
+    const range = MELEE_RANGE;
     const aimAngle = Math.atan2(this.aim.y, this.aim.x);
+    this.slashVfx(aimAngle, isFinisher);
     let hitAny = false;
     for (const e of this.gs.getTargets()) {
       if (!e.isAlive()) continue;
@@ -364,11 +385,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const now = performance.now();
     if (now < this.specialReadyAt) return;
     this.specialReadyAt = now + this.stats.specialCooldown;
-    const radius = this.stats.specialRadius;
     const bigExplosion = this.specialFlags.has('explosion');
-    this.gs.juice.ring(this.x, this.y, radius, bigExplosion ? 0xffa53a : 0xb26bff, 320);
-    this.gs.juice.shake(bigExplosion ? 240 : 160, bigExplosion ? 0.012 : 0.007);
-    this.gs.juice.burst(this.x, this.y, bigExplosion ? 0xffd24a : 0xb26bff, bigExplosion ? 24 : 16, 240, 1.6);
+    const radius = this.stats.specialRadius * (bigExplosion ? 1.3 : 1);
+    // explosion de chaleur rouge autour du chaton
+    this.gs.juice.heatBlast(this.x, this.y, radius);
+    this.gs.juice.shake(bigExplosion ? 260 : 190, bigExplosion ? 0.014 : 0.009);
     this.gs.sfx('special');
     // dégâts de zone du tourbillon
     for (const e of this.gs.getTargets()) {

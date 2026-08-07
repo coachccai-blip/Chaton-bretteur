@@ -31,7 +31,7 @@ export const COLORS = {
 
 export const PLAYER_BASE = {
   maxHp: 100,
-  speed: 220,
+  speed: 265,
   swordDamage: [10, 10, 18], // coups 1-2-3
   comboWindow: 420, // ms pour enchaîner
   attackDuration: 220, // ms d'une frappe
@@ -42,7 +42,7 @@ export const PLAYER_BASE = {
   dashCharges: 1,
   specialDamage: 30,
   specialCooldown: 4000,
-  specialRadius: 120,
+  specialRadius: 150,
   hurtIFrames: 500,
   knockback: 280, // 3e coup
   lifesteal: 0, // fraction
