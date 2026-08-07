@@ -107,3 +107,75 @@ export const PROPS: SpriteDef[] = [
 export function genProps(scene: Phaser.Scene): void {
   for (const p of PROPS) genSprite(scene, p, ART_CELL);
 }
+
+/** Plaque de piège (sol métallique avec fentes). */
+export function genTrapBase(scene: Phaser.Scene, key = 'trap_base', size = 56): void {
+  canvasTex(scene, key, size, size, (ctx) => {
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = '#26262f'; ctx.fillRect(2, 2, size - 4, size - 4);
+    ctx.fillStyle = '#3a3a46'; ctx.fillRect(4, 4, size - 8, size - 8);
+    ctx.strokeStyle = '#15151c'; ctx.lineWidth = 3; ctx.strokeRect(3, 3, size - 6, size - 6);
+    // fentes sombres où sortent les pics
+    ctx.fillStyle = '#101015';
+    for (let i = 0; i < 3; i++) {
+      const y = 12 + i * ((size - 24) / 2);
+      ctx.fillRect(10, y, size - 20, 5);
+    }
+    // rivets
+    ctx.fillStyle = '#55555f';
+    [[8, 8], [size - 12, 8], [8, size - 12], [size - 12, size - 12]].forEach(([x, y]) => ctx.fillRect(x, y, 4, 4));
+  });
+}
+
+/** Pics métalliques (état sorti). Origine en bas dans le jeu. */
+export function genSpikes(scene: Phaser.Scene, key = 'trap_spikes', size = 56): void {
+  const h = 44;
+  canvasTex(scene, key, size, h, (ctx) => {
+    const n = 4;
+    const w = size / n;
+    for (let i = 0; i < n; i++) {
+      const x = i * w;
+      ctx.fillStyle = '#8a90a0';
+      ctx.beginPath(); ctx.moveTo(x + 2, h); ctx.lineTo(x + w / 2, 2); ctx.lineTo(x + w - 2, h); ctx.closePath(); ctx.fill();
+      // reflet
+      ctx.fillStyle = '#e8ecf4';
+      ctx.beginPath(); ctx.moveTo(x + w / 2, 2); ctx.lineTo(x + w / 2 - 3, h - 2); ctx.lineTo(x + w / 2 + 1, h - 2); ctx.closePath(); ctx.fill();
+      // ombre droite
+      ctx.fillStyle = '#4a4e58';
+      ctx.beginPath(); ctx.moveTo(x + w / 2, 2); ctx.lineTo(x + w - 2, h); ctx.lineTo(x + w / 2 + 4, h); ctx.closePath(); ctx.fill();
+    }
+  });
+}
+
+/** Bassin de lave/poison organique et lumineux. */
+export function genPool(scene: Phaser.Scene, key: string, inner: string, mid: string, outer: string, crust: string, size = 112): void {
+  canvasTex(scene, key, size, size, (ctx) => {
+    const cx = size / 2, cy = size / 2;
+    let seed = size ^ 0x1234;
+    const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+    // contour blobby (croûte)
+    ctx.beginPath();
+    const pts = 16;
+    for (let i = 0; i <= pts; i++) {
+      const a = (i / pts) * Math.PI * 2;
+      const r = size * 0.4 + (rnd() - 0.5) * size * 0.1;
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = crust; ctx.fill();
+    // intérieur dégradé
+    ctx.save(); ctx.clip();
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.42);
+    g.addColorStop(0, inner); g.addColorStop(0.4, mid); g.addColorStop(0.8, outer); g.addColorStop(1, crust);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, size, size);
+    // taches vives
+    for (let i = 0; i < 6; i++) {
+      const x = cx + (rnd() - 0.5) * size * 0.5, y = cy + (rnd() - 0.5) * size * 0.5;
+      ctx.fillStyle = inner; ctx.globalAlpha = 0.5;
+      ctx.beginPath(); ctx.arc(x, y, 3 + rnd() * 5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  });
+}

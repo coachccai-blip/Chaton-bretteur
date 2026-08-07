@@ -54,10 +54,12 @@ export class RewardScene extends Phaser.Scene {
     c.add(desc);
 
     c.setSize(w, h);
-    c.setInteractive(new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h), Phaser.Geom.Rectangle.Contains);
-    c.on('pointerover', () => this.tweens.add({ targets: c, scale: 1.05, duration: 120 }));
-    c.on('pointerout', () => this.tweens.add({ targets: c, scale: 1, duration: 120 }));
-    c.on('pointerdown', () => { AudioManager.play('ui'); this.pick(power); });
+    // zone cliquable couvrant toute la carte (large marge)
+    const hit = this.add.zone(0, 0, w + 20, h + 20).setInteractive({ useHandCursor: true });
+    c.add(hit);
+    hit.on('pointerover', () => this.tweens.add({ targets: c, scale: 1.06, duration: 120 }));
+    hit.on('pointerout', () => this.tweens.add({ targets: c, scale: 1, duration: 120 }));
+    hit.on('pointerdown', () => { AudioManager.play('ui'); this.pick(power); });
 
     this.tweens.add({ targets: c, alpha: 1, y, duration: 300, delay: index * 90, ease: 'Back.easeOut' });
   }

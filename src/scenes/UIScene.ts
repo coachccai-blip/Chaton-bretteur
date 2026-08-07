@@ -52,8 +52,8 @@ export class UIScene extends Phaser.Scene {
     iconBadge(this, GAME_WIDTH - 108, 26, glyphTexture('coin'), COLORS.gold, 0x3a2f10, 14).setDepth(2);
     this.currencyText = label(this, GAME_WIDTH - 88, 26, '0', 18, '#f4c430', 0).setDepth(3);
 
-    // progress
-    this.progressText = label(this, GAME_WIDTH / 2, 22, '', 15, '#f4e9c1').setDepth(3);
+    // progress (aligné à gauche après les jauges de cooldown)
+    this.progressText = label(this, 400, 22, '', 15, '#f4e9c1', 0).setDepth(3);
 
     // powers acquis
     this.powersLayer = this.add.container(0, 50).setDepth(3);

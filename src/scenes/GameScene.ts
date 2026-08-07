@@ -15,6 +15,7 @@ import { SaveSystem } from '../systems/SaveSystem';
 import { AudioManager } from '../systems/AudioManager';
 import { Environment } from '../systems/Environment';
 import { Door, ROOM_TYPE_INFO, type RoomType } from '../entities/Door';
+import { Trap, type TrapType } from '../entities/Trap';
 import { randomLayout, type Rect } from '../config/roomLayouts';
 import { PROPS } from '../art/environment';
 import type { IEnemyLike } from '../config/types';
@@ -92,6 +93,7 @@ export class GameScene extends Phaser.Scene {
 
   private hazards: Hazard[] = [];
   private bossHazards: Hazard[] = [];
+  private traps: Trap[] = [];
   private hazardGfx!: Phaser.GameObjects.Graphics;
   private reviveAvailable = false;
   private poisonUntil = 0;
@@ -157,6 +159,7 @@ export class GameScene extends Phaser.Scene {
     this.roomObjects = [];
     this.walls.clear(true, true);
     this.clearDoors();
+    this.clearTraps();
     this.hazards = [];
     this.bossHazards = [];
     this.hazardGfx.clear();
@@ -264,7 +267,7 @@ export class GameScene extends Phaser.Scene {
 
   private startCombat(): void {
     this.roomState = 'combat';
-    this.setupHazards();
+    this.setupTraps();
     this.wavesTotal = Phaser.Math.Between(1, 3);
     this.waveIndex = 0;
     this.events.emit('progress', this.zone.name, this.combatDone + 1, this.zone.rooms, false, 'Combat');
@@ -663,15 +666,49 @@ export class GameScene extends Phaser.Scene {
   canRevive(): boolean { return this.reviveAvailable && !RunState.reviveUsed; }
   consumeRevive(): void { RunState.reviveUsed = true; this.reviveAvailable = false; }
 
-  // ---------------- hazards ----------------
-  private setupHazards(): void {
-    this.hazards = [];
-    if (this.zone.hazard === 'none') return;
+  // ---------------- pièges d'environnement ----------------
+  private clearTraps(): void {
+    this.traps.forEach((t) => t.destroy());
+    this.traps = [];
+  }
+
+  private setupTraps(): void {
+    this.clearTraps();
+    // types de pièges par zone
+    const byZone: Record<string, TrapType[]> = {
+      thorns: ['spike'],
+      toxic: ['toxic', 'spike'],
+      lava: ['lava', 'spike'],
+      shadow: ['spike'],
+      none: [],
+    };
+    const pool = byZone[this.zone.hazard] ?? ['spike'];
+    if (pool.length === 0) return;
     const n = Phaser.Math.Between(2, 4);
     for (let i = 0; i < n; i++) {
-      const pos = this.randomSpawnPos();
-      this.hazards.push({ x: pos.x, y: pos.y, r: Phaser.Math.Between(30, 50), type: this.zone.hazard as HazardType, nextTick: 0, activeAt: 0, expireAt: Number.MAX_SAFE_INTEGER });
+      let pos = this.arenaPoint(70);
+      for (let tries = 0; tries < 8 && (this.pointBlocked(pos.x, pos.y, 36) || Phaser.Math.Distance.Between(pos.x, pos.y, this.player.x, this.player.y) < 90); tries++) {
+        pos = this.arenaPoint(70);
+      }
+      const type = Phaser.Utils.Array.GetRandom(pool);
+      this.traps.push(new Trap(this, pos.x, pos.y, type));
     }
+  }
+
+  /** dégâts d'environnement/piège (ignore les i-frames). */
+  hurtPlayer(amount: number): void {
+    if (this.player && !this.player.dead) this.player.takeHazardDamage(amount);
+  }
+
+  private updateTraps(now: number): void {
+    let slow = 1;
+    const px = this.player?.x ?? -999, py = this.player?.y ?? -999;
+    const alive = !!this.player && !this.player.dead;
+    for (const t of this.traps) {
+      const r = t.update(now, px, py, alive);
+      if (r.slow < slow) slow = r.slow;
+    }
+    if (this.player && slow < 1) this.player.slowFactor = Math.min(this.player.slowFactor, slow);
   }
 
   /** Zone au sol dynamique (attaque de boss) : télégraphe puis active pendant `duration`. */
@@ -1010,6 +1047,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.updateHazards(now);
+    this.updateTraps(now);
 
     // fin du ralentissement temporel (The World)
     if (this.enemyTimeScale !== 1 && now >= this.enemyTimeScaleUntil) this.enemyTimeScale = 1;

@@ -90,37 +90,41 @@ export function genPixel(scene: Phaser.Scene, key = 'px', s = 4): void {
 }
 
 /**
- * Tuile de sol procédurale d'une zone : base + variations bruitées, bord sombre.
- * Déterministe (seedé) pour un rendu stable.
+ * Sol lisse d'une zone : base unie + nuages doux basse fréquence (sans grille).
+ * Déterministe (seedé). Rendu net mais sans lignes ni blocs visibles.
  */
-export function genFloorTile(scene: Phaser.Scene, key: string, base: number, alt: number, size = 64): void {
+export function genFloorTile(scene: Phaser.Scene, key: string, base: number, alt: number, size = 256): void {
   makeCanvasTexture(scene, key, size, size, (ctx) => {
+    ctx.imageSmoothingEnabled = true;
     const baseHex = '#' + base.toString(16).padStart(6, '0');
     const altHex = '#' + alt.toString(16).padStart(6, '0');
     ctx.fillStyle = baseHex;
     ctx.fillRect(0, 0, size, size);
-    // damier de blocs 8px avec bruit pseudo-aléatoire seedé
-    let seed = base ^ (size * 2654435761);
-    const rnd = () => {
-      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      return seed / 0x7fffffff;
-    };
-    const b = 8;
-    for (let y = 0; y < size; y += b) {
-      for (let x = 0; x < size; x += b) {
-        const r = rnd();
-        if (r > 0.72) {
-          ctx.fillStyle = altHex;
-          ctx.fillRect(x, y, b, b);
-        } else if (r > 0.62) {
-          ctx.fillStyle = 'rgba(0,0,0,0.10)';
-          ctx.fillRect(x, y, b, b);
-        }
-      }
+
+    let seed = (base ^ 0x9e3779b1) >>> 0;
+    const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+
+    // grands nuages doux (variation organique, très faible contraste)
+    for (let i = 0; i < 26; i++) {
+      const x = rnd() * size, y = rnd() * size;
+      const r = 40 + rnd() * 90;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      const lighter = rnd() > 0.5;
+      g.addColorStop(0, lighter ? altHex : '#000000');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = lighter ? 0.10 : 0.08;
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
     }
-    // liseré sombre pour lecture de grille
-    ctx.strokeStyle = 'rgba(0,0,0,0.18)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0.5, 0.5, size - 1, size - 1);
+    ctx.globalAlpha = 1;
+
+    // très léger grain (dithering fin) pour éviter le banding
+    for (let i = 0; i < size * size * 0.03; i++) {
+      const x = Math.floor(rnd() * size), y = Math.floor(rnd() * size);
+      ctx.fillStyle = rnd() > 0.5 ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.05)';
+      ctx.fillRect(x, y, 2, 2);
+    }
   });
 }

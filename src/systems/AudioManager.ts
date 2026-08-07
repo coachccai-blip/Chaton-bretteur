@@ -87,6 +87,7 @@ class Audio {
       case 'timestop': this.blip(180, 0.7, 'sawtooth', 0.28, -120); this.blip(90, 0.9, 'sine', 0.22, -40); this.noise(0.2, 0.12); break;
       case 'zap': this.blip(900, 0.06, 'square', 0.16, -400); this.noise(0.05, 0.1); break;
       case 'reaction': this.blip(300, 0.2, 'sawtooth', 0.22, 500); this.noise(0.12, 0.14); break;
+      case 'spike': this.blip(220, 0.08, 'square', 0.14, 180); this.noise(0.06, 0.1); break;
     }
   }
 

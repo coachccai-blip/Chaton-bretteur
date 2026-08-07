@@ -3,7 +3,7 @@ import { genSprite, genMask, genOrb, genPixel, genFloorTile } from './PixelArtGe
 import { CAT, SWORD } from './hero';
 import { GLYPHS } from './icons';
 import { genCritter, MONSTER_RECIPES, BOSS_RECIPES } from './critters';
-import { genRadialLight, genVignette, genSoftShadow, genWallTile, genProps } from './environment';
+import { genRadialLight, genVignette, genSoftShadow, genWallTile, genProps, genTrapBase, genSpikes, genPool } from './environment';
 import { ZONES } from '../config/worlds';
 
 function shade(c: number, amt: number): number {
@@ -47,6 +47,12 @@ export function generateAll(scene: Phaser.Scene): void {
   genVignette(scene, 'vignette', 960, 540);
   genSoftShadow(scene, 'shadow', 64, 32);
   genProps(scene);
+
+  // pièges
+  genTrapBase(scene, 'trap_base', 56);
+  genSpikes(scene, 'trap_spikes', 56);
+  genPool(scene, 'pool_lava', '#ffe08a', '#ff8a1f', '#ff3a1f', '#5a1408', 112);
+  genPool(scene, 'pool_toxic', '#dfffa0', '#8fd94a', '#4a7a2a', '#1a2810', 112);
 
   generated = true;
 }
