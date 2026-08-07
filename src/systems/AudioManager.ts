@@ -82,6 +82,11 @@ class Audio {
       case 'power': this.blip(660, 0.1, 'triangle', 0.18, 220); this.blip(990, 0.12, 'triangle', 0.14, 180); break;
       case 'bossdie': this.blip(140, 0.8, 'sawtooth', 0.3, 300); this.noise(0.5, 0.2); break;
       case 'victory': this.arpUp(); break;
+      case 'door': this.blip(520, 0.12, 'sine', 0.16, 260); this.blip(780, 0.12, 'sine', 0.12, 200); break;
+      case 'fountain': [523, 659, 880].forEach((n, i) => setTimeout(() => this.blip(n, 0.18, 'sine', 0.16), i * 70)); break;
+      case 'timestop': this.blip(180, 0.7, 'sawtooth', 0.28, -120); this.blip(90, 0.9, 'sine', 0.22, -40); this.noise(0.2, 0.12); break;
+      case 'zap': this.blip(900, 0.06, 'square', 0.16, -400); this.noise(0.05, 0.1); break;
+      case 'reaction': this.blip(300, 0.2, 'sawtooth', 0.22, 500); this.noise(0.12, 0.14); break;
     }
   }
 

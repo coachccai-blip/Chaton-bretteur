@@ -4,6 +4,14 @@ Un **roguelite d'action top-down** dans l'esprit de *Hades*, jouable au **clavie
 
 Développé en **Phaser 3 + Vite + TypeScript**.
 
+## 🏰 Salles, portes & ambiance (façon Dead Cells / Hades)
+
+- **Ambiance** : lumière dynamique autour du chaton, vignette, brouillard, particules d'ambiance par zone (lucioles, bulles toxiques, braises, poussière spectrale), parallaxe, ombres portées, murs de pierre en relief. Décors (props) éclairés dispersés.
+- **Salles à formes variées** : piliers, blocs centraux, coins coupés, barres latérales… en **collision** — les monstres ne traversent plus les murs.
+- **Portes** : après chaque salle, on choisit entre plusieurs **portes** dont l'icône indique le contenu de la salle suivante — ⚔️ Combat (boon), ❤️ Fontaine de vie, 🪙 Marchand, ⭐ Trésor, 💥 Boss.
+- **Salles spéciales** : fontaine (gros soin + PV max), marchand (achats en Croquettes du run : soin / PV max / boon), trésor (or + boon offert).
+- **Animations de pouvoirs** soignées — ex. **The World** : voile indigo, ondes « ZA WARUDO », horloge qui s'arrête, ennemis figés, tandis que le chaton passe au premier plan. Éclairs pixelisés, ondes tranchantes, explosions, domaines… chacun avec son **SFX synthétisé** dédié.
+
 ## 🎨 Graphismes : pixel art 100 % généré par code
 
 Le brief prévoyait des assets PNG fournis séparément. Comme aucune image n'était disponible, **tous les visuels sont générés par le code** au démarrage — aucun fichier image n'est requis :

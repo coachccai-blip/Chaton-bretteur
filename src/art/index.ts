@@ -3,7 +3,15 @@ import { genSprite, genMask, genOrb, genPixel, genFloorTile } from './PixelArtGe
 import { CAT, SWORD } from './hero';
 import { GLYPHS } from './icons';
 import { genCritter, MONSTER_RECIPES, BOSS_RECIPES } from './critters';
+import { genRadialLight, genVignette, genSoftShadow, genWallTile, genProps } from './environment';
 import { ZONES } from '../config/worlds';
+
+function shade(c: number, amt: number): number {
+  const r = Math.min(255, Math.max(0, ((c >> 16) & 255) + amt));
+  const g = Math.min(255, Math.max(0, ((c >> 8) & 255) + amt));
+  const b = Math.min(255, Math.max(0, (c & 255) + amt));
+  return (r << 16) | (g << 8) | b;
+}
 
 let generated = false;
 
@@ -28,8 +36,17 @@ export function generateAll(scene: Phaser.Scene): void {
   // Icônes
   for (const g of GLYPHS) genMask(scene, g, 3);
 
-  // Sols de zones
-  for (const z of ZONES) genFloorTile(scene, `floor_${z.id}`, z.palette.floor, z.palette.floorAlt, 64);
+  // Sols & murs de zones
+  for (const z of ZONES) {
+    genFloorTile(scene, `floor_${z.id}`, z.palette.floor, z.palette.floorAlt, 64);
+    genWallTile(scene, `wall_${z.id}`, shade(z.palette.wall, 40), z.palette.wall, shade(z.palette.wall, -35), 48);
+  }
+
+  // Atmosphère
+  genRadialLight(scene, 'light', 'rgba(255,255,255,1)', 256);
+  genVignette(scene, 'vignette', 960, 540);
+  genSoftShadow(scene, 'shadow', 64, 32);
+  genProps(scene);
 
   generated = true;
 }

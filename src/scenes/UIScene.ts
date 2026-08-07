@@ -143,8 +143,10 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
-  private onProgress(zoneName: string, room: number, total: number, isBoss: boolean): void {
-    this.progressText.setText(isBoss ? `${zoneName} — BOSS` : `${zoneName} — Salle ${room}/${total}`);
+  private onProgress(zoneName: string, room: number, total: number, isBoss: boolean, label?: string): void {
+    if (isBoss) this.progressText.setText(`${zoneName} — BOSS`);
+    else if (label && label !== 'Combat') this.progressText.setText(`${zoneName} — ${label}`);
+    else this.progressText.setText(`${zoneName} — Salle ${room}/${total}`);
     if (!isBoss) this.bossLayer.setVisible(false);
   }
 

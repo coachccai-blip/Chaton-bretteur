@@ -31,6 +31,15 @@ function makeGrid(w: number, h: number): Grid {
   return Array.from({ length: h }, () => Array<string | null>(w).fill(null));
 }
 
+/** Éclaircit une couleur hex de `amt` (0-255). */
+function lighten(hex: string, amt: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.min(255, ((n >> 16) & 255) + amt);
+  const g = Math.min(255, ((n >> 8) & 255) + amt);
+  const b = Math.min(255, (n & 255) + amt);
+  return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+}
+
 function disc(g: Grid, cx: number, cy: number, rx: number, ry: number, c: string): void {
   const h = g.length, w = g[0].length;
   for (let y = 0; y < h; y++) {
@@ -141,6 +150,13 @@ export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
   }
 
   if (r.belly) disc(g, cx, bodyCy + ry * 0.25, rx * 0.6, ry * 0.6, r.belly);
+
+  // volume : ombre basse + reflet haut + éclat spéculaire
+  if (r.feature !== 'ghost') {
+    disc(g, cx, bodyCy + ry * 0.55, rx * 0.85, ry * 0.4, lighten(r.body, -24));
+    disc(g, cx - rx * 0.33, bodyCy - ry * 0.42, rx * 0.38, ry * 0.3, lighten(r.body, 34));
+    disc(g, cx - rx * 0.42, bodyCy - ry * 0.52, rx * 0.13, ry * 0.11, lighten(r.body, 70));
+  }
 
   // ---- features devant / dessus ----
   if (r.feature === 'ears') {
