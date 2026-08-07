@@ -34,7 +34,8 @@ export class GameOverScene extends Phaser.Scene {
     label(this, GAME_WIDTH / 2, 466, `+ ${RunState.currencyEarned} Croquettes Dorées`, 20, '#f4c430');
     label(this, GAME_WIDTH / 2, 492, `Total : ${SaveSystem.currency} 🥇`, 14, '#9a8fb0');
 
-    button(this, GAME_WIDTH / 2, GAME_HEIGHT - 22, 300, 44, 'Retour au Camp', () => {
+    // bouton à droite (les stats sont centrées) pour ne masquer aucune info
+    button(this, GAME_WIDTH - 150, GAME_HEIGHT - 30, 260, 44, 'Retour au Camp', () => {
       AudioManager.play('ui');
       this.scene.start('Hub');
     }, { fill: 0x2a4a2a, border: 0x6ad46a, size: 18 });

@@ -34,13 +34,14 @@ export class VictoryScene extends Phaser.Scene {
     label(this, GAME_WIDTH / 2, 406, `Monstres vaincus : ${RunState.kills}`, 15, '#f4e9c1');
     label(this, GAME_WIDTH / 2, 434, `+ ${RunState.currencyEarned} Croquettes Dorées`, 17, '#f4c430');
 
-    button(this, GAME_WIDTH / 2, GAME_HEIGHT - 24, 300, 46, 'Retour au Camp', () => {
+    // bouton à droite (les stats sont centrées) pour ne masquer aucune info
+    button(this, GAME_WIDTH - 150, GAME_HEIGHT - 30, 260, 46, 'Retour au Camp', () => {
       AudioManager.play('ui');
       this.scene.start('Hub');
     }, { fill: 0x2a4a2a, border: 0x6ad46a, size: 18 });
 
     if (SaveSystem.data.unlockedExtreme) {
-      label(this, GAME_WIDTH / 2, GAME_HEIGHT - 64, 'Difficulté Extrême débloquée !', 13, '#ff9db0');
+      label(this, GAME_WIDTH / 2, GAME_HEIGHT - 30, 'Difficulté Extrême débloquée !', 13, '#ff9db0');
     }
   }
 }

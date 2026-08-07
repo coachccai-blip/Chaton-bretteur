@@ -163,19 +163,23 @@ export class UIScene extends Phaser.Scene {
     this.touch = this.sys.game.device.input.touch || navigator.maxTouchPoints > 0;
     this.touchLayer = this.add.container(0, 0).setDepth(20).setVisible(this.touch);
 
-    // joystick
-    const jx = 110, jy = GAME_HEIGHT - 100, jr = 60;
-    const base = this.add.circle(jx, jy, jr, 0xffffff, 0.08).setStrokeStyle(3, 0xffffff, 0.25);
-    const thumb = this.add.circle(jx, jy, 28, 0xffffff, 0.25).setStrokeStyle(2, 0xffffff, 0.4);
+    // joystick FLOTTANT : apparaît là où le doigt se pose, déplacement relatif.
+    const jr = 62;
+    const base = this.add.circle(0, 0, jr, 0xffffff, 0.08).setStrokeStyle(3, 0xffffff, 0.25).setVisible(false);
+    const thumb = this.add.circle(0, 0, 28, 0xffffff, 0.25).setStrokeStyle(2, 0xffffff, 0.4).setVisible(false);
     this.touchLayer.add([base, thumb]);
-    let jpid = -1;
+    let jpid = -1, ox = 0, oy = 0;
 
     const zone = this.add.zone(0, GAME_HEIGHT / 2, GAME_WIDTH * 0.5, GAME_HEIGHT).setOrigin(0, 0.5).setInteractive();
     this.touchLayer.add(zone);
-    zone.on('pointerdown', (p: Phaser.Input.Pointer) => { jpid = p.id; this.moveThumb(p, jx, jy, jr, thumb); });
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) => { if (p.id === jpid) this.moveThumb(p, jx, jy, jr, thumb); });
+    zone.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      jpid = p.id; ox = p.x; oy = p.y;
+      base.setPosition(ox, oy).setVisible(true);
+      thumb.setPosition(ox, oy).setVisible(true);
+    });
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => { if (p.id === jpid) this.moveThumb(p, ox, oy, jr, thumb); });
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
-      if (p.id === jpid) { jpid = -1; thumb.setPosition(jx, jy); this.gs.controls.setStick(0, 0); }
+      if (p.id === jpid) { jpid = -1; base.setVisible(false); thumb.setVisible(false); this.gs.controls.setStick(0, 0); }
     });
 
     // boutons d'action

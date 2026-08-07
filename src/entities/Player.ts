@@ -3,6 +3,9 @@ import type { GameScene } from '../scenes/GameScene';
 import type { PlayerStats } from '../config/game';
 import type { IPlayerContext, IEnemyLike, ICombatScene, OnHitFn, OnKillFn, VoidFn, SpecialFlag, DashFlag } from '../config/types';
 
+/** Portée d'auto-visée : au-delà, l'attaque suit la visée manuelle/déplacement. */
+const AUTO_AIM_RANGE = 240;
+
 export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerContext {
   gs: GameScene;
   stats: PlayerStats;
@@ -135,6 +138,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const move = input.getMove();
     this.aim = input.getAim(this.x, this.y, move);
 
+    // Auto-visée : pendant une attaque, oriente vers la cible la plus proche.
+    if (this.attacking) {
+      const to = this.nearestTargetDir(AUTO_AIM_RANGE);
+      if (to) this.aim = to;
+    }
+
     // facing
     if (Math.abs(this.aim.x) > 0.1) this.facing = this.aim.x >= 0 ? 1 : -1;
     this.setFlipX(this.facing < 0);
@@ -264,6 +273,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     this.lastAttackAt = now;
     this.attacking = true;
     this.attackEndAt = now + this.attackDuration();
+    // vise immédiatement l'ennemi le plus proche (essentiel sans souris/visée)
+    const to = this.nearestTargetDir(AUTO_AIM_RANGE);
+    if (to) { this.aim = to; if (Math.abs(to.x) > 0.1) { this.facing = to.x >= 0 ? 1 : -1; this.setFlipX(this.facing < 0); } }
     this.gs.sfx('sword');
 
     // résolution des dégâts au milieu du swing
@@ -271,6 +283,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       if (this.dead) return;
       this.resolveArcHit();
     });
+  }
+
+  /** Direction normalisée vers l'ennemi vivant le plus proche (ou null). */
+  private nearestTargetDir(maxRange: number): Phaser.Math.Vector2 | null {
+    let best: IEnemyLike | null = null;
+    let bestD2 = maxRange * maxRange;
+    for (const e of this.gs.getTargets()) {
+      if (!e.isAlive()) continue;
+      const dx = e.x - this.x, dy = e.y - this.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < bestD2) { bestD2 = d2; best = e; }
+    }
+    if (!best) return null;
+    return new Phaser.Math.Vector2(best.x - this.x, best.y - this.y).normalize();
   }
 
   private resolveArcHit(): void {
@@ -354,7 +380,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     }
     // boons de spécial
     if (this.specialFlags.has('wave')) {
-      const a = this.aim.clone().normalize();
+      const a = this.nearestTargetDir(360) ?? this.aim.clone().normalize();
       this.gs.slashWave(this.x, this.y, a.x, a.y, Math.round(this.stats.specialDamage * 0.9));
       this.gs.slashWave(this.x, this.y, a.x, a.y, Math.round(this.stats.specialDamage * 0.9)); // double lame
     }
