@@ -107,7 +107,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   golem: {
     id: 'golem', name: 'Ignis', title: 'le Serpent de Lave', sprite: 'serpentlave',
-    hp: 1200, scale: 0.82, contactDamage: 18, auraColor: 0xff6a1f, level: 35,
+    hp: 1500, scale: 0.82, contactDamage: 18, auraColor: 0xff6a1f, level: 35,
     phases: [
       { hpFrac: 1.0, speed: 205, movement: 'slither', moves: [
         { type: 'fireBurst', telegraph: 620, cooldown: 3000, count: 10, speed: 250, damage: 14, color: 0xff7a2a },
@@ -128,7 +128,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   roi: {
     id: 'roi', name: 'Mortis', title: 'l’Archimage Mort-vivant', sprite: 'archimage',
-    hp: 3000, scale: 0.82, contactDamage: 20, auraColor: 0xb26bff, level: 50,
+    hp: 5000, scale: 0.82, contactDamage: 20, auraColor: 0xb26bff, level: 50,
     phases: [
       { hpFrac: 1.0, speed: 140, moves: [
         { type: 'summon', telegraph: 700, cooldown: 6000, summonId: 'zombie', summonCount: 2 },
@@ -158,7 +158,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   leviathan: {
     id: 'leviathan', name: 'Glacior', title: 'le Léviathan des Abysses', sprite: 'leviathan',
-    hp: 6000, scale: 0.82, contactDamage: 22, auraColor: 0x7fdcff, level: 70,
+    hp: 10000, scale: 0.82, contactDamage: 22, auraColor: 0x7fdcff, level: 70,
     phases: [
       { hpFrac: 1.0, speed: 160, moves: [
         // 0. Pilônes de Glace — invoqués au spawn, rendent Glacior invincible (damage = PV/pilône)
@@ -193,7 +193,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   rapace: {
     id: 'rapace', name: 'Voltaïr', title: 'le Rapace du Jugement', sprite: 'rapace',
-    hp: 15000, scale: 0.82, contactDamage: 24, auraColor: 0xb0c8ff, level: 85,
+    hp: 20000, scale: 0.82, contactDamage: 24, auraColor: 0xb0c8ff, level: 85,
     phases: [
       { hpFrac: 1.0, speed: 175, moves: [
         { type: 'arrowRain', telegraph: 640, cooldown: 2600, count: 9, radius: 46, damage: 20, color: 0xb0c8ff },
@@ -222,7 +222,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   reflet: {
     id: 'reflet', name: 'Néantis', title: 'le Reflet Noir', sprite: 'reflet',
-    hp: 30000, scale: 0.82, contactDamage: 26, auraColor: 0xd05aff, level: 99,
+    hp: 50000, scale: 0.82, contactDamage: 26, auraColor: 0xd05aff, level: 99,
     phases: [
       { hpFrac: 1.0, speed: 150, moves: [
         // 1. Combo Miroir — charge d'estoc
