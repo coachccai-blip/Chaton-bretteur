@@ -70,6 +70,11 @@ class Audio {
     if (!this.ctx) return;
     switch (name) {
       case 'sword': this.blip(520, 0.08, 'square', 0.18, -220); break;
+      // Combo d'épée : un timbre par coup (1-2-3) + claquement du coup final.
+      case 'slash1': this.blip(660, 0.07, 'square', 0.16, -320); this.noise(0.04, 0.08); break;
+      case 'slash2': this.blip(540, 0.07, 'sawtooth', 0.16, -280); this.noise(0.04, 0.08); break;
+      case 'slash3': this.blip(460, 0.08, 'square', 0.17, -340); this.noise(0.05, 0.09); break;
+      case 'slashfin': this.blip(300, 0.16, 'sawtooth', 0.22, -240); this.blip(180, 0.14, 'square', 0.14, -120); this.noise(0.12, 0.16); break;
       case 'dash': this.blip(300, 0.14, 'sawtooth', 0.16, 260); break;
       case 'special': this.blip(180, 0.25, 'sawtooth', 0.2, 420); break;
       case 'hurt': this.blip(320, 0.12, 'square', 0.22, -160); break;

@@ -379,7 +379,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
 
     // Queue Équilibrière : un coup d'épée tranche pendant le dash.
     if (this.mods.dashAttack) {
-      this.slashVfx(dir.angle(), false);
+      this.slashVfx(dir.angle(), 0, this.maxCombo);
       for (const e of this.gs.getTargets()) {
         if (e.isAlive() && Math.hypot(e.x - this.x, e.y - this.y) <= MELEE_RANGE) this.dealDamage(e, this.stats.swordDamage[0], false);
       }
@@ -421,7 +421,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     // vise immédiatement l'ennemi le plus proche (essentiel sans souris/visée)
     const to = this.nearestTargetDir(AUTO_AIM_RANGE);
     if (to) { this.aim = to; if (Math.abs(to.x) > 0.1) { this.facing = to.x >= 0 ? 1 : -1; this.setFlipX(this.facing < 0); } }
-    this.gs.sfx('sword');
+    // Son différent par coup du combo (1, 2, 3…) + claquement du coup final.
+    const isFinisher = this.comboIndex === this.maxCombo - 1;
+    this.gs.sfx(isFinisher ? 'slashfin' : `slash${(this.comboIndex % 3) + 1}`);
 
     // résolution des dégâts au milieu du swing
     this.gs.time.delayedCall(this.attackDuration() * 0.35, () => {
@@ -430,16 +432,43 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     });
   }
 
-  /** Croissant de coupe : visualise la portée (grande hitbox) de la mêlée. */
-  private slashVfx(aimAngle: number, finisher: boolean): void {
+  /** Couleur de croissant par coup du combo (pour LIRE la progression). */
+  private static SLASH_COLORS = [0xbfe6ff, 0x4fa8ff, 0xb98cff];
+
+  /**
+   * Croissant de coupe PLEIN : chaque coup du combo a une couleur, une largeur
+   * d'arc et un SENS DE BALAYAGE différents (le 1er fend vers le bas, le 2e en
+   * revers, le 3e/final en grand arc doré-orangé), pour qu'on VOIE le combo au
+   * lieu de spammer sans retour visuel.
+   */
+  private slashVfx(aimAngle: number, comboIndex: number, maxCombo: number): void {
+    const finisher = comboIndex === maxCombo - 1;
+    const dir = comboIndex % 2 === 0 ? 1 : -1; // alterne le côté du swing
+    const cx = this.x, cy = this.y - 8;
+    const R = MELEE_RANGE * (finisher ? 0.95 : 0.82);
+    const span = finisher ? 1.5 : 1.0;
+    // Décale le centre de l'arc selon le coup : les croissants successifs
+    // apparaissent de part et d'autre (fend à droite, revers à gauche…).
+    const center = aimAngle + (finisher ? 0 : dir * 0.36);
+    const col = finisher ? 0xff9a2a : Player.SLASH_COLORS[comboIndex % Player.SLASH_COLORS.length];
     const g = this.gs.add.graphics().setDepth(23);
-    const R = MELEE_RANGE * 0.82, cx = this.x, cy = this.y - 8;
-    const col = finisher ? 0xff8a2a : 0xdff0ff;
-    g.lineStyle(finisher ? 16 : 12, col, 0.5);
-    g.beginPath(); g.arc(cx, cy, R, aimAngle - 1.15, aimAngle + 1.15, false); g.strokePath();
-    g.lineStyle(finisher ? 6 : 4, 0xffffff, 0.75);
-    g.beginPath(); g.arc(cx, cy, R, aimAngle - 1.0, aimAngle + 1.0, false); g.strokePath();
-    this.gs.tweens.add({ targets: g, alpha: 0, duration: 190, ease: 'Cubic.easeOut', onComplete: () => g.destroy() });
+    // halo coloré large + fil de lame blanc net (rendu en coordonnées absolues).
+    g.lineStyle(finisher ? 20 : 14, col, 0.6);
+    g.beginPath(); g.arc(cx, cy, R, center - span, center + span, false); g.strokePath();
+    g.lineStyle(finisher ? 9 : 5, 0xffffff, 0.92);
+    g.beginPath(); g.arc(cx, cy, R, center - span * 0.8, center + span * 0.8, false); g.strokePath();
+    // easeIn : le croissant reste BRILLANT puis s'efface d'un coup (lisible même
+    // en plein enchaînement rapide), au lieu de pâlir tout de suite.
+    this.gs.tweens.add({
+      targets: g, alpha: 0, duration: finisher ? 340 : 250,
+      ease: 'Cubic.easeIn', onComplete: () => g.destroy(),
+    });
+    // Le coup final claque : anneau + étincelles dans la couleur de la lame.
+    if (finisher) {
+      const tipX = cx + Math.cos(aimAngle) * R, tipY = cy + Math.sin(aimAngle) * R;
+      this.gs.juice.ring(cx, cy, R * 0.92, col, 240);
+      this.gs.juice.burst(tipX, tipY, col, 12, 220, 1.2);
+    }
   }
 
   /** Direction normalisée vers l'ennemi vivant le plus proche (ou null). */
@@ -463,7 +492,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const baseDmg = dmgTable[idxForDamage] ?? dmgTable[dmgTable.length - 1];
     const range = MELEE_RANGE;
     const aimAngle = Math.atan2(this.aim.y, this.aim.x);
-    this.slashVfx(aimAngle, isFinisher);
+    this.slashVfx(aimAngle, this.comboIndex, this.maxCombo);
     let hitAny = false;
     for (const e of this.gs.getTargets()) {
       if (!e.isAlive()) continue;
