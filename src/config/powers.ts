@@ -571,15 +571,6 @@ export const POWERS: PowerDef[] = [
     apply(p) { p.addSpecialFlag('rasenshuriken'); },
   },
   {
-    id: 'attack_titan', name: 'Titan Assaillant', god: 'Bataillon', category: 'divine', rarity: 'epic', icon: 'rage',
-    description: 'Sous 25% de PV : transformation 6 s — +50% dégâts, -50% dégâts subis (1×/salle).',
-    apply(p) {
-      p.mods.transformAt = 0.25; p.mods.transformMs = 6000;
-      p.mods.transformDmg = 1.5; p.mods.transformSpd = 1.0;
-      p.mods.transformScale = 1.5; p.mods.transformColor = 0xd9a066; p.mods.transformSfx = 1;
-    },
-  },
-  {
     id: 'gentle_fist', name: 'Soixante-Quatre Poings', god: 'Poing Souple', category: 'divine', rarity: 'epic', icon: 'fist',
     description: 'Tous les 10 coups : rafale de 8 frappes de zone autour du chaton.',
     apply(p) {
@@ -613,7 +604,7 @@ export const POWERS: PowerDef[] = [
     },
   },
   {
-    id: 'the_world', name: 'The World', god: 'Roi des Vampires', category: 'divine', rarity: 'legendary', icon: 'hourglass',
+    id: 'the_world', name: 'Zharu warudo', god: 'Roi des Vampires', category: 'divine', rarity: 'legendary', icon: 'hourglass',
     description: 'Le Spécial FIGE LE TEMPS : ennemis quasi immobiles 2,2 s.',
     apply(p) { p.addSpecialFlag('timestop'); },
   },
@@ -631,7 +622,7 @@ export const POWERS: PowerDef[] = [
     apply(p) { p.mods.gravSoul = 1; },
   },
   {
-    id: 'sukuna_domain', name: 'Sanctuaire Malfaisant', god: 'Roi des Fléaux', category: 'divine', rarity: 'legendary', icon: 'domain',
+    id: 'sukuna_domain', name: 'Saimyo Territory', god: 'Roi des Fléaux', category: 'divine', rarity: 'legendary', icon: 'domain',
     description: 'Relance le SPÉCIAL en continu (avec tous ses bonus) si des ennemis sont proches.',
     apply(p) {
       p.addPeriodic(2200, () => {
@@ -660,22 +651,25 @@ export const POWERS: PowerDef[] = [
     },
   },
   {
-    id: 'kamehameha', name: 'Kamehameha Ultime', god: 'Guerrier Millénaire', category: 'divine', rarity: 'legendary', icon: 'wave',
-    description: 'Remplace le Spécial : RAYON balayable dévastateur (35 dégâts/tick, portée écran).',
-    apply(p) { p.addSpecialFlag('kamehameha'); },
+    id: 'koji_bond', name: 'Koji Bond', god: 'Lien du Rayon', category: 'divine', rarity: 'legendary', icon: 'wave',
+    description: 'Chaque frappe fait ricocher un laser : tous les monstres de la zone subissent 5% des dégâts infligés.',
+    apply(p) {
+      p.addOnHit((target, dmg) => { p.combat.kojiLaser(target.x, target.y, dmg); });
+    },
   },
   {
-    id: 'susanoo', name: 'Susanoo', god: 'Œil Éternel', category: 'divine', rarity: 'legendary', icon: 'domain',
+    id: 'susanoo', name: 'Meta Suzataro', god: 'Œil Éternel', category: 'divine', rarity: 'legendary', icon: 'domain',
     description: 'Une armure spectrale absorbe les 3 prochains coups et riposte (se reconstitue en 20 s).',
     apply(p) { p.mods.susanoo = 1; p.mods.susanooCharges = 3; },
   },
   {
-    id: 'gear_fifth', name: 'Gear Fifth — Éveil du Soleil', god: 'Guerrier Libéré', category: 'divine', rarity: 'legendary', icon: 'rage',
-    description: 'Sous 40% de PV : ÉVEIL 8 s — dégâts +80%, vitesse +20%, dégâts subis -40% (1×/salle).',
+    id: 'gear_fifth', name: 'Kaf Gear V', god: 'Guerrier Libéré', category: 'divine', rarity: 'legendary', icon: 'rage',
+    description: 'ÉVEIL SOUTENU : tant que tes PV sont ≤ 40%, dégâts +80%, vitesse +20%, dégâts subis -40%.',
     apply(p) {
-      p.mods.transformAt = 0.40; p.mods.transformMs = 8000;
+      // Buff maintenu en continu sous 40% PV (géré par le Player via mods.kafGear).
+      p.mods.kafGear = 1;
       p.mods.transformDmg = 1.8; p.mods.transformSpd = 1.2;
-      p.mods.transformScale = 1.6; p.mods.transformColor = 0xfff2a0; p.mods.transformSfx = 2;
+      p.mods.transformScale = 1.5; p.mods.transformColor = 0xfff2a0;
     },
   },
 ];

@@ -305,6 +305,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       this.gs.juice.burst(this.x, this.y, this.mods.transformColor || 0xffffff, 24, 260, 1.8);
       this.gs.sfx(this.mods.transformSfx === 2 ? 'toon' : 'special');
     }
+    // Kaf Gear V : buff SOUTENU tant que les PV sont ≤ 40% (pas une seule fois).
+    if (this.mods.kafGear) {
+      const on = !this.dead && this.hpFrac() <= 0.40;
+      if (on) {
+        // rafraîchi en continu (fenêtre courte) : reste actif sous 40% PV
+        this.addBuff('kafgear', 300, { dmg: this.mods.transformDmg || 1.8, spd: this.mods.transformSpd || 1.2 });
+        if (!this.mods.transformActive) { // effets d'entrée une seule fois par activation
+          this.gs.juice.ring(this.x, this.y, 120, this.mods.transformColor || 0xfff2a0, 450);
+          this.gs.sfx('toon');
+        }
+        this.mods.transformActive = 1;
+      } else if (this.mods.transformActive) {
+        this.mods.transformActive = 0;
+      }
+    }
   }
 
   private animate(move: Phaser.Math.Vector2, dt: number): void {
@@ -452,11 +467,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
    */
   private updateOrbitBlades(now: number, dt: number): void {
     this.orbitAngle += (dt / 1000) * (Math.PI * 2); // référence : 1 tour / s
-    // Katana : 1 tour / 1,2 s, pointe vers l'extérieur.
-    this.syncOrbitWeapon(this.orbitBlades, this.mods.orbitBlade || 0, 'katana_black', 66,
+    // Katana : 1 tour / 1,2 s, pointe vers l'extérieur. Rayon DOUBLÉ (132).
+    this.syncOrbitWeapon(this.orbitBlades, this.mods.orbitBlade || 0, 'katana_black', 132,
       this.orbitAngle / 1.2, 8 + this.stats.swordDamage[0] * 0.3, 24, now, (a) => a + Math.PI / 2, false);
-    // Mjölnir : 1 tour / 1,6 s, culbute sur lui-même + traînée électrique.
-    this.syncOrbitWeapon(this.orbitHammers, this.mods.orbitHammer || 0, 'hammer_thor', 58,
+    // Mjölnir : 1 tour / 1,6 s, culbute + traînée électrique. Rayon DOUBLÉ (116).
+    this.syncOrbitWeapon(this.orbitHammers, this.mods.orbitHammer || 0, 'hammer_thor', 116,
       this.orbitAngle / 1.6, 10, 27, now, () => this.orbitAngle * 2.4, true);
   }
 
@@ -479,6 +494,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
         if (Math.hypot(e.x - bx, e.y - by) <= hitR) {
           const wk = e as unknown as object;
           if (now - (this.orbitHit.get(wk) ?? 0) > 350) { this.orbitHit.set(wk, now); this.dealDamage(e, dmg, false); }
+        }
+      }
+      // Les armes orbitales DÉTRUISENT les projectiles ennemis qu'elles croisent.
+      const projs = this.gs.projectiles.getChildren();
+      for (let j = projs.length - 1; j >= 0; j--) {
+        const pr = projs[j] as Phaser.GameObjects.Sprite;
+        if (pr.active && Math.hypot(pr.x - bx, pr.y - by) <= hitR + 6) {
+          this.gs.juice.burst(pr.x, pr.y, electric ? 0xbff7f6 : 0x9a5cff, 4, 100, 0.7);
+          pr.destroy();
         }
       }
     }

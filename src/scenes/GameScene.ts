@@ -1490,6 +1490,48 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Koji Bond : à chaque frappe, un petit laser ricoche sur TOUS les monstres de
+   * la zone, chacun subissant 5% des dégâts infligés. VFX limité pour rester fluide.
+   */
+  kojiLaser(x: number, y: number, damage: number): void {
+    const lz = Math.max(1, Math.round(damage * 0.05));
+    const targets = this.getTargets().filter((e) => e.isAlive());
+    if (!targets.length) return;
+    // Chaîne de ricochet par proximité (départ = monstre frappé).
+    let cx = x, cy = y;
+    const remaining = targets.slice();
+    const path: IEnemyLike[] = [];
+    while (remaining.length) {
+      let bi = 0, bd = Infinity;
+      for (let i = 0; i < remaining.length; i++) {
+        const d = Phaser.Math.Distance.Between(cx, cy, remaining[i].x, remaining[i].y);
+        if (d < bd) { bd = d; bi = i; }
+      }
+      const t = remaining.splice(bi, 1)[0];
+      path.push(t); cx = t.x; cy = t.y;
+    }
+    // Dégâts à tous (silencieux : pas de nombres/sfx en cascade).
+    for (const t of path) t.takeDamage(lz, x, y, { silent: true });
+    // VFX ricochet throttlé (les frappes sont fréquentes).
+    const now = performance.now();
+    if (now - this._kojiVfxAt > 55) {
+      this._kojiVfxAt = now;
+      const g = this.add.graphics().setDepth(46);
+      let px = x, py = y - 6;
+      const hops = path.slice(0, 8); // limite visuelle
+      for (const t of hops) {
+        g.lineStyle(4, 0xff2a5a, 0.25).lineBetween(px, py, t.x, t.y - 6);
+        g.lineStyle(1.5, 0xff9db8, 0.95).lineBetween(px, py, t.x, t.y - 6);
+        this.juice.burst(t.x, t.y - 6, 0xff5a8a, 3, 80, 0.5);
+        px = t.x; py = t.y - 6;
+      }
+      this.sfx('zap');
+      this.tweens.add({ targets: g, alpha: 0, duration: 200, ease: 'Cubic.easeIn', onComplete: () => g.destroy() });
+    }
+  }
+  private _kojiVfxAt = 0;
+
   /** Onde tranchante (Getsuga / clone) : projectile allié qui transperce. */
   slashWave(x: number, y: number, dx: number, dy: number, damage: number): void {
     const len = Math.hypot(dx, dy) || 1;

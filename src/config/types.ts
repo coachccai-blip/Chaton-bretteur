@@ -35,6 +35,8 @@ export interface ICombatScene {
   beamSweep(x: number, y: number, dx: number, dy: number, dmgPerTick: number, ms: number, color: number): void;
   /** aspire un ennemi vers un point (Gomme élastique). */
   pullEnemy(e: IEnemyLike, tx: number, ty: number, stunMs: number): void;
+  /** Koji Bond : laser qui ricoche sur tous les monstres (5% des dégâts infligés). */
+  kojiLaser(x: number, y: number, damage: number): void;
 }
 
 /** Ce qu'un pouvoir/boon peut manipuler à l'exécution (implémenté par Player). */
