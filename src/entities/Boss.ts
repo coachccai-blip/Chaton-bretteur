@@ -161,10 +161,12 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     if (!this.busy && !frozen) {
       // Vitesse de déplacement des boss DOUBLÉE.
       const spd = this.phase.speed * this.gs.enemyTimeScale * 2;
-      if (!this.openingDone && now >= this.openingAt) {
-        // Ouverture : le boss lance sa MEILLEURE attaque dès le début du combat.
-        this.openingDone = true;
-        this.execBestMove(dir);
+      if (!this.openingDone) {
+        // Ouverture GARANTIE : le boss reste immobile pendant son apparition puis
+        // lance sa MEILLEURE attaque en TOUT PREMIER (aucune ruée/déplacement avant).
+        // Ex. Glacior invoque toujours ses pilônes de glace dès le début du combat.
+        if (now >= this.openingAt) { this.openingDone = true; this.execBestMove(dir); }
+        else { body.setVelocity(0, 0); }
       } else if (now < this.dashingUntil) {
         // Ruée en cours : on laisse la vélocité de dash s'appliquer (pas d'écrasement).
       } else {
