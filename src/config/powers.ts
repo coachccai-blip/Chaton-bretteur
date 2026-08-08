@@ -637,6 +637,19 @@ export const POWERS: PowerDef[] = [
     apply(p) { p.stats.instakillChance += 0.07; },
   },
   {
+    id: 'life_gate', name: 'Porte de la Vie', god: 'Rock Lee', category: 'divine', rarity: 'legendary', icon: 'fist',
+    description: 'Ouvre les Huit Portes : PV max réduits à 10, mais dégâts +300% et vitesse +100%. Aura rouge.',
+    apply(p) {
+      p.stats.maxHp = 10;
+      p.stats.swordDamage = p.stats.swordDamage.map((d) => Math.round(d * 4));
+      p.stats.specialDamage = Math.round(p.stats.specialDamage * 4);
+      p.stats.dashDamage = Math.round(p.stats.dashDamage * 4);
+      p.stats.moveSpeedMult *= 2; // +100% de vitesse
+      p.mods.lifeGate = 1;        // aura + traînée rouge (géré côté Player)
+      p.setHp(10);
+    },
+  },
+  {
     id: 'alucard', name: 'BT d’Arès', god: 'Dieu de la Guerre', category: 'divine', rarity: 'legendary', icon: 'lifesteal',
     description: 'Vol de vie (12% des dégâts) + 8 PV par ennemi tué — mais ne soigne QUE jusqu’à 30% des PV max.',
     apply(p) {

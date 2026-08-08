@@ -4,7 +4,7 @@ import { CAT, SWORD, KATANA, MERCHANT_CAT, HAMMER, WATER_WAVE, SUSANOO, KAGE_BUN
 import { GLYPHS } from './icons';
 import { genCritter, MONSTER_RECIPES } from './critters';
 import { BOSS_CATS } from './bosscats';
-import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, MINE, FIREBALL, ICE_SHARD, FROST, ICE_STALACTITE, ICE_PYLON, BLACK_FLAME, MUD_BLOB, MUD_SPLAT, TORNADO, FIRE_TORNADO, BOOMERANG, CAT_PAW, ANGEL_WINGS, MINE_BOSS, GRENADE, MISSILE, EXPLOSION, TURRET, TANK, TANK_MISSILE, GATLING_BULLET, MATERIAL_ART } from './environment';
+import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, MINE, FIREBALL, ICE_SHARD, FROST, ICE_STALACTITE, ICE_PYLON, BLACK_FLAME, MUD_BLOB, MUD_SPLAT, TORNADO, FIRE_TORNADO, BOOMERANG, CAT_PAW, ANGEL_WINGS, MINE_BOSS, GRENADE, MISSILE, EXPLOSION, TURRET, TANK, TANK_MISSILE, GATLING_BULLET, MATERIAL_ART, RED_AURA } from './environment';
 import { ZONES } from '../config/worlds';
 
 let generated = false;
@@ -41,6 +41,7 @@ export function generateAll(scene: Phaser.Scene): void {
   genSprite(scene, TANK_MISSILE); // roquette de char
   genSprite(scene, GATLING_BULLET); // balle de gatling
   for (const m of MATERIAL_ART) genSprite(scene, m); // matériaux lâchés par les boss
+  genSprite(scene, RED_AURA); // aura rouge du boon Porte de la Vie
   genSprite(scene, ICE_SHARD); // bloc de glace (projectile givre)
   genSprite(scene, FROST);  // particule de givre (spray en cône)
   genSprite(scene, ICE_STALACTITE); // stalactite tombante (Glacior)

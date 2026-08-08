@@ -451,6 +451,44 @@ export const GATLING_BULLET: SpriteDef = {
   ],
 };
 
+/** Aura rouge de flammes (26x30) : boon « Porte de la Vie » (Huit Portes). */
+export const RED_AURA: SpriteDef = {
+  key: 'red_aura',
+  pal: { '.': null, '#': '#3a0a08', 'R': '#d02818', 'o': '#ff6a1f', 'y': '#ffd24a' },
+  rows: [
+    '..........#R#.............',
+    '.......#.#RR#..#...#......',
+    '......#R##RR#.#R#.#R#.....',
+    '.....#RR##oRR##R#.#R##....',
+    '.....#Ro#Rooo##oR##oRR#...',
+    '.....#RoRoooo##ooR#oRR#...',
+    '.....#RoRoyyyoRooR#Roo#...',
+    '.....#oooyyyyyoyyoRooo#...',
+    '.##.#Roooyy####yyyooooR#..',
+    '#RR##Royy##....##yyyooR#..',
+    '#RR##oyy#........#yyyoR#..',
+    '#RoRRyy#..........#yyoR#..',
+    'Rooooyy#..........#yyo#...',
+    'Rooooy#............#yo#...',
+    'Roooyy#............#yyR#..',
+    '#oooyy#............#yyR#.#',
+    '#ooooy#............#yyo##R',
+    '.#Royy#............#yyooR#',
+    '.#Rooy#............#yyooRR',
+    '..#Roy#............#yyooRR',
+    '..#Roy#............#yyooRR',
+    '..#Royy#..........#yyooRR#',
+    '..#Royy#..........#yooRRR#',
+    '..#Rooyy##......##yooRR##.',
+    '..#Rooyyyy######yyooR##...',
+    '..#RooooyyyyyyyyyyoR#.....',
+    '..#RRoooooooyyyyyooR#.....',
+    '...#RRRRRRRoooooooR#......',
+    '....#RR####RRooooRR#......',
+    '.....##....#RRooRR#.......',
+  ],
+};
+
 /** ===== Matériaux lâchés par les boss (icônes récupérables + camp) ===== */
 export const MAT_WOOD: SpriteDef = {
   key: 'mat_wood', pal: { '.': null, '#': '#2a1a0a', 't': '#8a5a2a', 'O': '#b8863a', 'o': '#5a3a18' },

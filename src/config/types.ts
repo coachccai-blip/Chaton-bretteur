@@ -51,6 +51,7 @@ export interface IPlayerContext {
   roomDamageBonus: number;
   heal(amount: number): void;
   healUpTo(amount: number, frac: number): void;
+  setHp(n: number): void;
   grantMaxShield(amount: number): void;
   addOnHit(fn: OnHitFn): void;
   addOnKill(fn: OnKillFn): void;

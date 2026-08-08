@@ -79,6 +79,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   // Susanoo : aura violette + buste spectral tant que le boon est actif.
   private susanooAura?: Phaser.GameObjects.Image;
   private susanooSprite?: Phaser.GameObjects.Sprite;
+  private lifeGateAura?: Phaser.GameObjects.Sprite;
+  private lifeGateTrail?: Phaser.GameObjects.Particles.ParticleEmitter;
   // Kage Bunshin : clone d'ombre visible qui suit le chaton et frappe.
   private kageClone?: Phaser.GameObjects.Sprite;
   private kageNextAt = 0;
@@ -107,6 +109,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   // ---------- IPlayerContext ----------
   heal(amount: number): void {
     this.hp = Math.min(this.stats.maxHp, this.hp + amount * this.stats.healReceivedMult);
+    this.gs.events.emit('hp', this.hp, this.stats.maxHp, this.shield, this.maxShield);
+  }
+  /** Fixe les PV (borné à [1, maxHp]) et met à jour la barre (boon Porte de la Vie). */
+  setHp(n: number): void {
+    this.hp = Phaser.Math.Clamp(n, 1, this.stats.maxHp);
     this.gs.events.emit('hp', this.hp, this.stats.maxHp, this.shield, this.maxShield);
   }
   /** Invincibilité temporaire (consommable Éclat Glacé). */
@@ -273,6 +280,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     this.updateOrbitBlades(now, dt);
     this.updateSusanooVfx(now);
     this.updateKageClone(now);
+    this.updateLifeGate(now);
 
     // actions
     if (input.consumeDash()) this.tryDash(move);
@@ -569,6 +577,36 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     c.setAlpha(0.58 + 0.12 * Math.sin(now * 0.006));
     // Le clone ne frappe plus tout seul : il DUPLIQUE les attaques du chaton
     // (voir cloneMirrorMelee), pour 10% des dégâts d'origine.
+  }
+
+  /**
+   * Porte de la Vie (Huit Portes) : aura rouge + traînée de particules, et
+   * VERROUILLE les PV max à 10 (aucun boon/fontaine ne peut les augmenter).
+   */
+  private updateLifeGate(now: number): void {
+    if (!this.mods.lifeGate || this.dead) {
+      if (this.lifeGateAura) { this.lifeGateAura.destroy(); this.lifeGateAura = undefined; }
+      if (this.lifeGateTrail) { this.lifeGateTrail.destroy(); this.lifeGateTrail = undefined; }
+      return;
+    }
+    // Verrou des PV max à 10 malgré les autres boons.
+    if (this.stats.maxHp !== 10) { this.stats.maxHp = 10; this.gs.events.emit('hp', Math.min(this.hp, 10), 10, this.shield, this.maxShield); }
+    if (this.hp > 10) { this.hp = 10; this.gs.events.emit('hp', 10, 10, this.shield, this.maxShield); }
+    // Aura rouge (derrière le chaton).
+    if (!this.lifeGateAura) {
+      this.lifeGateAura = this.gs.add.sprite(this.x, this.y - 6, 'red_aura').setDepth(this.depth - 1).setScale(1.5).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.8);
+    }
+    const pulse = 1.5 + Math.sin(now * 0.012) * 0.14;
+    this.lifeGateAura.setPosition(this.x, this.y - 6).setScale(pulse).setDepth(this.depth - 1);
+    // Traînée de particules rouges derrière le personnage.
+    if (!this.lifeGateTrail) {
+      this.lifeGateTrail = this.gs.add.particles(0, 0, 'px', {
+        follow: this, followOffset: { x: 0, y: -8 },
+        speed: { min: 10, max: 60 }, scale: { start: 2, end: 0 }, lifespan: 380,
+        frequency: 24, tint: [0xff2a1a, 0xff6a1f, 0xffc24a], blendMode: 'ADD',
+      });
+      this.lifeGateTrail.setDepth(this.depth - 1);
+    }
   }
 
   /** Première Danse de l'Eau : une vague écumeuse jaillit le long du dash. */
@@ -952,6 +990,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     this.susanooAura?.destroy(); this.susanooAura = undefined;
     this.susanooSprite?.destroy(); this.susanooSprite = undefined;
     this.kageClone?.destroy(); this.kageClone = undefined;
+    this.lifeGateAura?.destroy(); this.lifeGateAura = undefined;
+    this.lifeGateTrail?.destroy(); this.lifeGateTrail = undefined;
   }
 
   destroy(fromScene?: boolean): void {
