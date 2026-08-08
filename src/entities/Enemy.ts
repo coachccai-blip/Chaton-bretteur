@@ -5,6 +5,7 @@ import type { EnemyDef, EnemySignature } from '../config/enemies';
 import type { Element, IEnemyLike } from '../config/types';
 import { getDifficulty } from '../config/difficulty';
 import { RunState } from '../systems/RunState';
+import { BlackFlameFx } from './BlackFlameFx';
 
 type State = 'idle' | 'telegraph' | 'charging' | 'recover' | 'signature';
 
@@ -51,6 +52,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
   private hpBg?: Phaser.GameObjects.Rectangle;
   private hpFill?: Phaser.GameObjects.Rectangle;
+  private blackFlame?: BlackFlameFx; // flammes noires d'Amaterasu (Brûlure Noire)
 
   constructor(scene: GameScene, x: number, y: number, def: EnemyDef, hpMul: number, dmgMul: number) {
     super(scene, x, y, `mob_${def.sprite}`);
@@ -96,6 +98,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     return Math.round(base * this.dmgMul);
   }
 
+  /** Superpose (ou retire) les flammes noires d'Amaterasu selon le statut. */
+  private updateBlackFlame(dt: number): void {
+    if (this.statuses.blackburn) {
+      if (!this.blackFlame) this.blackFlame = new BlackFlameFx(this.gs, 17);
+      this.blackFlame.update(this.x, this.y - this.displayHeight * 0.35, this.displayHeight, dt);
+    } else if (this.blackFlame) {
+      this.blackFlame.destroy();
+      this.blackFlame = undefined;
+    }
+  }
+
   /** Son d'attaque throttlé globalement (évite la saturation en meute). */
   private atkSfx(key: string): void {
     const now = performance.now();
@@ -115,6 +128,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
     this.processStatuses(now);
     if (!this.alive) return;
+    this.updateBlackFlame(dt);
 
     const frozen = !!this.statuses.freeze;
     const timeScale = this.gs.enemyTimeScale;
@@ -623,6 +637,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.gs.onEnemyKilled(this, byPlayer);
     this.hpBg?.destroy();
     this.hpFill?.destroy();
+    this.blackFlame?.destroy(); this.blackFlame = undefined;
     this.gs.tweens.add({
       targets: this, scaleX: this.def.scale * 1.3, scaleY: 0, alpha: 0, duration: 200,
       onComplete: () => this.destroy(),
@@ -650,6 +665,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   destroy(fromScene?: boolean): void {
     this.hpBg?.destroy();
     this.hpFill?.destroy();
+    this.blackFlame?.destroy();
     super.destroy(fromScene);
   }
 }

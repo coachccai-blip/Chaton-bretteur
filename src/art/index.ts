@@ -4,7 +4,7 @@ import { CAT, SWORD, KATANA, MERCHANT_CAT, HAMMER, WATER_WAVE, SUSANOO, KAGE_BUN
 import { GLYPHS } from './icons';
 import { genCritter, MONSTER_RECIPES } from './critters';
 import { BOSS_CATS } from './bosscats';
-import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, MINE, FIREBALL, ICE_SHARD, FROST, ICE_STALACTITE, ICE_PYLON } from './environment';
+import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, MINE, FIREBALL, ICE_SHARD, FROST, ICE_STALACTITE, ICE_PYLON, BLACK_FLAME } from './environment';
 import { ZONES } from '../config/worlds';
 
 let generated = false;
@@ -29,6 +29,7 @@ export function generateAll(scene: Phaser.Scene): void {
   genSprite(scene, FROST);  // particule de givre (spray en cône)
   genSprite(scene, ICE_STALACTITE); // stalactite tombante (Glacior)
   genSprite(scene, ICE_PYLON); // pilône d'invincibilité (Glacior)
+  genSprite(scene, BLACK_FLAME); // flamme noire d'Amaterasu (Brûlure Noire)
 
   // Monstres (procéduraux)
   for (const [key, recipe] of Object.entries(MONSTER_RECIPES)) genCritter(scene, `mob_${key}`, recipe);

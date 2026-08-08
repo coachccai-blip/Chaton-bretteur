@@ -3,6 +3,7 @@ import type { GameScene } from '../scenes/GameScene';
 import type { BossDef, BossMove, BossPhase } from '../config/bosses';
 import type { Element, IEnemyLike } from '../config/types';
 import { REACTIONS, reactKey } from './Enemy';
+import { BlackFlameFx } from './BlackFlameFx';
 
 interface StatusInfo { expire: number; nextTick: number; }
 
@@ -40,6 +41,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   private aura!: Phaser.GameObjects.Image;
   private auraEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
   private auraRing!: Phaser.GameObjects.Graphics;
+  private blackFlame?: BlackFlameFx; // flammes noires d'Amaterasu
 
   constructor(scene: GameScene, x: number, y: number, def: BossDef, hpMul: number, dmgMul: number) {
     super(scene, x, y, `boss_${def.sprite}`);
@@ -81,6 +83,17 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     // entrée
     this.setScale(def.scale * 0.2).setAlpha(0);
     scene.tweens.add({ targets: this, scaleX: def.scale, scaleY: def.scale, alpha: 1, duration: 500, ease: 'Back.easeOut' });
+  }
+
+  /** Flammes noires d'Amaterasu superposées au boss tant que la Brûlure Noire brûle. */
+  private updateBlackFlame(dt: number): void {
+    if (this.statuses.blackburn) {
+      if (!this.blackFlame) this.blackFlame = new BlackFlameFx(this.gs, 18);
+      this.blackFlame.update(this.x, this.y - this.displayHeight * 0.4, this.displayHeight * 1.1, dt);
+    } else if (this.blackFlame) {
+      this.blackFlame.destroy();
+      this.blackFlame = undefined;
+    }
   }
 
   private updateAura(): void {
@@ -128,6 +141,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
     this.processStatuses(now);
     if (!this.alive) return;
+    this.updateBlackFlame(dt);
     const frozen = !!this.statuses.freeze;
     const dx = p.x - this.x, dy = p.y - this.y;
     const dist = Math.hypot(dx, dy) || 1;
@@ -592,6 +606,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     this.auraEmitter?.destroy();
     this.auraRing?.destroy();
+    this.blackFlame?.destroy(); this.blackFlame = undefined;
     this.gs.tweens.add({ targets: this.aura, alpha: 0, duration: 600, onComplete: () => this.aura?.destroy() });
     this.gs.onBossKilled(this);
   }
@@ -601,6 +616,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.aura?.destroy();
     this.auraEmitter?.destroy();
     this.auraRing?.destroy();
+    this.blackFlame?.destroy();
     super.destroy(fromScene);
   }
 }

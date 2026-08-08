@@ -230,6 +230,33 @@ export const MINE: SpriteDef = {
   ],
 };
 
+/**
+ * Flamme noire d'Amaterasu (10x14) : corps noir-violacé, liseré violet cursed.
+ * Superposée en boucle scintillante sur les monstres qui brûlent (Brûlure Noire).
+ */
+export const BLACK_FLAME: SpriteDef = {
+  key: 'black_flame',
+  pal: {
+    '.': null, '#': '#050208', 'k': '#12081a', 'p': '#241033', 'v': '#4a1a5a',
+  },
+  rows: [
+    '....##....',
+    '....kk....',
+    '...#kk#...',
+    '...pkkp...',
+    '..#pkkp#..',
+    '..pkkkkp..',
+    '.#pkkkkp#.',
+    '.pkkkkkkp.',
+    '.pkkkkkkp.',
+    '#pkkkkkkp#',
+    '#pvkkkkvp#',
+    '.pvkkkkvp.',
+    '.#vpkkpv#.',
+    '..#vvvv#..',
+  ],
+};
+
 /** Boule de feu (12x12) crachée par Ignis : cœur blanc incandescent, couronne rouge. */
 export const FIREBALL: SpriteDef = {
   key: 'fireball',
