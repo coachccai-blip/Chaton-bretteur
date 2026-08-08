@@ -56,7 +56,10 @@ export function button(
   // répond correctement qu'au centre (quirk Phaser) — on pouvait donc cliquer
   // « à côté » d'un bouton sans déclencher l'action. Une Zone, comme dans les
   // autres écrans, couvre toute la surface de façon fiable.
-  const zone = scene.add.zone(0, 0, w, h).setInteractive({ useHandCursor: true });
+  // Zone cliquable un peu PLUS GRANDE que le visuel (marge de confort tactile) :
+  // les petits boutons (« – », « + ») restent faciles à toucher au doigt.
+  const HITPAD = 16;
+  const zone = scene.add.zone(0, 0, w + HITPAD, h + HITPAD).setInteractive({ useHandCursor: true });
   const c = scene.add.container(x, y, [bg, txt, zone]);
   c.setSize(w, h);
   let enabled = true;

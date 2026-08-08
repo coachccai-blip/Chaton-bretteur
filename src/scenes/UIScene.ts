@@ -96,10 +96,9 @@ export class UIScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-TWO', () => this.gs.useConsumable(1));
     this.onConsumables({ slots: RunState.consumablesStart, active: RunState.consumables });
 
-    // Bouton COMPÉTENCE : placé au MILIEU de l'écran (et non en haut à droite)
-    // pour ne pas toucher les slots de consommables par erreur ; clignote quand
-    // un choix est dispo, le joueur clique pour choisir.
-    const sbw = 210, sbh = 40, sbx = (GAME_WIDTH - sbw) / 2, sby = GAME_HEIGHT / 2 - sbh / 2;
+    // Bouton COMPÉTENCE : juste AU-DESSUS de la zone des noms de boss (bas-centre),
+    // loin des slots de consommables ; clignote quand un choix est dispo.
+    const sbw = 210, sbh = 38, sbx = (GAME_WIDTH - sbw) / 2, sby = GAME_HEIGHT - 92;
     this.skillBtnBg = this.add.graphics();
     this.skillBtnText = label(this, sbx + sbw / 2, sby + sbh / 2, '', 15, '#0e1a0e').setDepth(7);
     this.skillBtn = this.add.container(0, 0, [this.skillBtnBg, this.skillBtnText]).setDepth(6).setVisible(false);
