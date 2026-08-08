@@ -36,6 +36,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   hp: number;
   damage: number;
   private dmgMul = 1;
+  private speedMul = 1;      // accélération par salle (de plus en plus rapide)
+  private canDash = false;   // ruée vers le joueur (mondes glacés et au-delà)
+  private canBurst = false;  // rafales de projectiles à distance
+  private nextDashAt = 0;
+  private dashingUntil = 0;
+  private nextBurstAt = 0;
   alive = true;
   isBoss = false;
 
@@ -54,7 +60,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   private hpFill?: Phaser.GameObjects.Rectangle;
   private blackFlame?: BlackFlameFx; // flammes noires d'Amaterasu (Brûlure Noire)
 
-  constructor(scene: GameScene, x: number, y: number, def: EnemyDef, hpMul: number, dmgMul: number) {
+  constructor(scene: GameScene, x: number, y: number, def: EnemyDef, hpMul: number, dmgMul: number,
+              opts?: { speedMul?: number; canDash?: boolean; canBurst?: boolean }) {
     super(scene, x, y, `mob_${def.sprite}`);
     this.gs = scene;
     this.def = def;
@@ -62,6 +69,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.hp = this.maxHp;
     this.damage = def.damage * dmgMul;
     this.dmgMul = dmgMul;
+    this.speedMul = opts?.speedMul ?? 1;
+    this.canDash = !!opts?.canDash;
+    this.canBurst = !!opts?.canBurst;
+    const t0 = performance.now();
+    this.nextDashAt = t0 + 1800 + Math.random() * 2200;
+    this.nextBurstAt = t0 + 1400 + Math.random() * 1800;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -96,6 +109,33 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   /** Dégât direct (éruption, bombe) : pleine échelle zone × difficulté. */
   private directDmg(base: number): number {
     return Math.round(base * this.dmgMul);
+  }
+
+  /** Ruée : la bête bondit vers le joueur (mondes glacés et au-delà). */
+  private startEnemyDash(dir: Phaser.Math.Vector2, now: number, body: Phaser.Physics.Arcade.Body): void {
+    this.dashingUntil = now + 220;
+    this.nextDashAt = now + 2600 + Math.random() * 2400;
+    const ds = 520 * this.gs.enemyTimeScale;
+    body.setVelocity(dir.x * ds, dir.y * ds);
+    this.facingSign = dir.x > 0 ? 1 : -1;
+    this.setFlipX(this.facingSign < 0);
+    this.gs.juice.dashTrail(this.x, this.y, 0xffffff);
+    this.atkSfx('bosscharge');
+  }
+
+  /** Rafale de projectiles visés, tirés en salve rapprochée vers le joueur. */
+  private fireEnemyBurst(): void {
+    this.atkSfx('eshot');
+    const n = 5;
+    for (let k = 0; k < n; k++) {
+      this.gs.time.delayedCall(k * 90, () => {
+        if (!this.alive) return;
+        const q = this.gs.player;
+        if (!q || q.dead) return;
+        const a = Math.atan2(q.y - this.y, q.x - this.x) + Phaser.Math.FloatBetween(-0.06, 0.06);
+        this.gs.spawnEnemyProjectile(this.x, this.y - 14, Math.cos(a), Math.sin(a), 240, this.projDmg(9));
+      });
+    }
   }
 
   /** Superpose (ou retire) les flammes noires d'Amaterasu selon le statut. */
@@ -138,7 +178,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     const dir = new Phaser.Math.Vector2(dx / dist, dy / dist);
     const body = this.body as Phaser.Physics.Arcade.Body;
     const slow = now < this.slowUntil ? this.slowMul : 1;
-    const spd = this.def.speed * (frozen ? 0.12 : 1) * slow * timeScale;
+    const spd = this.def.speed * this.speedMul * (frozen ? 0.12 : 1) * slow * timeScale;
 
     // Orientation gauche/droite : dérivée de l'INTENTION (cible / direction de
     // charge), jamais de la vélocité subie (un knockback ne retourne pas la
@@ -157,6 +197,21 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       return;
     }
     if (this.aiState === 'signature') { body.setVelocity(0, 0); this.clampToArena(); this.updateHpBar(); return; }
+
+    // --- Ruée (mondes glacés et au-delà) : la bête fonce sur le joueur ---
+    if (this.dashingUntil > now) {
+      // ruée en cours : on laisse la vélocité filer, on ne change rien d'autre
+      this.animate(dt, body); this.clampToArena(); this.updateHpBar(); return;
+    }
+    if (this.canDash && this.aiState === 'idle' && !frozen && now >= this.nextDashAt && dist > 110 && dist < 480) {
+      this.startEnemyDash(dir, now, body);
+      this.animate(dt, body); this.clampToArena(); this.updateHpBar(); return;
+    }
+    // --- Rafale de projectiles à distance (beaucoup d'ennemis, mondes glacés+) ---
+    if (this.canBurst && this.aiState === 'idle' && !frozen && now >= this.nextBurstAt && dist < 440) {
+      this.nextBurstAt = now + 2600 + Math.random() * 1400;
+      this.fireEnemyBurst();
+    }
 
     switch (this.def.behavior) {
       case 'chaser': body.setVelocity(dir.x * spd, dir.y * spd); break;

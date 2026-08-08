@@ -528,7 +528,15 @@ export class GameScene extends Phaser.Scene {
     // (croissance exponentielle) en plus du palier de salle.
     const zoneHp = Math.pow(1.62, this.zone.index) * (1 + this.combatDone * 0.07);
     const zoneDmg = Math.pow(1.34, this.zone.index) * (1 + this.combatDone * 0.05);
-    const e = new Enemy(this, x, y, def, diff.enemyHp * zoneHp, diff.enemyDamage * zoneDmg);
+    // Vitesse : de plus en plus rapide au fil des salles (et un peu par zone).
+    const speedMul = (1 + this.combatDone * 0.07) * (1 + this.zone.index * 0.05);
+    // À partir du monde de glace (zone 4) : tous foncent (dash) et beaucoup canardent.
+    const icePlus = this.zone.index >= 4;
+    const e = new Enemy(this, x, y, def, diff.enemyHp * zoneHp, diff.enemyDamage * zoneDmg, {
+      speedMul,
+      canDash: icePlus,
+      canBurst: icePlus && Math.random() < 0.6,
+    });
     this.enemies.add(e);
     this.activeEnemies.add(e);
     return e;
