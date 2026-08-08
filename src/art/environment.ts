@@ -490,11 +490,24 @@ export const RED_AURA: SpriteDef = {
 };
 
 /** ===== Matériaux lâchés par les boss (icônes récupérables + camp) ===== */
+// « Bois de Sylvann » : une branche fourchue avec une petite feuille (plutôt
+// qu'une bûche) — limbe diagonal, écorce texturée, nœud, et un rameau latéral.
 export const MAT_WOOD: SpriteDef = {
-  key: 'mat_wood', pal: { '.': null, '#': '#2a1a0a', 't': '#8a5a2a', 'O': '#b8863a', 'o': '#5a3a18' },
+  key: 'mat_wood',
+  pal: { '.': null, '#': '#2a1a0a', 't': '#8a5a2a', 'O': '#b8863a', 'o': '#5a3a18', 'l': '#5f9a3a', 'L': '#8ac24a' },
   rows: [
-    '.......#tttt', '......#ttttt', '.....#ttttt#', '....#ttttt#.', '.###ttttt#..',
-    '#OOttttt#...', 'OOOOttt#....', 'OOoOtt#.....', 'tOOtt#......', 'tttt#.......',
+    '.......lL...',
+    '......llLO#.',
+    '........Ott#',
+    '.......Ott#.',
+    '...#..Ott#..',
+    '..#o#Oot#...',
+    '..#tOtt#....',
+    '.#OttO#.....',
+    '.#Otto#.....',
+    '#Ottt#......',
+    '#Ott#.......',
+    '.##.........',
   ],
 };
 export const MAT_MUD: SpriteDef = {
