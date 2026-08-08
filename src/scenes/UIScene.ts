@@ -49,8 +49,6 @@ export class UIScene extends Phaser.Scene {
   private powerHits: { x: number; def: PowerDef; n: number }[] = [];
   private domRoot?: HTMLDivElement;
   private domCleanup: (() => void)[] = [];
-  private tcConso: HTMLElement[] = [];   // boutons consommables tactiles (2)
-  private consoState: { slots: string[]; active: string[] } = { slots: [], active: [] };
   private gameplayActive = true;
 
   constructor() { super('UI'); }
@@ -182,8 +180,6 @@ export class UIScene extends Phaser.Scene {
     this.consumableLayer.removeAll(true);
     const slots = data?.slots ?? [];
     const active = data?.active ?? [];
-    this.consoState = { slots, active };
-    this.syncTouchConsumables();
     for (let i = 0; i < 2; i++) {
       const startId = slots[i];
       if (!startId) continue;
@@ -423,10 +419,8 @@ export class UIScene extends Phaser.Scene {
     const dash = mkBtn('»', 'rgba(89,200,255,0.32)', 'rgba(89,200,255,1)');
     const special = mkBtn('✷', 'rgba(178,107,255,0.32)', 'rgba(178,107,255,1)');
     const pause = mkBtn('⏸', 'rgba(20,15,30,0.6)', 'rgba(255,255,255,0.6)');
-    // Deux boutons consommables (côté gauche), synchronisés via onConsumables().
-    const conso1 = mkBtn('🧪', 'rgba(106,212,106,0.30)', 'rgba(106,212,106,1)');
-    const conso2 = mkBtn('🧪', 'rgba(106,212,106,0.30)', 'rgba(106,212,106,1)');
-    this.tcConso = [conso1, conso2];
+    // Pas de bouton consommable à gauche : la gauche sert UNIQUEMENT au déplacement.
+    // Les consommables se lancent via les logos de potions en haut à droite (ATH).
 
     // Disposition responsive : les tailles suivent la plus petite dimension de
     // l'écran (vmin), recalculées à chaque rotation/redimensionnement.
@@ -449,11 +443,6 @@ export class UIScene extends Phaser.Scene {
       set(special, med, { right: `calc(${sri} + ${gap}px)`, bottom: `calc(${sbi} + ${big + gap * 2}px)` });
       set(pause, sml, { top: 'calc(env(safe-area-inset-top,0px) + 10px)', right: `calc(${sri} + 12px)` });
       pause.style.fontSize = `${Math.round(sml * 0.5)}px`;
-      // Consommables : coin bas-gauche, empilés (1 en bas, 2 au-dessus), taille moyenne.
-      const cons = Math.round(Math.max(58, Math.min(vmin * 0.17, 96)));
-      const sli = 'env(safe-area-inset-left, 0px)';
-      set(conso1, cons, { left: `calc(${sli} + ${gap}px)`, bottom: `calc(${sbi} + ${gap}px)` });
-      set(conso2, cons, { left: `calc(${sli} + ${gap}px)`, bottom: `calc(${sbi} + ${cons + gap * 2}px)` });
     };
     layout();
     window.addEventListener('resize', layout);
@@ -463,11 +452,10 @@ export class UIScene extends Phaser.Scene {
       window.removeEventListener('orientationchange', layout);
     });
 
-    root.append(base, thumb, attack, dash, special, pause, conso1, conso2);
+    root.append(base, thumb, attack, dash, special, pause);
     // Overlay DANS #game (la cible du plein écran) : reste visible en plein écran.
     (document.getElementById('game') ?? document.body).appendChild(root);
     this.domRoot = root;
-    this.syncTouchConsumables(); // état initial (icône/dispo)
 
     // En plein écran, Phaser bascule le canvas dans un élément dédié : un overlay
     // resté sur <body> DISPARAÎT. On replace donc les boutons tactiles DANS
@@ -555,8 +543,6 @@ export class UIScene extends Phaser.Scene {
     bind(attack, () => this.gs.controls.pressAttack());
     bind(dash, () => this.gs.controls.pressDash());
     bind(special, () => this.gs.controls.pressSpecial());
-    bind(conso1, () => this.gs.useConsumable(0));
-    bind(conso2, () => this.gs.useConsumable(1));
     // la pause reste utilisable même quand le jeu est en pause (menu pause)
     pause.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); this.gs.controls.pressPause(); }, { passive: false });
 
@@ -575,30 +561,10 @@ export class UIScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.destroyDomControls());
   }
 
-  /** Reflète l'état des 2 consommables sur les boutons tactiles (visibles/dispo). */
-  private syncTouchConsumables(): void {
-    if (!this.tcConso.length) return;
-    for (let i = 0; i < 2; i++) {
-      const el = this.tcConso[i]; if (!el) continue;
-      const startId = this.consoState.slots[i];
-      const activeId = this.consoState.active[i];
-      const def = startId ? consumableById(startId) : undefined;
-      if (!def) { el.style.display = 'none'; continue; }   // pas d'objet équipé → masqué
-      el.style.display = 'flex';
-      el.title = def.name;
-      // Disponible (non consommé) = vif ; consommé = grisé/atténué.
-      const usable = !!activeId;
-      el.style.opacity = usable ? '1' : '0.32';
-      el.style.filter = usable ? 'none' : 'grayscale(1)';
-      el.style.borderColor = usable ? 'rgba(106,212,106,1)' : 'rgba(120,120,130,0.7)';
-    }
-  }
-
   private destroyDomControls(): void {
     for (const fn of this.domCleanup) fn();
     this.domCleanup = [];
     this.domRoot?.remove();
     this.domRoot = undefined;
-    this.tcConso = [];
   }
 }
