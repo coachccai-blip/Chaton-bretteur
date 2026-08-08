@@ -11,6 +11,12 @@ class Run {
   reviveUsed = false;
   victory = false;
 
+  // Expérience / niveau : on gagne un boon à chaque montée de niveau. Réglé pour
+  // atteindre ~niveau 6/12/18… au boss 1/2/3… si l'on fait tous les combats.
+  xp = 0;
+  level = 0;
+  xpForLevel(level = this.level): number { return Math.round(34 * Math.pow(1.09, level)); }
+
   // chronomètre du run (se met en pause pendant le choix des boons / la pause)
   private accumulatedMs = 0;
   private segmentStart = 0;
@@ -23,6 +29,8 @@ class Run {
     this.powers = [];
     this.currencyEarned = 0;
     this.kills = 0;
+    this.xp = 0;
+    this.level = 0;
     this.reviveUsed = false;
     this.victory = false;
     this.accumulatedMs = 0;

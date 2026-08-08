@@ -638,6 +638,7 @@ export class GameScene extends Phaser.Scene {
       RunState.kills++;
       this.player.notifyKill(e);
       this.addRunCurrency(REWARDS.perEnemyBonus);
+      this.awardXp(Math.round(2 + e.maxHp * 0.06)); // XP proportionnelle à la robustesse
     }
     // dépose une âme à récupérer (salles de combat uniquement)
     if (this.roomState === 'combat') this.spawnSoul(e.def.id, e.x, e.y);
@@ -656,7 +657,49 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private rewardFromCombat = false;
+  // File de boons gagnés par montée de niveau (XP). Les boons ne sont plus donnés
+  // en fin de salle : on les obtient en montant de niveau.
+  private pendingBoons = 0;
+  private rewardActive = false;
+  private boonOnEmpty: (() => void) | null = null;
+
+  /** Gagne de l'XP ; chaque niveau franchi met un boon en file d'attente. */
+  private awardXp(amount: number): void {
+    RunState.xp += amount;
+    let leveled = false;
+    while (RunState.xp >= RunState.xpForLevel()) {
+      RunState.xp -= RunState.xpForLevel();
+      RunState.level++;
+      this.pendingBoons++;
+      leveled = true;
+    }
+    this.events.emit('xp', RunState.xp, RunState.xpForLevel(), RunState.level);
+    if (leveled) {
+      this.juice.popText(this.player.x, this.player.y - 56, `NIVEAU ${RunState.level} !`, '#59b8ff', 18);
+      this.sfx('power');
+    }
+  }
+
+  /** Ouvre le prochain boon en file, sinon exécute le callback de fin. */
+  private stepBoons(): void {
+    if (this.pendingBoons > 0) {
+      this.pendingBoons--;
+      this.rewardActive = true;
+      if (!this.scene.isPaused()) this.scene.pause();
+      this.scene.launch('Reward', { gameScene: this });
+    } else {
+      this.rewardActive = false;
+      const cb = this.boonOnEmpty; this.boonOnEmpty = null;
+      if (this.scene.isPaused()) this.scene.resume();
+      if (cb) cb();
+    }
+  }
+
+  /** Démarre la distribution des boons en file puis exécute `onEmpty`. */
+  private openBoons(onEmpty: () => void): void {
+    this.boonOnEmpty = onEmpty;
+    if (!this.rewardActive) this.stepBoons();
+  }
 
   private roomClear(): void {
     this.roomState = 'transition';
@@ -667,13 +710,8 @@ export class GameScene extends Phaser.Scene {
     this.projectiles.clear(true, true);
     this.combatDone++;
     this.juice.popText(this.player.x, this.player.y - 50, 'Salle nettoyée !', '#6ad46a', 18);
-    this.rewardFromCombat = true;
-    this.time.delayedCall(500, () => this.openReward());
-  }
-
-  private openReward(): void {
-    this.scene.pause();
-    this.scene.launch('Reward', { gameScene: this });
+    // Les portes s'ouvrent directement : plus de boon en fin de salle (XP à la place).
+    const _tk = this.roomToken; this.time.delayedCall(500, () => { if (this.roomToken === _tk) this.openDoors(); });
   }
 
   /** Nombre d'exemplaires d'un boon déjà possédés (pour l'étiquette cumulable). */
@@ -748,16 +786,15 @@ export class GameScene extends Phaser.Scene {
       if (!power.fallback) RunState.addPower(power); // les cartes de repli ne sont pas des boons
       this.events.emit('powers', RunState.powers);
     }
-    this.scene.resume();
-    if (this.rewardFromCombat) {
-      this.rewardFromCombat = false;
-      const _tk = this.roomToken; this.time.delayedCall(200, () => { if (this.roomToken === _tk) this.openDoors(); });
-    }
+    // Enchaîne le boon suivant en file (montées de niveau multiples), ou reprend.
+    this.stepBoons();
   }
 
   onBossKilled(b: Boss): void {
     this.boss = null;
+    this.roomState = 'transition'; // évite l'auto-ouverture de boons pendant l'anim de mort
     this.bossHazards = [];
+    this.awardXp(Math.round(b.maxHp * 0.03)); // gros gain d'XP (met des boons en file)
     // Détruit le collider de contact du boss (évite l'accumulation d'un run à
     // l'autre) et despawn les adds encore vivants, sinon ils continuent d'infliger
     // des dégâts de contact pendant l'anim de mort/bannière — pouvant tuer après
@@ -783,7 +820,8 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(1400, () => {
       this.time.timeScale = 1;
       this.physics.world.timeScale = 1;
-      this.afterBoss();
+      // Distribue d'abord les boons gagnés (XP du boss), puis passe à la suite.
+      this.openBoons(() => this.afterBoss());
     });
   }
 
@@ -1339,6 +1377,12 @@ export class GameScene extends Phaser.Scene {
       this.scene.pause();
       this.scene.launch('Pause', { gameScene: this });
       return;
+    }
+    // Boon en attente (montée de niveau) : on l'ouvre à une frontière de frame
+    // pour ne pas interrompre le fil d'exécution d'un kill (combat ou boss).
+    if (this.pendingBoons > 0 && !this.rewardActive && !this.scene.isPaused()
+        && (this.roomState === 'combat' || this.roomState === 'boss')) {
+      this.openBoons(() => { /* reprend simplement le combat */ });
     }
     if (this.player && !this.player.dead) this.player.update(time, delta);
 

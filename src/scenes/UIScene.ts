@@ -12,6 +12,8 @@ export class UIScene extends Phaser.Scene {
   private gs!: GameScene;
   private hpBar!: Phaser.GameObjects.Graphics;
   private hpText!: Phaser.GameObjects.Text;
+  private xpBar!: Phaser.GameObjects.Graphics;
+  private levelText!: Phaser.GameObjects.Text;
   private currencyText!: Phaser.GameObjects.Text;
   private timerText!: Phaser.GameObjects.Text;
   private progressText!: Phaser.GameObjects.Text;
@@ -49,6 +51,11 @@ export class UIScene extends Phaser.Scene {
     this.hpBar = this.add.graphics().setDepth(2);
     this.hpText = label(this, 150, 27, '', 13, '#ffffff').setDepth(3);
 
+    // XP (jauge bleue sous la vie) + niveau
+    this.add.graphics().fillStyle(0x10233a, 1).fillRoundedRect(18, 42, 264, 10, 4).setDepth(1);
+    this.xpBar = this.add.graphics().setDepth(2);
+    this.levelText = label(this, 292, 47, 'Nv 0', 12, '#8fd0ff', 0).setDepth(3);
+
     // dash / special indicators
     this.dashBadge = iconBadge(this, 310, 27, glyphTexture('dash'), COLORS.dash, COLORS.panelLight, 17).setDepth(2);
     this.dashOverlay = this.add.circle(310, 27, 17, 0x000000, 0.6).setDepth(3);
@@ -66,8 +73,8 @@ export class UIScene extends Phaser.Scene {
     // progress (aligné à gauche après les jauges de cooldown)
     this.progressText = label(this, 400, 22, '', 15, '#f4e9c1', 0).setDepth(3);
 
-    // powers acquis
-    this.powersLayer = this.add.container(0, 50).setDepth(3);
+    // powers acquis (décalés sous la barre d'XP)
+    this.powersLayer = this.add.container(0, 64).setDepth(3);
 
     // boss bar
     this.bossLayer = this.add.container(0, 0).setDepth(5).setVisible(false);
@@ -92,6 +99,7 @@ export class UIScene extends Phaser.Scene {
       this.onHp(p.hp, p.stats.maxHp, p.shield, p.maxShield);
       this.onCooldowns(0, 0, p.dashCharges());
     }
+    this.onXp(RunState.xp, RunState.xpForLevel(), RunState.level);
     this.currencyText.setText(`${RunState.currencyEarned}`);
     this.onPowers(RunState.powers);
   }
@@ -131,6 +139,7 @@ export class UIScene extends Phaser.Scene {
     e.on('bossHp', this.onBossHp, this);
     e.on('bossPhase', (cur: number, total: number) => this.bossPhase.setText(`Phase ${cur}/${total}`));
     e.on('hurt', this.onHurt, this);
+    e.on('xp', this.onXp, this);
 
     this.events.on(Phaser.Scenes.Events.SHUTDOWN, () => {
       e.off('hp', this.onHp, this);
@@ -139,6 +148,7 @@ export class UIScene extends Phaser.Scene {
       e.off('progress', this.onProgress, this);
       e.off('bossHp', this.onBossHp, this);
       e.off('hurt', this.onHurt, this);
+      e.off('xp', this.onXp, this);
     });
   }
 
@@ -152,6 +162,13 @@ export class UIScene extends Phaser.Scene {
       this.hpBar.fillStyle(COLORS.shield, 0.85).fillRoundedRect(18, 16, Math.max(2, w * Math.min(1, frac + sFrac)), 6, 4);
     }
     this.hpText.setText(`${Math.ceil(hp)} / ${max}`);
+  }
+
+  private onXp(xp: number, need: number, level: number): void {
+    this.xpBar.clear();
+    const frac = Phaser.Math.Clamp(xp / Math.max(1, need), 0, 1);
+    this.xpBar.fillStyle(0x59b8ff, 1).fillRoundedRect(18, 42, Math.max(2, 264 * frac), 10, 4);
+    this.levelText.setText(`Nv ${level}`);
   }
 
   private onCooldowns(dashFrac: number, specialFrac: number, charges: number): void {
@@ -196,7 +213,7 @@ export class UIScene extends Phaser.Scene {
     if (rect.width === 0 || rect.height === 0) return null;
     const gx = (clientX - rect.left) / rect.width * GAME_WIDTH;
     const gy = (clientY - rect.top) / rect.height * GAME_HEIGHT;
-    if (gy < 34 || gy > 68) return null; // bande des pouvoirs (y ≈ 50)
+    if (gy < 50 || gy > 82) return null; // bande des pouvoirs (y ≈ 64)
     for (const h of this.powerHits) if (Math.abs(gx - h.x) < 16) return h;
     return null;
   }
