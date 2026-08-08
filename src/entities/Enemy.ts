@@ -37,6 +37,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   damage: number;
   private dmgMul = 1;
   private speedMul = 1;      // accélération par salle (de plus en plus rapide)
+  private atkSpeedMul = 1;   // cadence d'attaque (× selon la difficulté)
+  /** Réduit un délai (télégraphe/CD) selon la cadence d'attaque (modes durs = plus rapide). */
+  private cd(ms: number): number { return ms / this.atkSpeedMul; }
   private canDash = false;   // ruée vers le joueur (mondes glacés et au-delà)
   private canBurst = false;  // rafales de projectiles à distance
   private nextDashAt = 0;
@@ -61,7 +64,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   private blackFlame?: BlackFlameFx; // flammes noires d'Amaterasu (Brûlure Noire)
 
   constructor(scene: GameScene, x: number, y: number, def: EnemyDef, hpMul: number, dmgMul: number,
-              opts?: { speedMul?: number; canDash?: boolean; canBurst?: boolean }) {
+              opts?: { speedMul?: number; canDash?: boolean; canBurst?: boolean; atkSpeedMul?: number }) {
     super(scene, x, y, def.texKey ?? `mob_${def.sprite}`);
     this.gs = scene;
     this.def = def;
@@ -70,6 +73,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.damage = def.damage * dmgMul;
     this.dmgMul = dmgMul;
     this.speedMul = opts?.speedMul ?? 1;
+    this.atkSpeedMul = opts?.atkSpeedMul ?? 1;
     this.canDash = !!opts?.canDash;
     this.canBurst = !!opts?.canBurst;
     const t0 = performance.now();
@@ -343,7 +347,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     const endSig = () => {
       if (!this.alive) return; // le monstre a pu mourir pendant le télégraphe
       this.aiState = 'idle';
-      this.sigNextAt = performance.now() + sig.cooldown;
+      this.sigNextAt = performance.now() + this.cd(sig.cooldown);
       this.clearTint();
       this.setScale(this.def.scale);
     };
@@ -512,7 +516,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         this.beginTelegraph(now, this.def.attack?.telegraph ?? 500, 0xff5a3a, () => {
           if (summoner && Math.random() < 0.5) this.summon();
           else this.shoot(dir);
-          this.nextActionAt = performance.now() + (this.def.attack?.cooldown ?? 1800);
+          this.nextActionAt = performance.now() + this.cd(this.def.attack?.cooldown ?? 1800);
         });
       }
     }
@@ -565,7 +569,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     if (dist < range) body.setVelocity(-dir.x * spd, -dir.y * spd);
     else body.setVelocity(-dir.y * spd * 0.4, dir.x * spd * 0.4);
     if (this.aiState === 'idle' && now >= this.nextActionAt) {
-      this.nextActionAt = now + (this.def.attack?.cooldown ?? 3200);
+      this.nextActionAt = now + this.cd(this.def.attack?.cooldown ?? 3200);
       const allies = this.gs.getEnemies().filter((e) => e !== this && e.isAlive() && e.hp < e.maxHp);
       if (allies.length) {
         allies.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
@@ -586,7 +590,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     if (dist < range) body.setVelocity(-dir.x * spd, -dir.y * spd);
     else body.setVelocity(-dir.y * spd * 0.4, dir.x * spd * 0.4);
     if (this.aiState === 'idle' && now >= this.nextActionAt) {
-      this.nextActionAt = now + (this.def.attack?.cooldown ?? 2600);
+      this.nextActionAt = now + this.cd(this.def.attack?.cooldown ?? 2600);
       const boss = this.gs.boss;
       if (boss && boss.isAlive()) {
         this.beginTelegraph(now, 400, 0x6ad46a, () => {
@@ -607,7 +611,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     else if (dist < 120) body.setVelocity(-dir.x * spd * 0.5, -dir.y * spd * 0.5);
     else body.setVelocity(-dir.y * spd * 0.4, dir.x * spd * 0.4);
     if (this.aiState === 'idle' && now >= this.nextActionAt) {
-      this.nextActionAt = now + (this.def.attack?.cooldown ?? 4200);
+      this.nextActionAt = now + this.cd(this.def.attack?.cooldown ?? 4200);
       this.beginTelegraph(now, 450, 0x59c8ff, () => {
         if (!this.alive) return;
         this.gs.juice.ring(this.x, this.y, range, 0x59c8ff, 420);
@@ -627,7 +631,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     else if (dist > range) body.setVelocity(dir.x * spd, dir.y * spd);
     else body.setVelocity(-dir.y * spd * 0.5, dir.x * spd * 0.5);
     if (this.aiState === 'idle' && now >= this.nextActionAt) {
-      this.nextActionAt = now + (this.def.attack?.cooldown ?? 2600);
+      this.nextActionAt = now + this.cd(this.def.attack?.cooldown ?? 2600);
       const p = this.gs.player;
       const tx = p ? p.x : this.x, ty = p ? p.y : this.y;
       const a = this.def.attack!;
@@ -669,7 +673,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       body.setVelocity(0, 0);
       if (now >= this.aiStateUntil) {
         this.aiState = 'idle';
-        this.nextActionAt = now + (this.def.attack?.cooldown ?? 2200);
+        this.nextActionAt = now + this.cd(this.def.attack?.cooldown ?? 2200);
       }
     }
   }
@@ -682,7 +686,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   private beginTelegraph(now: number, ms: number, color: number, cb: () => void): void {
-    ms = Math.round(ms * (this.gs.player?.stats.telegraphMult ?? 1)); // Sens du Chaton
+    // Difficulté : amorce d'attaque plus courte dans les modes durs.
+    ms = Math.round(this.cd(ms) * (this.gs.player?.stats.telegraphMult ?? 1)); // Sens du Chaton
     this.aiState = 'telegraph';
     this.setTintFill(color);
     const s = this.def.scale;

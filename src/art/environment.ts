@@ -553,24 +553,24 @@ export const MAT_BANDANA: SpriteDef = {
 };
 export const MATERIAL_ART: SpriteDef[] = [MAT_WOOD, MAT_MUD, MAT_WING, MAT_TAIL, MAT_SPIKE, MAT_CAPE, MAT_SCEPTER, MAT_BANDANA];
 
-/** Ailes d'ange (22x14) : effet du revive « Retombée Féline ». */
+/** Ailes d'ange (22x14) : effet du revive « Retombée Féline ». Orientées vers le haut. */
 export const ANGEL_WINGS: SpriteDef = {
   key: 'angel_wings',
   pal: { '.': null, '#': '#9fb0d0', 'w': '#dfeaff', 'W': '#ffffff' },
   rows: [
-    '......................',
-    '......................',
-    '......####..####......',
-    '....##wwww..wwww##....',
-    '....WWWWWW..WWWWWW....',
-    '..##wwwww....wwwww##..',
-    '..WWWWWWW....WWWWWWW..',
-    '##wwwwww......wwwwww##',
-    'WWWWWWWW......WWWWWWWW',
-    'wwwwwww........wwwwwww',
-    'WWWWWWW........WWWWWWW',
-    'wwwwww..........wwwwww',
     'WWWWWW..........WWWWWW',
+    'wwwwww..........wwwwww',
+    'WWWWWWW........WWWWWWW',
+    'wwwwwww........wwwwwww',
+    'WWWWWWWW......WWWWWWWW',
+    '##wwwwww......wwwwww##',
+    '..WWWWWWW....WWWWWWW..',
+    '..##wwwww....wwwww##..',
+    '....WWWWWW..WWWWWW....',
+    '....##wwww..wwww##....',
+    '......####..####......',
+    '......................',
+    '......................',
     '......................',
   ],
 };
