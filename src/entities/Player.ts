@@ -197,8 +197,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       if (to) this.aim = to;
     }
 
-    // facing
-    if (Math.abs(this.aim.x) > 0.1) this.facing = this.aim.x >= 0 ? 1 : -1;
+    // Orientation gauche/droite : suit le DÉPLACEMENT ; pendant une attaque,
+    // suit la cible visée ; à l'arrêt, garde la dernière direction. Le sprite
+    // source est orienté à droite → miroir (flipX) quand facing < 0.
+    if (this.attacking) {
+      if (Math.abs(this.aim.x) > 0.15) this.facing = this.aim.x >= 0 ? 1 : -1;
+    } else if (Math.abs(move.x) > 0.1) {
+      this.facing = move.x > 0 ? 1 : -1;
+    }
     this.setFlipX(this.facing < 0);
 
     // déplacement (bloqué pendant le dash)

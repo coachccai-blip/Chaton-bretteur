@@ -114,6 +114,13 @@ function render(scene: Phaser.Scene, key: string, g: Grid): void {
   tex.refresh();
 }
 
+/**
+ * Génère un sprite de créature orienté vers la DROITE, en vue 3/4 (norme du
+ * guide de refonte : un seul asset, la version « gauche » = miroir au rendu).
+ * Silhouette asymétrique volontaire (museau à droite, queue à gauche, pupilles
+ * décalées, éclairage haut-droite) pour que le flip horizontal soit lisible.
+ * La masse reste centrée sur l'axe du canvas : le flip ne déplace pas la bête.
+ */
 export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
   const W = r.w, H = r.h;
   const g = makeGrid(W, H);
@@ -121,14 +128,16 @@ export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
   const bodyCy = H * 0.56;
   const rx = W * 0.34;
   const ry = H * 0.36;
+  const hasFeet = r.feet !== false && r.feature !== 'ghost' && r.feature !== 'spider';
+  const grounded = r.feature !== 'ghost' && r.feature !== 'spider';
 
-  // ---- features derrière le corps ----
+  // ================= arrière-plan (derrière le corps) =================
   if (r.feature === 'wings') {
-    tri(g, cx - rx, bodyCy - ry * 0.6, cx - W * 0.5, bodyCy - ry, cx - rx * 0.4, bodyCy + ry * 0.4, r.accent);
-    tri(g, cx + rx, bodyCy - ry * 0.6, cx + W * 0.5, bodyCy - ry, cx + rx * 0.4, bodyCy + ry * 0.4, r.accent);
+    // aile arrière (gauche) plus petite, aile avant (droite) plus grande (3/4)
+    tri(g, cx - rx * 0.9, bodyCy - ry * 0.6, cx - W * 0.44, bodyCy - ry * 0.9, cx - rx * 0.3, bodyCy + ry * 0.3, lighten(r.accent, -22));
+    tri(g, cx + rx, bodyCy - ry * 0.6, cx + W * 0.52, bodyCy - ry, cx + rx * 0.4, bodyCy + ry * 0.45, r.accent);
   }
   if (r.feature === 'spider') {
-    // 8 pattes
     for (let i = 0; i < 4; i++) {
       const ly = bodyCy - ry * 0.5 + i * ry * 0.45;
       rect(g, 1, Math.round(ly), Math.round(cx - rx * 0.7), Math.round(ly) + 1, r.outline);
@@ -136,51 +145,71 @@ export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
     }
   }
 
-  // ---- corps ----
+  // ---- queue à GAUCHE (derrière) : casse la symétrie, contrepoids du regard ----
+  if (grounded && r.feature !== 'mushroom' && r.feature !== 'hat') {
+    const tx = cx - rx * 0.92, ty = bodyCy + ry * 0.2;
+    disc(g, tx, ty, rx * 0.26, ry * 0.3, lighten(r.body, -12));
+    disc(g, tx - rx * 0.14, ty - ry * 0.55, rx * 0.2, ry * 0.24, lighten(r.body, -6));
+    disc(g, tx - rx * 0.05, ty - ry * 1.12, rx * 0.15, ry * 0.18, r.accent); // pointe accentuée
+  }
+
+  // ================= corps =================
   if (r.feature === 'ghost') {
     disc(g, cx, bodyCy - ry * 0.2, rx, ry, r.body);
     rect(g, Math.round(cx - rx), Math.round(bodyCy), Math.round(cx + rx), H - 2, r.body);
-    // bas ondulé
     for (let x = 0; x < W; x++) {
       const wob = Math.floor(Math.sin(x * 1.4) * 1.5 + 1.5);
       for (let y = H - 1; y >= H - 1 - wob; y--) if (g[y] && g[y][x] === r.body) g[y][x] = null;
     }
+    // traîne spectrale qui part vers la gauche (asymétrie du fantôme)
+    disc(g, cx - rx * 0.85, bodyCy + ry * 0.4, rx * 0.3, ry * 0.4, r.body);
   } else {
     disc(g, cx, bodyCy, rx, ry, r.body);
   }
 
-  if (r.belly) disc(g, cx, bodyCy + ry * 0.25, rx * 0.6, ry * 0.6, r.belly);
+  if (r.belly) disc(g, cx + rx * 0.12, bodyCy + ry * 0.25, rx * 0.58, ry * 0.58, r.belly);
 
-  // volume : ombre basse + reflet haut + éclat spéculaire
-  if (r.feature !== 'ghost') {
-    disc(g, cx, bodyCy + ry * 0.55, rx * 0.85, ry * 0.4, lighten(r.body, -24));
-    disc(g, cx - rx * 0.33, bodyCy - ry * 0.42, rx * 0.38, ry * 0.3, lighten(r.body, 34));
-    disc(g, cx - rx * 0.42, bodyCy - ry * 0.52, rx * 0.13, ry * 0.11, lighten(r.body, 70));
+  // ---- museau/mâchoire qui DÉBORDE à droite (indicateur de direction le + lisible) ----
+  if (r.feature !== 'ghost' && r.feature !== 'spider') {
+    const mx = cx + rx * 0.82, my = bodyCy + ry * 0.04;
+    disc(g, mx, my, rx * 0.32, ry * 0.28, r.belly ?? lighten(r.body, 10));
+    disc(g, mx + rx * 0.2, my + ry * 0.04, Math.max(0.8, rx * 0.09), Math.max(0.8, ry * 0.08), r.outline); // narine
   }
 
-  // ---- features devant / dessus ----
+  // volume : ombre basse + reflet HAUT-DROITE + éclat spéculaire (lumière haut-droite)
+  if (r.feature !== 'ghost') {
+    disc(g, cx - rx * 0.12, bodyCy + ry * 0.55, rx * 0.85, ry * 0.4, lighten(r.body, -24));
+    disc(g, cx + rx * 0.36, bodyCy - ry * 0.42, rx * 0.38, ry * 0.3, lighten(r.body, 34));
+    disc(g, cx + rx * 0.46, bodyCy - ry * 0.52, rx * 0.13, ry * 0.11, lighten(r.body, 70));
+  }
+
+  // ================= dessus / devant =================
   if (r.feature === 'ears') {
-    tri(g, cx - rx * 0.8, bodyCy - ry * 0.7, cx - rx * 1.1, bodyCy - ry * 1.7, cx - rx * 0.2, bodyCy - ry, r.body);
-    tri(g, cx + rx * 0.8, bodyCy - ry * 0.7, cx + rx * 1.1, bodyCy - ry * 1.7, cx + rx * 0.2, bodyCy - ry, r.body);
+    // oreille arrière (gauche) plus petite, oreille avant (droite) plus haute
+    tri(g, cx - rx * 0.85, bodyCy - ry * 0.7, cx - rx * 1.0, bodyCy - ry * 1.45, cx - rx * 0.25, bodyCy - ry, r.body);
+    tri(g, cx + rx * 0.7, bodyCy - ry * 0.7, cx + rx * 1.05, bodyCy - ry * 1.75, cx + rx * 0.15, bodyCy - ry, r.body);
   }
   if (r.feature === 'horns') {
-    tri(g, cx - rx * 0.6, bodyCy - ry * 0.6, cx - rx * 0.9, bodyCy - ry * 1.6, cx - rx * 0.2, bodyCy - ry * 0.7, r.accent);
-    tri(g, cx + rx * 0.6, bodyCy - ry * 0.6, cx + rx * 0.9, bodyCy - ry * 1.6, cx + rx * 0.2, bodyCy - ry * 0.7, r.accent);
+    tri(g, cx - rx * 0.55, bodyCy - ry * 0.6, cx - rx * 0.8, bodyCy - ry * 1.4, cx - rx * 0.2, bodyCy - ry * 0.7, lighten(r.accent, -18));
+    tri(g, cx + rx * 0.6, bodyCy - ry * 0.6, cx + rx * 0.95, bodyCy - ry * 1.7, cx + rx * 0.2, bodyCy - ry * 0.7, r.accent);
   }
   if (r.feature === 'spikes') {
+    // crête dorsale qui grandit vers l'avant (droite)
     for (let i = -1; i <= 1; i++) {
-      tri(g, cx + i * rx * 0.7 - 1.2, bodyCy - ry * 0.7, cx + i * rx * 0.7, bodyCy - ry * 1.5, cx + i * rx * 0.7 + 1.2, bodyCy - ry * 0.7, r.accent);
+      const h = 1.2 + (i + 1) * 0.3;
+      tri(g, cx + i * rx * 0.6 - 1.2, bodyCy - ry * 0.7, cx + i * rx * 0.6, bodyCy - ry * (0.8 + h * 0.5), cx + i * rx * 0.6 + 1.2, bodyCy - ry * 0.7, r.accent);
     }
   }
   if (r.feature === 'hat') {
-    tri(g, cx - rx * 1.1, bodyCy - ry * 0.7, cx, bodyCy - ry * 2.1, cx + rx * 1.1, bodyCy - ry * 0.7, r.accent);
+    // chapeau pointu penché vers l'avant (droite)
+    tri(g, cx - rx * 1.0, bodyCy - ry * 0.7, cx + rx * 0.35, bodyCy - ry * 2.1, cx + rx * 1.15, bodyCy - ry * 0.7, r.accent);
     rect(g, Math.round(cx - rx * 1.2), Math.round(bodyCy - ry * 0.7), Math.round(cx + rx * 1.2), Math.round(bodyCy - ry * 0.5), r.accent);
   }
   if (r.feature === 'mushroom') {
-    disc(g, cx, bodyCy - ry * 0.6, rx * 1.15, ry * 0.8, r.accent);
-    disc(g, cx - rx * 0.5, bodyCy - ry * 0.7, rx * 0.18, ry * 0.14, '#f6f1e4');
-    disc(g, cx + rx * 0.45, bodyCy - ry * 0.6, rx * 0.16, ry * 0.13, '#f6f1e4');
-    disc(g, cx, bodyCy - ry * 0.95, rx * 0.16, ry * 0.13, '#f6f1e4');
+    disc(g, cx + rx * 0.1, bodyCy - ry * 0.6, rx * 1.15, ry * 0.8, r.accent);
+    disc(g, cx - rx * 0.4, bodyCy - ry * 0.7, rx * 0.18, ry * 0.14, '#f6f1e4');
+    disc(g, cx + rx * 0.55, bodyCy - ry * 0.6, rx * 0.16, ry * 0.13, '#f6f1e4');
+    disc(g, cx + rx * 0.1, bodyCy - ry * 0.95, rx * 0.16, ry * 0.13, '#f6f1e4');
   }
   if (r.feature === 'crown') {
     const cy0 = Math.round(bodyCy - ry * 1.15);
@@ -190,30 +219,34 @@ export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
     }
   }
 
-  // ---- pieds ----
-  if (r.feet !== false && r.feature !== 'ghost' && r.feature !== 'spider') {
-    disc(g, cx - rx * 0.5, H - 2.5, rx * 0.3, ry * 0.2, r.body);
-    disc(g, cx + rx * 0.5, H - 2.5, rx * 0.3, ry * 0.2, r.body);
+  // ================= pieds (avant/droite plus bas et avancé) =================
+  if (hasFeet) {
+    disc(g, cx - rx * 0.42, H - 3.2, rx * 0.28, ry * 0.19, lighten(r.body, -14)); // pied arrière (gauche)
+    disc(g, cx + rx * 0.58, H - 2.2, rx * 0.32, ry * 0.22, r.body);                // pied avant (droite)
   }
 
   // ---- contour (avant les yeux pour ne pas les cercler) ----
   outlinePass(g, r.outline);
 
-  // ---- yeux ----
-  const eyeY = bodyCy - ry * 0.05;
-  const ex = rx * 0.45;
+  // ================= yeux (décalés vers la DROITE, vue 3/4) =================
+  const eyeY = bodyCy - ry * 0.06;
+  const backX = cx + rx * 0.02;   // œil arrière (côté gauche du visage tourné)
+  const frontX = cx + rx * 0.5;   // œil avant, proche du museau
   const er = Math.max(1.1, W * 0.09);
+  const erBack = er * 0.82;       // œil arrière un peu plus petit (perspective)
   if (r.eye === 'glow') {
-    disc(g, cx - ex, eyeY, er, er, r.eyeColor);
-    disc(g, cx + ex, eyeY, er, er, r.eyeColor);
+    disc(g, backX, eyeY, erBack, erBack, r.eyeColor);
+    disc(g, frontX, eyeY, er, er, r.eyeColor);
   } else {
-    disc(g, cx - ex, eyeY, er, er, '#ffffff');
-    disc(g, cx + ex, eyeY, er, er, '#ffffff');
-    disc(g, cx - ex + 0.3, eyeY + 0.3, er * 0.5, er * 0.5, r.outline);
-    disc(g, cx + ex + 0.3, eyeY + 0.3, er * 0.5, er * 0.5, r.outline);
+    disc(g, backX, eyeY, erBack, erBack, '#ffffff');
+    disc(g, frontX, eyeY, er, er, '#ffffff');
+    // pupilles collées au bord DROIT de l'œil + reflet 1 px en haut-droite
+    disc(g, backX + erBack * 0.5, eyeY + 0.2, erBack * 0.5, erBack * 0.5, r.outline);
+    disc(g, frontX + er * 0.5, eyeY + 0.2, er * 0.5, er * 0.5, r.outline);
+    disc(g, frontX + er * 0.7, eyeY - er * 0.3, Math.max(0.7, er * 0.28), Math.max(0.7, er * 0.28), '#f6f1e4');
     if (r.eye === 'angry') {
-      rect(g, Math.round(cx - ex - er), Math.round(eyeY - er - 1), Math.round(cx - ex + er * 0.4), Math.round(eyeY - er), r.outline);
-      rect(g, Math.round(cx + ex - er * 0.4), Math.round(eyeY - er - 1), Math.round(cx + ex + er), Math.round(eyeY - er), r.outline);
+      rect(g, Math.round(backX - erBack), Math.round(eyeY - erBack - 1), Math.round(backX + erBack * 0.4), Math.round(eyeY - erBack), r.outline);
+      rect(g, Math.round(frontX - er * 0.4), Math.round(eyeY - er - 1), Math.round(frontX + er), Math.round(eyeY - er), r.outline);
     }
   }
 

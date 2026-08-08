@@ -16,6 +16,9 @@ export const CAT: SpriteDef = {
     'G': '#c2c6d0', 'g': '#868c98',
     'e': '#f2c23a', 'i': '#7a1f12',
   },
+  // Sprite orienté à droite (vue 3/4 top-down) : une queue part vers la GAUCHE
+  // (l'arrière), l'œil/museau droit reçoit la lumière — la silhouette est donc
+  // asymétrique et le miroir gauche/droite (flipX) est parfaitement lisible.
   rows: [
     '......k.kk.k......',
     '.....kRkkkkRk.....',
@@ -23,15 +26,15 @@ export const CAT: SpriteDef = {
     '...GgRRRRRRRRgG...',
     '..GGgWWWWWWWWgGG..',
     '..GgWmmmmmmmmWgG..',
-    '..GgWmeWWWWemWgG..',
+    '..GgWmeWWWWeemgG..',
     '..GgWmmWiiWmmWgG..',
-    '...ggWmmmmmmWgg...',
-    '..RH#WWWWWWWW#HR..',
-    '.HRr#RRRRRRRR#rRH.',
-    '..rR#RWWWWWWR#Rr..',
-    '..#b#RRWWWWRR#b#..',
-    '...#BB#WWWW#BB#...',
-    '...#Bb#....#bB#...',
+    '.b.ggWmmmmmmWgg...',
+    'bBRH#WWWWWWWW#HR..',
+    '.bRr#RRRRRRRR#rRH.',
+    '.B#R#RWWWWWWR#Rr..',
+    '.B#b#RRWWWWRR#b#..',
+    '.bB#BB#WWWW#BB#...',
+    '..B#Bb#....#bB#...',
     '...bBB#....#BBb...',
     '...#bb......bb#...',
     '..................',

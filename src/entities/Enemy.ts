@@ -38,6 +38,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   private aiStateUntil = 0;
   private chargeDir = new Phaser.Math.Vector2();
   private bobT = Math.random() * 6;
+  private facingSign = 1; // +1 = orienté droite (défaut), -1 = miroir vers la gauche
 
   private statuses: Partial<Record<Element, StatusInfo>> = {};
   private sigNextAt = 0;
@@ -96,6 +97,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const slow = now < this.slowUntil ? this.slowMul : 1;
     const spd = this.def.speed * (frozen ? 0.12 : 1) * slow * timeScale;
+
+    // Orientation gauche/droite : dérivée de l'INTENTION (cible / direction de
+    // charge), jamais de la vélocité subie (un knockback ne retourne pas la
+    // bête). Verrouillée pendant les états engagés (télégraphe/signature).
+    if (this.aiState === 'charging') {
+      if (Math.abs(this.chargeDir.x) > 0.1) this.facingSign = this.chargeDir.x > 0 ? 1 : -1;
+    } else if (this.aiState !== 'telegraph' && this.aiState !== 'signature') {
+      if (Math.abs(dx) > 4) this.facingSign = dx > 0 ? 1 : -1; // DEADZONE anti-oscillation
+    }
+    this.setFlipX(this.facingSign < 0);
 
     // attaque signature (interrompt le comportement)
     if (this.aiState === 'idle' && this.def.signature && !frozen && now >= this.sigNextAt
@@ -314,7 +325,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     const bob = Math.sin(this.bobT) * (moving ? 0.08 : 0.04);
     const s = this.def.scale;
     if (this.aiState !== 'telegraph' && this.aiState !== 'signature') this.setScale(s * (1 - bob * 0.4), s * (1 + bob));
-    if (Math.abs(body.velocity.x) > 5) this.setFlipX(body.velocity.x < 0);
+    // NB : l'orientation (flipX) est gérée dans update() à partir de l'intention.
   }
 
   private updateExploder(now: number, dir: Phaser.Math.Vector2, dist: number, spd: number): void {

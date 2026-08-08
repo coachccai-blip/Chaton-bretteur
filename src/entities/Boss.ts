@@ -137,7 +137,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.bobT += dt / 1000 * 5;
     const bob = Math.sin(this.bobT) * 0.03;
     if (!this.busy) this.setScale(this.def.scale * (1 - bob * 0.4), this.def.scale * (1 + bob));
-    if (Math.abs(body.velocity.x) > 5) this.setFlipX(body.velocity.x < 0);
+    // Orientation : face au joueur (intention), figée pendant une attaque.
+    if (!this.busy && Math.abs(dx) > 6) this.setFlipX(dx < 0);
     if (frozen) this.setTint(0x8fdfff); else if (!this.phase.tint) this.clearTint(); else this.setTint(this.phase.tint);
     this.updateAura();
   }
