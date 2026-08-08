@@ -54,6 +54,12 @@ export class Trap {
   }
 
   update(now: number, px: number, py: number, playerAlive: boolean): { slow: number } {
+    // Transmutation Mineure : désamorce le piège si le chaton (avec le boon) est
+    // à moins de 60 px — il ne blesse plus tant qu'on reste à portée.
+    if (playerAlive && this.gs.player?.mods.disarm && Phaser.Math.Distance.Between(px, py, this.x, this.y) < 60) {
+      this.base?.setTint(0x59c8ff);
+      return { slow: 1 };
+    }
     const inside = playerAlive && Phaser.Math.Distance.Between(px, py, this.x, this.y) < this.radius;
     let slow = 1;
 

@@ -414,11 +414,11 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       const st = this.statuses[key]!;
       if (now >= st.expire) { delete this.statuses[key]; continue; }
       if (now >= st.nextTick) {
-        st.nextTick = now + (key === 'burn' ? 400 : 500);
-        const dmg = key === 'burn' ? 14 : key === 'poison' ? 12 : key === 'bleed' ? 10 : 0;
+        st.nextTick = now + (key === 'burn' || key === 'blackburn' ? 400 : 500);
+        const dmg = key === 'blackburn' ? 28 : key === 'burn' ? 14 : key === 'poison' ? 12 : key === 'bleed' ? 10 : 0;
         if (dmg > 0) {
           this.hp = Math.max(0, this.hp - dmg);
-          this.gs.juice.burst(this.x, this.y - 20, key === 'burn' ? 0xff6a1f : key === 'poison' ? 0x8fd94a : 0xc0392b, 3, 60, 0.6);
+          this.gs.juice.burst(this.x, this.y - 20, key === 'blackburn' ? 0x14060a : key === 'burn' ? 0xff6a1f : key === 'poison' ? 0x8fd94a : 0xc0392b, 3, 60, 0.6);
           this.gs.events.emit('bossHp', this.hp, this.maxHp);
           if (this.hp <= 0) { this.die(); return; }
         }
@@ -429,15 +429,15 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   applyStatus(status: Element, duration: number): void {
     const now = performance.now();
     const dur = status === 'freeze' ? duration * 0.4 : duration; // résistance
-    if (status !== 'mark' && status !== 'bleed') {
+    if (status !== 'mark' && status !== 'bleed' && status !== 'blackburn') {
       for (const other of Object.keys(this.statuses) as Element[]) {
-        if (other === status || other === 'mark' || other === 'bleed') continue;
+        if (other === status || other === 'mark' || other === 'bleed' || other === 'blackburn') continue;
         const react = REACTIONS[reactKey(status, other)];
         if (react) { delete this.statuses[other]; this.triggerReaction(react); return; }
       }
     }
     const prev = this.statuses[status];
-    this.statuses[status] = { expire: Math.max(prev?.expire ?? 0, now + dur), nextTick: prev?.nextTick ?? now + (status === 'burn' ? 400 : 500) };
+    this.statuses[status] = { expire: Math.max(prev?.expire ?? 0, now + dur), nextTick: prev?.nextTick ?? now + (status === 'burn' || status === 'blackburn' ? 400 : 500) };
   }
 
   private triggerReaction(react: { name: string; base: number; hpFrac: number; color: number; aoe: number }): void {

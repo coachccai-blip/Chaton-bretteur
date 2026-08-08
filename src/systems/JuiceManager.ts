@@ -4,6 +4,7 @@ import Phaser from 'phaser';
 export class JuiceManager {
   private scene: Phaser.Scene;
   private frozenUntil = 0;
+  private frozen = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -13,21 +14,32 @@ export class JuiceManager {
     this.scene.cameras.main.shake(duration, intensity);
   }
 
-  /** Micro-pause pour donner du poids aux impacts. */
+  /**
+   * Micro-pause pour donner du poids aux impacts. Robuste aux appels qui se
+   * chevauchent : un seul état "gelé", et la reprise se replanifie tant que la
+   * fenêtre est prolongée — la physique finit TOUJOURS par redémarrer (évite un
+   * soft-lock si le dernier ennemi meurt pendant un hit-stop). On utilise
+   * l'horloge de la scène (et non window.setTimeout) pour que la reprise se
+   * mette en pause avec la scène (menu de récompense) et reprenne au retour.
+   */
   hitStop(ms = 45): void {
-    const world = this.scene.physics.world;
-    const now = performance.now();
-    if (now < this.frozenUntil) {
-      this.frozenUntil = Math.max(this.frozenUntil, now + ms);
-      return;
-    }
-    this.frozenUntil = now + ms;
-    world.pause();
-    window.setTimeout(() => {
-      if (this.scene.scene.isActive() && performance.now() >= this.frozenUntil - 5) {
-        world.resume();
+    this.frozenUntil = Math.max(this.frozenUntil, performance.now() + ms);
+    if (this.frozen) return;
+    this.frozen = true;
+    this.scene.physics.world.pause();
+    this.scheduleResume();
+  }
+
+  private scheduleResume(): void {
+    const remaining = Math.max(1, this.frozenUntil - performance.now());
+    this.scene.time.delayedCall(remaining, () => {
+      if (performance.now() >= this.frozenUntil - 5) {
+        this.frozen = false;
+        this.scene.physics.world.resume();
+      } else {
+        this.scheduleResume(); // fenêtre prolongée entre-temps : on recontrôle
       }
-    }, ms);
+    });
   }
 
   /** Flash blanc sur une entité touchée. */

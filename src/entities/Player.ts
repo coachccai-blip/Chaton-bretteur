@@ -66,6 +66,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   private dashCount = 0;
   private kunaiPos: { x: number; y: number; at: number } | null = null;
   private transformUsedRoom = false;
+  private transformToken = 0;
 
   constructor(scene: GameScene, x: number, y: number, stats: PlayerStats) {
     super(scene, x, y, 'cat');
@@ -272,7 +273,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       this.addBuff('transform', dur, { dmg: this.mods.transformDmg || 1.5, spd: this.mods.transformSpd || 1.1 });
       this.mods.transformActive = 1;
       this.setScale(this.mods.transformScale || 1.5);
-      this.gs.time.delayedCall(dur, () => { this.mods.transformActive = 0; this.setScale(1); });
+      // Jeton : une transformation d'une salle antérieure ne doit pas couper
+      // court une nouvelle transformation déclenchée dans une salle suivante.
+      const tok = ++this.transformToken;
+      this.gs.time.delayedCall(dur, () => {
+        if (this.transformToken !== tok) return;
+        this.mods.transformActive = 0; this.setScale(1);
+      });
       this.gs.juice.ring(this.x, this.y, 120, this.mods.transformColor || 0xffffff, 500);
       this.gs.juice.burst(this.x, this.y, this.mods.transformColor || 0xffffff, 24, 260, 1.8);
       this.gs.sfx(this.mods.transformSfx === 2 ? 'toon' : 'special');
@@ -605,9 +612,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       this.gs.juice.popText(this.x, this.y - 40, 'Esquive !', '#9fe6ff', 15);
       return;
     }
-    // Susanoo : absorbe les 3 prochains coups et riposte (se reconstitue en 20 s)
+    // Susanoo : absorbe les 3 prochains coups DISTINCTS et riposte (reconstitué
+    // en 20 s). On pose des i-frames sinon un contact continu vide les 3 charges
+    // en 3 frames au lieu d'absorber 3 coups séparés.
     if (this.mods.susanoo > 0) {
       this.mods.susanoo--;
+      this.invulnUntil = now + this.stats.hurtIFrames;
       this.gs.juice.ring(this.x, this.y, 100, 0xb26bff, 320);
       this.gs.explosionAt(this.x, this.y, 100, 30);
       if (this.mods.susanoo <= 0) this.gs.time.delayedCall(20000, () => { this.mods.susanoo = 3; });

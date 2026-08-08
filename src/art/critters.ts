@@ -218,6 +218,11 @@ export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
       tri(g, cx + i * rx * 0.55 - 1, cy0, cx + i * rx * 0.55, cy0 - 2.2, cx + i * rx * 0.55 + 1, cy0, r.accent);
     }
   }
+  if (r.feature === 'skull') {
+    // dôme crânien osseux + cavité nasale près du museau (identité squelette)
+    disc(g, cx + rx * 0.05, bodyCy - ry * 0.5, rx * 0.92, ry * 0.72, lighten(r.body, 22));
+    disc(g, cx + rx * 0.5, bodyCy + ry * 0.12, Math.max(0.9, rx * 0.12), Math.max(0.9, ry * 0.14), r.outline);
+  }
 
   // ================= pieds (avant/droite plus bas et avancé) =================
   if (hasFeet) {
@@ -321,16 +326,4 @@ export const MONSTER_RECIPES: Record<string, Recipe> = {
   faucheurdim: { w: 18, h: 20, body: '#0c0a16', outline: '#2a1440', eye: 'glow', eyeColor: '#d05aff', feature: 'ghost', accent: '#d05aff' },
   etoilenaine: { w: 16, h: 16, body: '#ffffff', belly: '#ffe8ff', outline: '#7a2ab0', eye: 'glow', eyeColor: '#d05aff', feature: 'spikes', accent: '#d05aff' },
   larvechaos: { w: 19, h: 16, body: '#14101f', belly: '#3a2c50', outline: '#080510', eye: 'glow', eyeColor: '#d05aff', feature: 'none', accent: '#59d9ff' },
-};
-
-/** Recettes des boss (plus grands), accordées à leur nouvelle identité. */
-export const BOSS_RECIPES: Record<string, Recipe> = {
-  // Centaure archer — bête sylvestre à bois, teintes terreuses/vertes
-  centaure: { w: 30, h: 30, body: '#6a4a2e', belly: '#a67a44', outline: '#1a0f08', eye: 'glow', eyeColor: '#dfffa0', feature: 'horns', accent: '#59d9a0' },
-  // Gobu géant — énorme gobelin vert à grandes oreilles
-  gobugeant: { w: 34, h: 30, body: '#5a7a3a', belly: '#a8d06a', outline: '#16240e', eye: 'angry', eyeColor: '#dfff9a', feature: 'ears', accent: '#33591f' },
-  // Serpent de lave — créature ophidienne incandescente
-  serpentlave: { w: 30, h: 26, body: '#2a120a', belly: '#ff7a2a', outline: '#0e0503', eye: 'glow', eyeColor: '#ffe08a', feature: 'spikes', accent: '#ff5522' },
-  // Archimage mort-vivant — sorcier squelettique à chapeau
-  archimage: { w: 30, h: 32, body: '#2a2440', belly: '#5a4a7a', outline: '#0e0b1a', eye: 'glow', eyeColor: '#c78aff', feature: 'hat', accent: '#8a5cff' },
 };

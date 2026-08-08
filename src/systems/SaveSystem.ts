@@ -31,7 +31,13 @@ class Save {
   load(): void {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) this.data = { ...defaults(), ...JSON.parse(raw) };
+      if (raw) {
+        const d = defaults();
+        const parsed = JSON.parse(raw);
+        // fusion profonde de `settings` : une sauvegarde antérieure à l'ajout
+        // d'un champ (ex. `muted`) ne doit pas écraser tout l'objet par défaut.
+        this.data = { ...d, ...parsed, settings: { ...d.settings, ...(parsed.settings ?? {}) } };
+      }
     } catch {
       this.data = defaults();
     }

@@ -285,8 +285,8 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'rubber_body', name: 'Corps de Gomme', god: 'Pirate', category: 'defense', rarity: 'common', icon: 'armor', repeatable: true,
-    description: 'Réduit de 50% les projections et repoussements subis.',
-    apply(p) { p.stats.knockbackResist = Math.min(0.9, p.stats.knockbackResist + 0.5); },
+    description: 'Le corps élastique amortit les coups : -10% de dégâts subis.',
+    apply(p) { p.stats.armor = 1 - (1 - p.stats.armor) * 0.90; p.stats.knockbackResist = Math.min(0.9, p.stats.knockbackResist + 0.5); },
   },
   {
     id: 'red_stone', name: 'Éclat de Pierre Rouge', god: 'Alchimiste', category: 'hp', rarity: 'common', icon: 'heart', repeatable: true,
@@ -310,8 +310,8 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'night_vision', name: 'Vision Nocturne', god: 'Chaton', category: 'attack', rarity: 'common', icon: 'eye', repeatable: true,
-    description: 'Révèle les pièges cachés et +5% de chance de critique.',
-    apply(p) { p.stats.critChance += 0.05; p.mods.reveal = 1; },
+    description: 'Sens aiguisés dans le noir : +5% de critique et +5% d’esquive.',
+    apply(p) { p.stats.critChance += 0.05; p.stats.dodgeChance += 0.05; p.mods.reveal = 1; },
   },
   {
     id: 'radar_whiskers', name: 'Moustaches Radar', god: 'Chaton', category: 'defense', rarity: 'common', icon: 'eye', repeatable: true,

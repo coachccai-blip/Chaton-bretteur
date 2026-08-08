@@ -39,6 +39,9 @@ const ZONE_PROPS: Record<string, string[]> = {
   marais: ['prop_reed', 'prop_glowshroom'],
   forge: ['prop_ember', 'prop_skull'],
   citadelle: ['prop_candle', 'prop_skull'],
+  givre: ['prop_glowshroom', 'prop_candle'],
+  celeste: ['prop_candle', 'prop_skull'],
+  neant: ['prop_skull', 'prop_candle'],
 };
 
 type HazardType = 'thorns' | 'toxic' | 'lava' | 'shadow' | 'web' | 'fire';
@@ -88,6 +91,7 @@ export class GameScene extends Phaser.Scene {
   enemies!: Phaser.Physics.Arcade.Group;
   projectiles!: Phaser.Physics.Arcade.Group;
   boss: Boss | null = null;
+  private bossOverlap?: Phaser.Physics.Arcade.Collider;
 
   private activeBanner?: Phaser.GameObjects.Text;
   private activeEnemies = new Set<Enemy>();
@@ -257,6 +261,7 @@ export class GameScene extends Phaser.Scene {
   // ---------------- progression / salles ----------------
   private startZone(index: number): void {
     this.projectiles.clear(true, true);
+    this.bossOverlap?.destroy(); this.bossOverlap = undefined;
     if (this.boss) { this.boss.destroy(); this.boss = null; }
     this.activeEnemies.forEach((e) => e.destroy());
     this.activeEnemies.clear();
@@ -549,7 +554,8 @@ export class GameScene extends Phaser.Scene {
     this.bossIntro(def, () => {
       this.banner(`BOSS : ${def.name}, ${def.title}`, () => {
         this.boss = new Boss(this, WORLD_WIDTH / 2, ARENA.y + 120, def, diff.enemyHp * bossHpMult, diff.enemyDamage);
-        this.physics.add.overlap(this.player, this.boss, (_p, b) => {
+        this.bossOverlap?.destroy();
+        this.bossOverlap = this.physics.add.overlap(this.player, this.boss, (_p, b) => {
           const bs = b as Boss;
           if (bs.isAlive()) this.player.takeDamage(bs.contactDamage, bs.x, bs.y);
         });
@@ -749,6 +755,15 @@ export class GameScene extends Phaser.Scene {
   onBossKilled(b: Boss): void {
     this.boss = null;
     this.bossHazards = [];
+    // Détruit le collider de contact du boss (évite l'accumulation d'un run à
+    // l'autre) et despawn les adds encore vivants, sinon ils continuent d'infliger
+    // des dégâts de contact pendant l'anim de mort/bannière — pouvant tuer après
+    // la victoire.
+    this.bossOverlap?.destroy();
+    this.bossOverlap = undefined;
+    this.activeEnemies.forEach((e) => e.destroy());
+    this.activeEnemies.clear();
+    this.clearSouls();
     AudioManager.play('bossdie');
     // slow-mo + shake + particules
     this.time.timeScale = 0.35;
