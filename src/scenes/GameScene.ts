@@ -128,7 +128,7 @@ export class GameScene extends Phaser.Scene {
   private traps: Trap[] = [];
   private hazardGfx!: Phaser.GameObjects.Graphics;
   private hazardMarkers: Phaser.GameObjects.Image[] = []; // mines de signalisation (pool)
-  private reviveAvailable = false;
+  private reviveCharges = 0;
   private poisonUntil = 0;
   private nextPoisonTick = 0;
 
@@ -153,7 +153,7 @@ export class GameScene extends Phaser.Scene {
     this.activeEnemies.clear();
     this.bossPylons = [];
     this.rageBosses = []; this.rageActive = false; this.rageOverlaps = [];
-    this.pendingBoons = 0; this.rewardActive = false; this.boonOnEmpty = null;
+    this.pendingBoons = 0; this.rewardActive = false;
     this.bossOverlap = undefined;
     this.boss = null;
     this.enemyTimeScale = 1;
@@ -182,7 +182,7 @@ export class GameScene extends Phaser.Scene {
     this.walls = this.physics.add.staticGroup();
 
     const stats = SaveSystem.computeBaseStats();
-    this.reviveAvailable = SaveSystem.hasFlag('revive');
+    this.reviveCharges = SaveSystem.reviveCharges();
     this.player = new Player(this, WORLD_WIDTH / 2, ARENA.y + ARENA.h / 2, stats);
 
     // collisions murs. Le joueur traverse les OBSTACLES pendant un dash
@@ -203,6 +203,7 @@ export class GameScene extends Phaser.Scene {
 
     this.scene.launch('UI', { gameScene: this });
     this.events.emit('powers', RunState.powers);
+    this.events.emit('boons', this.pendingBoons); // compteur de compétences (0 au départ)
 
     this.startZone(RunState.zoneIndex);
 
@@ -631,7 +632,7 @@ export class GameScene extends Phaser.Scene {
     // PV des boss : base ×2 amplifiée par une montée exponentielle de zone (le
     // joueur devient très fort), le tout ENCORE ×5 (boss très costauds), et
     // dégâts de contact/attaques mis à l'échelle de zone.
-    const bossHpMult = (2 + this.zone.index) * 2 * Math.pow(1.28, this.zone.index) * 5;
+    const bossHpMult = (2 + this.zone.index) * 2 * Math.pow(1.28, this.zone.index) * 2.5;
     const bossDmgMult = Math.pow(1.3, this.zone.index);
     AudioManager.startMusic('boss');
     this.events.emit('progress', this.zone.name, this.zone.rooms, this.zone.rooms, true);
@@ -828,9 +829,9 @@ export class GameScene extends Phaser.Scene {
   // en fin de salle : on les obtient en montant de niveau.
   private pendingBoons = 0;
   private rewardActive = false;
-  private boonOnEmpty: (() => void) | null = null;
 
-  /** Gagne de l'XP ; chaque niveau franchi met un boon en file d'attente. */
+  /** Gagne de l'XP ; chaque niveau franchi ajoute une COMPÉTENCE à récupérer
+   * (le joueur la choisit via le bouton clignotant de l'ATH — pas d'ouverture auto). */
   private awardXp(amount: number): void {
     RunState.xp += amount;
     let leveled = false;
@@ -844,28 +845,24 @@ export class GameScene extends Phaser.Scene {
     if (leveled) {
       this.juice.popText(this.player.x, this.player.y - 56, `NIVEAU ${RunState.level} !`, '#59b8ff', 18);
       this.sfx('power');
+      this.events.emit('boons', this.pendingBoons); // met à jour le compteur du bouton
     }
   }
 
-  /** Ouvre le prochain boon en file, sinon exécute le callback de fin. */
-  private stepBoons(): void {
-    if (this.pendingBoons > 0) {
-      this.pendingBoons--;
-      this.rewardActive = true;
-      if (!this.scene.isPaused()) this.scene.pause();
-      this.scene.launch('Reward', { gameScene: this });
-    } else {
-      this.rewardActive = false;
-      const cb = this.boonOnEmpty; this.boonOnEmpty = null;
-      if (this.scene.isPaused()) this.scene.resume();
-      if (cb) cb();
-    }
-  }
+  /** Nombre de compétences en attente (lu par l'ATH). */
+  boonsPending(): number { return this.pendingBoons; }
 
-  /** Démarre la distribution des boons en file puis exécute `onEmpty`. */
-  private openBoons(onEmpty: () => void): void {
-    this.boonOnEmpty = onEmpty;
-    if (!this.rewardActive) this.stepBoons();
+  /**
+   * Récupère UNE compétence (déclenché par le bouton de l'ATH). Ouvre l'écran de
+   * choix — jamais automatiquement, pour éviter les sélections par erreur.
+   */
+  redeemBoon(): void {
+    if (this.pendingBoons <= 0 || this.rewardActive || this.scene.isPaused()) return;
+    this.pendingBoons--;
+    this.rewardActive = true;
+    this.events.emit('boons', this.pendingBoons);
+    this.scene.pause();
+    this.scene.launch('Reward', { gameScene: this });
   }
 
   private roomClear(): void {
@@ -996,8 +993,11 @@ export class GameScene extends Phaser.Scene {
       if (!power.fallback) RunState.addPower(power); // les cartes de repli ne sont pas des boons
       this.events.emit('powers', RunState.powers);
     }
-    // Enchaîne le boon suivant en file (montées de niveau multiples), ou reprend.
-    this.stepBoons();
+    // Choix manuel : on reprend le jeu. Les compétences restantes attendent que le
+    // joueur reclique le bouton (pas d'enchaînement automatique).
+    this.rewardActive = false;
+    if (this.scene.isPaused()) this.scene.resume();
+    this.events.emit('boons', this.pendingBoons);
   }
 
   onBossKilled(b: Boss): void {
@@ -1032,8 +1032,8 @@ export class GameScene extends Phaser.Scene {
       this.time.delayedCall(1300, () => {
         this.time.timeScale = 1;
         this.physics.world.timeScale = 1;
-        // Distribue d'abord les boons gagnés, puis lance le round enragé.
-        this.openBoons(() => this.startRageRound());
+        // Les compétences gagnées attendent le bouton ; on enchaîne le round enragé.
+        this.startRageRound();
       });
       return;
     }
@@ -1055,7 +1055,7 @@ export class GameScene extends Phaser.Scene {
       this.time.delayedCall(1400, () => {
         this.time.timeScale = 1;
         this.physics.world.timeScale = 1;
-        this.banner('BOSS VRAIMENT VAINCU !', () => this.openBoons(() => this.afterBoss()));
+        this.banner('BOSS VRAIMENT VAINCU !', () => this.afterBoss());
       });
     }
   }
@@ -1073,7 +1073,7 @@ export class GameScene extends Phaser.Scene {
         this.rageOverlaps.forEach((o) => o.destroy());
         this.rageOverlaps = [];
         // PV par clone ≈ 0,5× le boss simple (trio ≈ 1,5×) ; dégâts ×1,3.
-        const hpMult = (2 + this.zone.index) * 2 * Math.pow(1.28, this.zone.index) * 5 * 0.5;
+        const hpMult = (2 + this.zone.index) * 2 * Math.pow(1.28, this.zone.index) * 2.5 * 0.5;
         const dmgMult = Math.pow(1.3, this.zone.index) * 1.3;
         const spots = [
           { x: WORLD_WIDTH / 2, y: ARENA.y + 110 },
@@ -1181,8 +1181,8 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  canRevive(): boolean { return this.reviveAvailable && !RunState.reviveUsed; }
-  consumeRevive(): void { RunState.reviveUsed = true; this.reviveAvailable = false; }
+  canRevive(): boolean { return RunState.revivesUsed < this.reviveCharges; }
+  consumeRevive(): void { RunState.revivesUsed += 1; }
 
   // ---------------- pièges d'environnement ----------------
   private clearTraps(): void {
@@ -1778,12 +1778,7 @@ export class GameScene extends Phaser.Scene {
       this.scene.launch('Pause', { gameScene: this });
       return;
     }
-    // Boon en attente (montée de niveau) : on l'ouvre à une frontière de frame
-    // pour ne pas interrompre le fil d'exécution d'un kill (combat ou boss).
-    if (this.pendingBoons > 0 && !this.rewardActive && !this.scene.isPaused()
-        && (this.roomState === 'combat' || this.roomState === 'boss')) {
-      this.openBoons(() => { /* reprend simplement le combat */ });
-    }
+    // (Plus d'ouverture automatique des compétences : le joueur clique le bouton.)
     if (this.player && !this.player.dead) this.player.update(time, delta);
 
     // ambiance : lumière + ombres portées

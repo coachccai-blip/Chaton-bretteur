@@ -96,6 +96,13 @@ class Save {
     return META_UPGRADES.some((m) => m.flag === flag && this.tierOf(m.id) > 0);
   }
 
+  /** Nombre de renaissances disponibles par run (= paliers de Retombée Féline). */
+  reviveCharges(): number {
+    let n = 0;
+    for (const m of META_UPGRADES) if (m.flag === 'revive') n += this.tierOf(m.id);
+    return n;
+  }
+
   /** Stats de base du chaton après application de toutes les méta-améliorations. */
   computeBaseStats(): PlayerStats {
     const base: PlayerStats = JSON.parse(JSON.stringify(PLAYER_BASE));

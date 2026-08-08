@@ -380,7 +380,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   private meleeRange(): number {
     const arm = 1 + 0.12 * Math.min(3, this.mods.armReach || 0);
     const susanoo = this.mods.susanoo > 0 ? 1.15 : 1;
-    return MELEE_RANGE * arm * susanoo;
+    const kafGear = (this.mods.kafGear && this.mods.transformActive) ? 2 : 1;
+    return MELEE_RANGE * arm * susanoo * kafGear;
   }
 
   // ---------- actions ----------

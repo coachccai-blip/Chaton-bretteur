@@ -8,7 +8,7 @@ class Run {
   powers: PowerDef[] = [];
   currencyEarned = 0;
   kills = 0;
-  reviveUsed = false;
+  revivesUsed = 0;
   victory = false;
 
   // Expérience / niveau : on gagne un boon à chaque montée de niveau. Réglé pour
@@ -31,7 +31,7 @@ class Run {
     this.kills = 0;
     this.xp = 0;
     this.level = 0;
-    this.reviveUsed = false;
+    this.revivesUsed = 0;
     this.victory = false;
     this.accumulatedMs = 0;
     this.segmentStart = performance.now();

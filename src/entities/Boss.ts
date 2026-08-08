@@ -38,6 +38,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   private nextStanceAt = 0; // prochaine bascule de posture
   private openingDone = false; // meilleure attaque lancée en début de combat
   private openingAt = 0;
+  private druidHealUsed = false; // Sylvaan n'invoque ses druides soigneurs qu'une fois
   private statuses: Partial<Record<Element, StatusInfo>> = {};
   private aura!: Phaser.GameObjects.Image;
   private auraEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -212,9 +213,16 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   /** Lance la meilleure attaque de la phase (ouverture de combat). */
+  /** Le sort d'invocation de druides soigneurs de Sylvaan est à usage unique. */
+  private moveSpent(i: number): boolean {
+    const m = this.phase.moves[i];
+    return m.type === 'summon' && m.summonId === 'druide' && this.druidHealUsed;
+  }
+
   private execBestMove(dir: Phaser.Math.Vector2): void {
     let best = 0, bestRank = -1;
     this.phase.moves.forEach((m, i) => {
+      if (this.moveSpent(i)) return;
       const r = OPENER_RANK[m.type] ?? 30;
       if (r > bestRank) { bestRank = r; best = i; }
     });
@@ -224,7 +232,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   /** Choisit un coup prêt, en privilégiant ceux qui collent à la posture courante. */
   private pickMove(now: number, dir: Phaser.Math.Vector2): void {
     const ready: number[] = [];
-    for (let i = 0; i < this.phase.moves.length; i++) if (now >= this.moveCooldowns[i]) ready.push(i);
+    for (let i = 0; i < this.phase.moves.length; i++) if (now >= this.moveCooldowns[i] && !this.moveSpent(i)) ready.push(i);
     if (!ready.length) return;
     const wantMelee = this.stance === 'rush';
     const preferred = ready.filter((i) => MELEE_MOVES.has(this.phase.moves[i].type) === wantMelee);
@@ -256,7 +264,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.resetMoveCooldowns();
     // changement de style : renfort immédiat si la nouvelle phase invoque
     const summon = this.phase.moves.find((m) => m.type === 'summon');
-    if (summon) {
+    if (summon && !(summon.summonId === 'druide' && this.druidHealUsed)) {
+      if (summon.summonId === 'druide') this.druidHealUsed = true;
       this.gs.time.delayedCall(500, () => {
         if (this.alive) this.gs.summonMinions(this.x, this.y, summon.summonId ?? 'slime', summon.summonCount ?? 3);
       });
@@ -381,6 +390,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         break;
       }
       case 'summon': {
+        if (m.summonId === 'druide') this.druidHealUsed = true;
         this.gs.summonMinions(this.x, this.y, m.summonId ?? 'slime', m.summonCount ?? 3);
         this.gs.juice.ring(this.x, this.y, 90, 0xb26bff, 350);
         done(220);

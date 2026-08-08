@@ -17,6 +17,10 @@ export class UIScene extends Phaser.Scene {
   private xpBar!: Phaser.GameObjects.Graphics;
   private levelText!: Phaser.GameObjects.Text;
   private currencyText!: Phaser.GameObjects.Text;
+  private skillBtn!: Phaser.GameObjects.Container;
+  private skillBtnBg!: Phaser.GameObjects.Graphics;
+  private skillBtnText!: Phaser.GameObjects.Text;
+  private skillBtnTween?: Phaser.Tweens.Tween;
   private timerText!: Phaser.GameObjects.Text;
   private progressText!: Phaser.GameObjects.Text;
   private powersLayer!: Phaser.GameObjects.Container;
@@ -76,6 +80,21 @@ export class UIScene extends Phaser.Scene {
 
     // chronomètre du run (stoppé pendant le choix des boons)
     this.timerText = label(this, GAME_WIDTH - 138, 27, '⏱ 0:00', 14, '#f4e9c1', 1).setDepth(3);
+
+    // Bouton COMPÉTENCE (sous les pièces) : clignote quand un choix est dispo ;
+    // le joueur clique pour choisir (évite les sélections auto par erreur).
+    const sbw = 176, sbh = 34, sbx = GAME_WIDTH - 12 - sbw, sby = 48;
+    this.skillBtnBg = this.add.graphics();
+    this.skillBtnText = label(this, sbx + sbw / 2, sby + sbh / 2, '', 15, '#0e1a0e').setDepth(7);
+    this.skillBtn = this.add.container(0, 0, [this.skillBtnBg, this.skillBtnText]).setDepth(6).setVisible(false);
+    this.skillBtnBg.clear();
+    this.skillBtnBg.fillStyle(0x59d96a, 1).fillRoundedRect(sbx, sby, sbw, sbh, 8);
+    this.skillBtnBg.lineStyle(3, 0xeafff0, 1).strokeRoundedRect(sbx, sby, sbw, sbh, 8);
+    this.skillBtn.setSize(sbw, sbh);
+    const hit = this.add.rectangle(sbx + sbw / 2, sby + sbh / 2, sbw, sbh, 0x000000, 0.001)
+      .setInteractive({ useHandCursor: true }).setDepth(8);
+    hit.on('pointerdown', () => { this.gs.redeemBoon(); });
+    this.skillBtn.add(hit);
 
     // progress (aligné à gauche après les jauges de cooldown)
     this.progressText = label(this, 400, 22, '', 15, '#f4e9c1', 0).setDepth(3);
@@ -139,6 +158,20 @@ export class UIScene extends Phaser.Scene {
   private onBossName(name: string): void { this.bossName.setText(name); this.bossLayer.setVisible(true); }
   private onBossPhase(cur: number, total: number): void { this.bossPhase.setText(`Phase ${cur}/${total}`); }
 
+  /** Compteur de compétences à récupérer : affiche/masque le bouton clignotant. */
+  private onBoons(n: number): void {
+    if (n > 0) {
+      this.skillBtnText.setText(n > 1 ? `⭐ COMPÉTENCE ×${n}` : '⭐ COMPÉTENCE !');
+      this.skillBtn.setVisible(true);
+      if (!this.skillBtnTween) {
+        this.skillBtnTween = this.tweens.add({ targets: this.skillBtn, alpha: 0.4, duration: 460, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      }
+    } else {
+      this.skillBtn.setVisible(false).setAlpha(1);
+      if (this.skillBtnTween) { this.skillBtnTween.stop(); this.skillBtnTween = undefined; }
+    }
+  }
+
   private setupEvents(): void {
     // GameScene est un singleton réutilisé : son émetteur PERSISTE d'un run à
     // l'autre. On enregistre des handlers NOMMÉS (jamais d'anonymes) et on les
@@ -154,6 +187,7 @@ export class UIScene extends Phaser.Scene {
     e.on('bossPhase', this.onBossPhase, this);
     e.on('hurt', this.onHurt, this);
     e.on('xp', this.onXp, this);
+    e.on('boons', this.onBoons, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       e.off('hp', this.onHp, this);
@@ -166,6 +200,7 @@ export class UIScene extends Phaser.Scene {
       e.off('bossPhase', this.onBossPhase, this);
       e.off('hurt', this.onHurt, this);
       e.off('xp', this.onXp, this);
+      e.off('boons', this.onBoons, this);
     });
   }
 

@@ -349,8 +349,8 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'givre_rukia', name: 'Givre de Rukia', god: 'Danse de Glace', category: 'divine', rarity: 'rare', icon: 'freeze', repeatable: true,
-    description: 'Les coups appliquent GEL (1,6 s) : ralentit puis fige.',
-    apply(p) { p.addOnHit((e) => e.applyStatus('freeze', 1600)); },
+    description: 'Les coups ont 10% de chances d’appliquer GEL (1,6 s) : ralentit puis fige.',
+    apply(p) { p.addOnHit((e) => { if (Math.random() < 0.10) e.applyStatus('freeze', 1600); }); },
   },
   {
     id: 'crocs_venin', name: 'Crocs Venimeux', god: 'Serpent', category: 'divine', rarity: 'rare', icon: 'poison', repeatable: true,
