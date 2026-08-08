@@ -46,6 +46,11 @@ export const META_UPGRADES: MetaUpgradeDef[] = [
     flag: 'revive',
   },
   {
+    id: 'room_purr', name: 'Ronronthérapie', icon: 'heart', maxTier: 5, costPerTier: [40, 85, 170, 340, 640],
+    description: '+5 PV soignés à chaque entrée de salle par palier (jusqu’à +25).',
+    apply(base, tier) { base.roomHeal += 5 * tier; },
+  },
+  {
     id: 'greed', name: 'Gourmandise', icon: 'coin', maxTier: 4, costPerTier: [55, 125, 270, 540],
     description: '+12% de Croquettes Dorées gagnées par palier.',
     apply(base, tier) { base.greed += 0.12 * tier; },

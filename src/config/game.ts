@@ -86,6 +86,7 @@ export const PLAYER_BASE = {
   telegraphMult: 1, // durée des télégraphes ennemis (Sens du Chaton)
   projSlowRadius: 0, // ralentit les projectiles ennemis proches (Moustaches Radar)
   contactShockOn: 0, // (réservé)
+  roomHeal: 0, // PV rendus à chaque entrée de salle (méta-amélioration Ronronthérapie)
 };
 
 export type PlayerStats = typeof PLAYER_BASE;

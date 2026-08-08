@@ -17,6 +17,8 @@ export class UIScene extends Phaser.Scene {
   private xpBar!: Phaser.GameObjects.Graphics;
   private levelText!: Phaser.GameObjects.Text;
   private currencyText!: Phaser.GameObjects.Text;
+  private reviveIcon!: Phaser.GameObjects.Sprite;
+  private reviveText!: Phaser.GameObjects.Text;
   private skillBtn!: Phaser.GameObjects.Container;
   private skillBtnBg!: Phaser.GameObjects.Graphics;
   private skillBtnText!: Phaser.GameObjects.Text;
@@ -81,6 +83,11 @@ export class UIScene extends Phaser.Scene {
     // chronomètre du run (stoppé pendant le choix des boons)
     this.timerText = label(this, GAME_WIDTH - 138, 27, '⏱ 0:00', 14, '#f4e9c1', 1).setDepth(3);
 
+    // Compteur de Retombées Félines restantes (logo = tête du chaton) près des pièces.
+    this.reviveIcon = this.add.sprite(GAME_WIDTH - 232, 24, 'cat').setScale(0.62).setDepth(2).setVisible(false);
+    this.reviveText = label(this, GAME_WIDTH - 218, 26, '', 16, '#eaf4ff', 0).setDepth(3).setVisible(false);
+    this.onRevives(this.gs.reviveLeft());
+
     // Bouton COMPÉTENCE (sous les pièces) : clignote quand un choix est dispo ;
     // le joueur clique pour choisir (évite les sélections auto par erreur).
     const sbw = 176, sbh = 34, sbx = GAME_WIDTH - 12 - sbw, sby = 48;
@@ -130,9 +137,12 @@ export class UIScene extends Phaser.Scene {
     this.onPowers(RunState.powers);
   }
 
+  private timerHidden = false;
+  private onHideTimer(): void { this.timerHidden = true; this.timerText.setVisible(false); }
+
   update(): void {
     // le chrono se fige de lui-même : durationSec() est en pause pendant les menus
-    this.timerText.setText(`⏱ ${formatTime(RunState.durationSec())}`);
+    if (!this.timerHidden) this.timerText.setText(`⏱ ${formatTime(RunState.durationSec())}`);
   }
 
   /** Dessine un cadre rouge à dégradé doux (bords opaques → centre transparent). */
@@ -155,6 +165,11 @@ export class UIScene extends Phaser.Scene {
   }
 
   private onCurrency(n: number): void { this.currencyText.setText(`${n}`); }
+  private onRevives(n: number): void {
+    const show = n > 0;
+    this.reviveIcon.setVisible(show);
+    this.reviveText.setVisible(show).setText(`×${n}`);
+  }
   private onBossName(name: string): void { this.bossName.setText(name); this.bossLayer.setVisible(true); }
   private onBossPhase(cur: number, total: number): void { this.bossPhase.setText(`Phase ${cur}/${total}`); }
 
@@ -188,6 +203,8 @@ export class UIScene extends Phaser.Scene {
     e.on('hurt', this.onHurt, this);
     e.on('xp', this.onXp, this);
     e.on('boons', this.onBoons, this);
+    e.on('revives', this.onRevives, this);
+    e.on('hideTimer', this.onHideTimer, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       e.off('hp', this.onHp, this);
@@ -201,6 +218,8 @@ export class UIScene extends Phaser.Scene {
       e.off('hurt', this.onHurt, this);
       e.off('xp', this.onXp, this);
       e.off('boons', this.onBoons, this);
+      e.off('revives', this.onRevives, this);
+      e.off('hideTimer', this.onHideTimer, this);
     });
   }
 

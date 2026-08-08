@@ -12,13 +12,13 @@ const MELEE_MOVES = new Set(['charge', 'roll', 'diveBomb', 'shockwave', 'lineSwe
 // Sorts pouvant partir en « second » lors d'un dual-cast : effets de zone /
 // invocations auto-télégraphiés qui ne nécessitent pas que le boss se déplace.
 const DUAL_MOVES = new Set([
-  'iceRain', 'geysers', 'glyphs', 'summon', 'nova', 'mudFlood', 'arrowRain',
-  'spiral', 'ringShot', 'fireBurst', 'fireTornado', 'aimedBurst', 'fan',
+  'iceRain', 'geysers', 'glyphs', 'summon', 'mudFlood', 'arrowRain',
+  'fireBurst', 'fireTornado', 'mines', 'missileRain', 'grenades', 'summonBoss',
 ]);
 
 /** Classement des coups pour l'ouverture : le boss lance sa MEILLEURE attaque au début. */
 const OPENER_RANK: Record<string, number> = {
-  icePylons: 100, fireTornado: 94, mudFlood: 92, nova: 88, crossBeams: 86, geysers: 84, iceRain: 82,
+  missileRain: 96, icePylons: 100, fireTornado: 94, mudFlood: 92, mines: 90, nova: 88, crossBeams: 86, geysers: 84, iceRain: 82, summonBoss: 76,
   fireBurst: 80, arrowRain: 74, spiral: 72, lineSweep: 66, diveBomb: 64, ringShot: 62,
   tornadoSweep: 78, shockwave: 60, roll: 58, summon: 54, glyphs: 52, charge: 48, fan: 44, aimedBurst: 38,
   teleport: 8,
@@ -601,6 +601,26 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         // Énorme tornade qui balaie tout l'écran — à esquiver au dash.
         this.gs.bossTornadoSweep(m.damage ?? 24, m.telegraph);
         done(m.telegraph + 1700);
+        break;
+      }
+      case 'mines': {
+        this.gs.layBossMines(m.count ?? 5, m.damage ?? 100);
+        done(m.telegraph + 300);
+        break;
+      }
+      case 'grenades': {
+        this.gs.throwGrenades(m.count ?? 3, m.damage ?? 55);
+        done((m.count ?? 3) * 220 + 600);
+        break;
+      }
+      case 'missileRain': {
+        this.gs.bossMissileRain(m.count ?? 8, m.damage ?? 50);
+        done((m.count ?? 8) * 150 + 800);
+        break;
+      }
+      case 'summonBoss': {
+        this.gs.summonEnragedBoss();
+        done(m.telegraph + 300);
         break;
       }
       case 'icePylons': {

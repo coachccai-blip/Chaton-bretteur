@@ -105,6 +105,8 @@ class Audio {
       case 'clone': this.blip(520, 0.12, 'sawtooth', 0.12, -260); break;
       case 'rayon': this.blip(240, 0.9, 'sawtooth', 0.24, 620); this.noise(0.85, 0.14); this.blip(680, 0.7, 'sine', 0.12, 200); break;
       case 'splash': this.noise(0.16, 0.12); this.blip(300, 0.14, 'sine', 0.12, -160); this.blip(520, 0.1, 'triangle', 0.08, -220); break;
+      // revive « Retombée Féline » : accord ascendant céleste + éclat.
+      case 'revive': this.blip(523, 0.5, 'sine', 0.16, 300); this.blip(784, 0.55, 'sine', 0.14, 260); this.blip(1046, 0.6, 'triangle', 0.12, 220); this.noise(0.2, 0.06); break;
       // --- attaques des monstres ---
       case 'eshot': this.blip(440, 0.06, 'square', 0.10, -180); break;
       case 'ecast': this.blip(200, 0.18, 'sawtooth', 0.10, 140); break;

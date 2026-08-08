@@ -306,7 +306,52 @@ export const BOSS_REFLET: SpriteDef = {
   ],
 };
 
+/** Général Kaptain Miaou — boss final : chat militaire (béret, cache-œil, treillis camo). */
+export const BOSS_MILITAIRE: SpriteDef = {
+  key: 'boss_militaire',
+  pal: {
+    '.': null, '#': '#0a0e08', 'b': '#2e5a2e', 'B': '#3f7a3f', 'f': '#8a8f86', 'F': '#b8beb0',
+    'k': '#141414', 'y': '#ffd24a', 'r': '#d0402a', 'm': '#6a7078', 'c': '#3a4a28', 'C': '#5a6a38', 'v': '#7a8a4a',
+  },
+  rows: [
+    '..............................',
+    '.........#########..#.........',
+    '........#BBBBBBBBb##f#........',
+    '.......#BBBBBBBBBBbbfk#.......',
+    '......#bBBBBrmBBBBbbbB#.......',
+    '......#bbBBBBBBBBbbbbff###....',
+    '......#fbbbbbbbbbbbbFFffkk#...',
+    '.......#fFbbbbbbbbFfFF##k#....',
+    '......#fffFfFFFFFFFfffkk#.....',
+    '......#ffFFFfFFFFFfFkkf#......',
+    '......#fFFyyFFFFkkkkkFf#......',
+    '......#fFyyyyFFFkkkkkFf#......',
+    '......#fFyy#yFFFkkkkkkf#......',
+    '......#fFFyyFFFFkkkkkkf#......',
+    '......#fFFFFFFFFkkkkkFk#......',
+    '......#fFFrFFFFFFFFFFFk##.....',
+    '.......#fFFrFFF#FFFFFf#kk#....',
+    '........#fFFFFFFFFFFfk##k#....',
+    '.....###ccfFFFFFFFFfkc###k#...',
+    '....#CC#cCCCffFFffkCCc#CCk#...',
+    '...#CCCCCCCCCCCCkkCyCCCCCC#...',
+    '...#CCCCCCCCCCCkvyCCCCCCCC#...',
+    '..#CCCCCCCCvCCkyCCCCCvCCCCC#..',
+    '..#CCCCCCCCCkyCCCCCCCCCCCCC#..',
+    '...#CCCCCvCyCCCCCCCCCCCCCC#...',
+    '..#ffffCCykCCCCCCCCvCCCffff#..',
+    '..#ffffckCCCvCCCCCCCCccffff#..',
+    '..#ffffcccCCCCCCCCCCcccffff#..',
+    '..#ffff#cccCCCvCCCCccc#ffff#..',
+    '...#####cccccccccccccc#####...',
+    '........#ccccccccccccc#.......',
+    '........#ccccccccccccc#.......',
+    '........#kkkk#####kkkk#.......',
+    '........#kkkk#...#kkkk#.......',
+  ],
+};
+
 export const BOSS_CATS: SpriteDef[] = [
   BOSS_CENTAURE, BOSS_GOBU, BOSS_SERPENT, BOSS_ARCHIMAGE,
-  BOSS_LEVIATHAN, BOSS_RAPACE, BOSS_REFLET,
+  BOSS_LEVIATHAN, BOSS_RAPACE, BOSS_REFLET, BOSS_MILITAIRE,
 ];

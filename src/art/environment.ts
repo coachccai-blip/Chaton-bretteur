@@ -279,6 +279,118 @@ export const FIREBALL: SpriteDef = {
   ],
 };
 
+/** Mine militaire (12x12) : posée par le boss final, explose à l'approche (-100 PV). */
+export const MINE_BOSS: SpriteDef = {
+  key: 'mine_boss',
+  pal: { '.': null, '#': '#0e1216', 'd': '#28303a', 'm': '#4a5560', 'r': '#ff6a4a', 'R': '#ffd24a', 'y': '#c9d0d6' },
+  rows: [
+    '.....#y#....',
+    '..#.####.#..',
+    '.#y#mmmm#y#.',
+    '..#mrrddm#..',
+    '.#mrrrrddm#.',
+    '##mrrRrddm##',
+    'y#mdrrdddm#y',
+    '##mddddddm##',
+    '..#mddddm#..',
+    '.#y#mmmm#y#.',
+    '..#.####.#..',
+    '.....#y#....',
+  ],
+};
+
+/** Grenade (10x14) lancée par le boss final. */
+export const GRENADE: SpriteDef = {
+  key: 'grenade',
+  pal: { '.': null, '#': '#101a12', 'g': '#5a8a4a', 'G': '#3a6a3a', 'k': '#22281f', 'm': '#3a3a3a', 'y': '#d9c24a' },
+  rows: [
+    '.....##yy#',
+    '....#mmy#.',
+    '...#mm##..',
+    '...#mm#...',
+    '..#ggGG#..',
+    '.#kgggGk#.',
+    '.#kgggGk#.',
+    '#GkgggGkG#',
+    '#GkkkkkkG#',
+    '#GkggGGkG#',
+    '.#kGGGGk#.',
+    '.#kGGGGk#.',
+    '..#GGGG#..',
+    '...####...',
+  ],
+};
+
+/** Missile (8x16) de la pluie de missiles du boss final. */
+export const MISSILE: SpriteDef = {
+  key: 'missile',
+  pal: { '.': null, '#': '#20140a', 'w': '#e8e8ee', 'g': '#6a7a52', 'r': '#ff4a3a', 'o': '#ff7a1f', 'y': '#ffd24a' },
+  rows: [
+    '...##...',
+    '..#ww#..',
+    '.#wwww#.',
+    '.#gggg#.',
+    '.#gggg#.',
+    '.#gggg#.',
+    '.#grrg#.',
+    '.#gggg#.',
+    '.#gggg#.',
+    '.#gggg#.',
+    '#gggggg#',
+    '#gggggg#',
+    '#g####g#',
+    '.##oo##.',
+    '..#yy#..',
+    '..#oy#..',
+  ],
+};
+
+/** Explosion (16x16) : impact des mines/grenades/missiles du boss final. */
+export const EXPLOSION: SpriteDef = {
+  key: 'explosion',
+  pal: { '.': null, '#': '#3a1400', 'o': '#ff6a1f', 'y': '#ffc24a', 'w': '#fff2c0' },
+  rows: [
+    '........#.......',
+    '.......#o#......',
+    '...#.######..#..',
+    '..#o#oooooo##o#.',
+    '...#ooyyyyoo##..',
+    '..#ooyyyyyyoo#..',
+    '..#oyywwwwyyo#..',
+    '.##oyywwwwyyo#.#',
+    '#o#oyywwwwyyo##o',
+    '.##oyywwwwyyo#.#',
+    '..#ooyyyyyyoo#..',
+    '...#ooyyyyoo#...',
+    '...##oooooo#.#..',
+    '..#o#######.#o#.',
+    '...#....#....#..',
+    '.......#o#......',
+  ],
+};
+
+/** Ailes d'ange (22x14) : effet du revive « Retombée Féline ». */
+export const ANGEL_WINGS: SpriteDef = {
+  key: 'angel_wings',
+  pal: { '.': null, '#': '#9fb0d0', 'w': '#dfeaff', 'W': '#ffffff' },
+  rows: [
+    '......................',
+    '......................',
+    '......####..####......',
+    '....##wwww..wwww##....',
+    '....WWWWWW..WWWWWW....',
+    '..##wwwww....wwwww##..',
+    '..WWWWWWW....WWWWWWW..',
+    '##wwwwww......wwwwww##',
+    'WWWWWWWW......WWWWWWWW',
+    'wwwwwww........wwwwwww',
+    'WWWWWWW........WWWWWWW',
+    'wwwwww..........wwwwww',
+    'WWWWWW..........WWWWWW',
+    '......................',
+  ],
+};
+
 /** Boomerang (12x12) : lame recourbée du boon Lame Boomerang (aller-retour). */
 export const BOOMERANG: SpriteDef = {
   key: 'boomerang',

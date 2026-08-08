@@ -28,6 +28,10 @@ import type { PowerDef } from '../config/powers';
 const ARENA = { x: 60, y: 96, w: 1080, h: 496 };
 export const ARENA_RECT = ARENA;
 
+// Arène du BOSS FINAL : circulaire et ~2× plus grande qu'une arène classique.
+const FINAL_CX = 900, FINAL_CY = 720, FINAL_R = 560;
+const FINAL_WORLD_W = 1800, FINAL_WORLD_H = 1440;
+
 function shade(c: number, amt: number): number {
   const r = Math.min(255, Math.max(0, ((c >> 16) & 255) + amt));
   const g = Math.min(255, Math.max(0, ((c >> 8) & 255) + amt));
@@ -129,6 +133,10 @@ export class GameScene extends Phaser.Scene {
   private hazardGfx!: Phaser.GameObjects.Graphics;
   private hazardMarkers: Phaser.GameObjects.Image[] = []; // mines de signalisation (pool)
   private reviveCharges = 0;
+  // --- Boss final ---
+  private finalActive = false; // arène circulaire du boss final en cours
+  private finalGfx?: Phaser.GameObjects.Graphics; // sol circulaire
+  private bossMines: { sprite: Phaser.GameObjects.Sprite; x: number; y: number; armAt: number; damage: number; r: number }[] = [];
   private poisonUntil = 0;
   private nextPoisonTick = 0;
 
@@ -154,6 +162,8 @@ export class GameScene extends Phaser.Scene {
     this.bossPylons = [];
     this.rageBosses = []; this.rageActive = false; this.rageOverlaps = [];
     this.pendingBoons = 0; this.rewardActive = false;
+    this.finalActive = false; this.finalGfx?.destroy(); this.finalGfx = undefined;
+    this.bossMines.forEach((m) => m.sprite.destroy()); this.bossMines = [];
     this.bossOverlap = undefined;
     this.boss = null;
     this.enemyTimeScale = 1;
@@ -162,6 +172,9 @@ export class GameScene extends Phaser.Scene {
     this.poisonUntil = 0;
     this.combatDone = 0;
 
+    // Restaure l'arène classique (l'arène du boss final mute ARENA + la caméra).
+    ARENA.x = 60; ARENA.y = 96; ARENA.w = 1080; ARENA.h = 496;
+    this.cameras.main.stopFollow();
     this.cameras.main.setBackgroundColor(COLORS.bg);
     // dézoom : affiche le monde 1200×675 dans le canvas 960×540 (personnage
     // plus petit, plus d'espace). L'ATH (UIScene) reste en 960×540.
@@ -204,6 +217,7 @@ export class GameScene extends Phaser.Scene {
     this.scene.launch('UI', { gameScene: this });
     this.events.emit('powers', RunState.powers);
     this.events.emit('boons', this.pendingBoons); // compteur de compétences (0 au départ)
+    this.events.emit('revives', this.reviveLeft()); // compteur de Retombées Félines
 
     this.startZone(RunState.zoneIndex);
 
@@ -338,6 +352,11 @@ export class GameScene extends Phaser.Scene {
     this.buildRoom();
     // replace le joueur en bas de la salle
     this.player.setPosition(WORLD_WIDTH / 2, ARENA.y + ARENA.h - 60);
+    // Ronronthérapie (méta) : soin à chaque entrée de salle.
+    if (this.player.stats.roomHeal > 0 && !this.player.dead) {
+      this.player.heal(this.player.stats.roomHeal);
+      this.juice.popText(this.player.x, this.player.y - 40, `+${this.player.stats.roomHeal}`, '#6ad46a', 16);
+    }
 
     switch (type) {
       case 'combat': this.startCombat(); break;
@@ -1066,9 +1085,16 @@ export class GameScene extends Phaser.Scene {
       if (!power.fallback) RunState.addPower(power); // les cartes de repli ne sont pas des boons
       this.events.emit('powers', RunState.powers);
     }
-    // Choix manuel : on reprend le jeu. Les compétences restantes attendent que le
-    // joueur reclique le bouton (pas d'enchaînement automatique).
     this.rewardActive = false;
+    // ENCHAÎNEMENT : s'il reste des compétences à choisir, on relance directement
+    // l'écran de choix (le joueur sélectionne les 4 d'affilée sans recliquer).
+    if (this.pendingBoons > 0) {
+      this.pendingBoons--;
+      this.rewardActive = true;
+      this.events.emit('boons', this.pendingBoons);
+      this.scene.launch('Reward', { gameScene: this });
+      return;
+    }
     if (this.scene.isPaused()) this.scene.resume();
     this.events.emit('boons', this.pendingBoons);
   }
@@ -1087,6 +1113,19 @@ export class GameScene extends Phaser.Scene {
     for (let i = 0; i < 4; i++) this.time.delayedCall(i * 110, () => this.juice.burst(b.x, b.y - 20, 0xffe0b0, 16, 240, 1.8));
     (b.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     this.tweens.add({ targets: b, alpha: 0, scaleY: 0, angle: 40, duration: 1000, ease: 'Cubic.easeIn', onComplete: () => b.destroy() });
+
+    // BOSS FINAL : pas de round enragé — sa chute conclut le jeu (VICTOIRE ultime).
+    if (this.finalActive && wasPrimary) {
+      this.roomState = 'transition';
+      this.bossMines.forEach((m) => m.sprite.destroy()); this.bossMines = [];
+      this.activeEnemies.forEach((e) => e.destroy()); this.activeEnemies.clear();
+      this.time.timeScale = 0.35; this.physics.world.timeScale = 2.8;
+      this.time.delayedCall(1600, () => {
+        this.time.timeScale = 1; this.physics.world.timeScale = 1;
+        this.banner('L’OMBRE MILITAIRE EST VAINCUE !', () => this.finishRun(true));
+      });
+      return;
+    }
 
     if (!this.rageActive && !wasRage) {
       // PREMIÈRE défaite du boss → PAS de passage de zone : on enchaîne sur le
@@ -1184,11 +1223,192 @@ export class GameScene extends Phaser.Scene {
 
   private afterBoss(): void {
     if (RunState.zoneIndex >= ZONES.length - 1) {
-      RunState.victory = true;
-      this.finishRun(true);
+      // Néantis ×3 vaincu : on propose de rentrer au camp (victoire) ou d'affronter
+      // le boss final. Pas de victoire automatique tant que le choix n'est pas fait.
+      RunState.victory = true; // la campagne est déjà « gagnée » à ce stade
+      this.roomState = 'transition';
+      this.scene.pause();
+      this.scene.launch('FinalChoice', { gameScene: this });
     } else {
       this.banner('Zone vaincue !', () => this.startZone(RunState.zoneIndex + 1));
     }
+  }
+
+  /** Choix « Rentrer au camp » : victoire du run. */
+  finishRunVictory(): void {
+    if (this.scene.isPaused()) this.scene.resume();
+    this.finishRun(true);
+  }
+
+  // ============================================================
+  //  BOSS FINAL — l'Ombre Militaire (arène circulaire agrandie)
+  // ============================================================
+  startFinalBoss(): void {
+    if (this.scene.isPaused()) this.scene.resume();
+    this.finalActive = true;
+    this.roomState = 'transition';
+    this.clearRageBosses(); this.clearPylons(); this.clearSouls();
+    this.activeEnemies.forEach((e) => e.destroy()); this.activeEnemies.clear();
+    this.projectiles.clear(true, true);
+    this.bossHazards = []; this.hazards = [];
+    this.setupFinalArena();
+    this.events.emit('hideTimer'); // pas de chronomètre pour ce combat
+
+    const def = BOSSES['militaire'];
+    const diff = getDifficulty(RunState.difficultyId);
+    const zi = ZONES.length - 1;
+    // 20× les PV de Néantis (même barème de boss appliqué à Néantis, ×20).
+    const neantisMul = (2 + zi) * 2 * Math.pow(1.28, zi) * 2.5;
+    const hpMul = neantisMul * 20 * (BOSSES['reflet'].hp / def.hp);
+    const dmgMul = Math.pow(1.3, zi) * 1.2;
+    this.bossIntro(def, () => {
+      this.banner(`BOSS FINAL : ${def.name}`, () => {
+        this.roomState = 'boss';
+        this.boss = new Boss(this, FINAL_CX, FINAL_CY - FINAL_R * 0.4, def, diff.enemyHp * hpMul, diff.enemyDamage * dmgMul);
+        this.bossOverlap?.destroy();
+        this.bossOverlap = this.physics.add.overlap(this.player, this.boss, (_p, b) => {
+          const bs = b as Boss; if (bs.isAlive()) this.player.takeDamage(bs.contactDamage, bs.x, bs.y);
+        });
+        this.events.emit('bossName', `${def.name}, ${def.title}`);
+        this.events.emit('bossHp', this.boss.maxHp, this.boss.maxHp);
+        this.events.emit('bossPhase', 1, def.phases.length);
+        AudioManager.startMusic('boss');
+      });
+    });
+  }
+
+  private setupFinalArena(): void {
+    this.physics.world.setBounds(0, 0, FINAL_WORLD_W, FINAL_WORLD_H);
+    const cam = this.cameras.main;
+    cam.setBounds(0, 0, FINAL_WORLD_W, FINAL_WORLD_H);
+    cam.setZoom(0.6);
+    cam.startFollow(this.player, true, 0.09, 0.09);
+    cam.setBackgroundColor(0x0a0d08);
+    // ARENA (rectangle englobant du cercle) : réutilisé par les clamps existants.
+    ARENA.x = FINAL_CX - FINAL_R; ARENA.y = FINAL_CY - FINAL_R; ARENA.w = FINAL_R * 2; ARENA.h = FINAL_R * 2;
+    this.clearRoom(); // retire murs, bordures et props de la salle précédente
+    this.floor?.setVisible(false);
+    this.walls.clear(true, true);
+    // Sol circulaire militaire (hélipad).
+    this.finalGfx?.destroy();
+    const g = this.add.graphics().setDepth(-5);
+    g.fillStyle(0x161a12, 1).fillCircle(FINAL_CX, FINAL_CY, FINAL_R);
+    g.fillStyle(0x1e241a, 1).fillCircle(FINAL_CX, FINAL_CY, FINAL_R - 10);
+    g.lineStyle(4, 0x3a4a28, 0.7);
+    for (let rr = FINAL_R - 46; rr > 90; rr -= 118) g.strokeCircle(FINAL_CX, FINAL_CY, rr);
+    g.lineStyle(12, 0x4a5a30, 1).strokeCircle(FINAL_CX, FINAL_CY, FINAL_R - 6);
+    g.lineStyle(9, 0x5a6a38, 0.7);
+    g.strokeRect(FINAL_CX - 46, FINAL_CY - 66, 0, 132);
+    g.lineBetween(FINAL_CX - 46, FINAL_CY - 66, FINAL_CX - 46, FINAL_CY + 66);
+    g.lineBetween(FINAL_CX + 46, FINAL_CY - 66, FINAL_CX + 46, FINAL_CY + 66);
+    g.lineBetween(FINAL_CX - 46, FINAL_CY, FINAL_CX + 46, FINAL_CY);
+    this.finalGfx = g;
+    this.player.setPosition(FINAL_CX, FINAL_CY + FINAL_R * 0.55);
+  }
+
+  /** Garde le joueur, le boss et les échos DANS le cercle de l'arène finale. */
+  private clampFinalArena(): void {
+    const max = FINAL_R - 22;
+    const cl = (o: { x: number; y: number }) => {
+      const dx = o.x - FINAL_CX, dy = o.y - FINAL_CY, d = Math.hypot(dx, dy);
+      if (d > max) { o.x = FINAL_CX + (dx / d) * max; o.y = FINAL_CY + (dy / d) * max; }
+    };
+    if (this.player && !this.player.dead) cl(this.player);
+    for (const e of this.activeEnemies) if (e.isAlive()) cl(e as unknown as { x: number; y: number });
+    if (this.boss?.isAlive()) cl(this.boss as unknown as { x: number; y: number });
+  }
+
+  /** Explosion (mine/grenade/missile) : sprite + dégâts de zone (esquive au dash). */
+  detonate(x: number, y: number, r: number, dmg: number): void {
+    const e = this.add.sprite(x, y, 'explosion').setDepth(28).setScale(0.5);
+    this.tweens.add({ targets: e, scale: 2.2, alpha: 0, duration: 360, ease: 'Cubic.easeOut', onComplete: () => e.destroy() });
+    this.juice.shake(150, 0.008);
+    this.juice.burst(x, y, 0xff7a1f, 16, 240, 1.6);
+    this.sfx('explosionbig');
+    if (this.combatActive && this.player && !this.player.dead && Math.hypot(this.player.x - x, this.player.y - y) <= r) {
+      this.player.takeDamage(dmg, x, y);
+    }
+  }
+
+  /** Le boss final pose des mines qui explosent à l'approche (-100 PV). */
+  layBossMines(count: number, dmg: number): void {
+    for (let k = 0; k < count; k++) {
+      const a = Math.random() * Math.PI * 2, rr = 70 + Math.random() * (FINAL_R - 140);
+      const x = FINAL_CX + Math.cos(a) * rr, y = FINAL_CY + Math.sin(a) * rr;
+      const s = this.add.sprite(x, y, 'mine_boss').setDepth(6).setScale(1.4).setAlpha(0.55);
+      this.tweens.add({ targets: s, alpha: 1, duration: 220, yoyo: true, repeat: 2 });
+      this.bossMines.push({ sprite: s, x, y, armAt: performance.now() + 900, damage: dmg, r: 48 });
+    }
+    this.sfx('bosscast');
+  }
+
+  private updateBossMines(now: number): void {
+    if (!this.bossMines.length) return;
+    const p = this.player;
+    this.bossMines = this.bossMines.filter((m) => {
+      if (!m.sprite.active) return false;
+      if (now >= m.armAt) m.sprite.setTint(now % 500 < 250 ? 0xff5a3a : 0xffffff);
+      const near = this.combatActive && p && !p.dead && now >= m.armAt && Math.hypot(p.x - m.x, p.y - m.y) <= m.r;
+      if (near) { this.detonate(m.x, m.y, 92, m.damage); m.sprite.destroy(); return false; }
+      return true;
+    });
+  }
+
+  /** Grenades lancées vers le joueur : arc puis explosion (≥55 PV). */
+  throwGrenades(count: number, dmg: number): void {
+    const b = this.boss; if (!b) return;
+    for (let k = 0; k < count; k++) {
+      this.time.delayedCall(k * 220, () => {
+        if (!this.combatActive || !this.boss) return;
+        const p = this.player;
+        const tx = Phaser.Math.Clamp((p && !p.dead ? p.x : this.boss.x) + Phaser.Math.Between(-50, 50), FINAL_CX - FINAL_R + 30, FINAL_CX + FINAL_R - 30);
+        const ty = Phaser.Math.Clamp((p && !p.dead ? p.y : this.boss.y) + Phaser.Math.Between(-50, 50), FINAL_CY - FINAL_R + 30, FINAL_CY + FINAL_R - 30);
+        const gr = this.add.sprite(this.boss.x, this.boss.y - 12, 'grenade').setDepth(24).setScale(1.3);
+        const shadow = this.add.ellipse(tx, ty, 18, 8, 0x000000, 0.3).setDepth(3);
+        this.tweens.add({ targets: gr, x: tx, y: ty, duration: 520, ease: 'Sine.easeIn' });
+        this.tweens.add({ targets: gr, scale: 1.9, duration: 260, yoyo: true });
+        this.tweens.add({ targets: gr, angle: 360, duration: 520 });
+        this.time.delayedCall(520, () => { gr.destroy(); shadow.destroy(); this.detonate(tx, ty, 82, dmg); });
+      });
+    }
+    this.sfx('bosscharge');
+  }
+
+  /** Pluie de missiles télégraphiés qui tombent du ciel (≥50 PV). */
+  bossMissileRain(count: number, dmg: number): void {
+    for (let k = 0; k < count; k++) {
+      this.time.delayedCall(k * 150, () => {
+        if (!this.combatActive) return;
+        const p = this.player;
+        let tx: number, ty: number;
+        if (k % 3 === 0 && p && !p.dead) { tx = p.x; ty = p.y; }
+        else { const a = Math.random() * Math.PI * 2, rr = Math.random() * (FINAL_R - 90); tx = FINAL_CX + Math.cos(a) * rr; ty = FINAL_CY + Math.sin(a) * rr; }
+        const shadow = this.add.ellipse(tx, ty, 28, 12, 0xff5522, 0.4).setDepth(3);
+        this.tweens.add({ targets: shadow, scaleX: 1.5, scaleY: 1.5, duration: 720, yoyo: true });
+        const m = this.add.sprite(tx, ty - 380, 'missile').setDepth(24).setScale(1.5);
+        this.tweens.add({ targets: m, y: ty, duration: 720, ease: 'Quad.easeIn', onComplete: () => { m.destroy(); shadow.destroy(); this.detonate(tx, ty, 72, dmg); } });
+      });
+    }
+    this.sfx('bosscast');
+  }
+
+  /** Le boss final invoque un ÉCHO enragé et amélioré d'un boss déjà vaincu. */
+  summonEnragedBoss(): void {
+    const pool = ['miniboss_sylvaan', 'miniboss_gorbak', 'miniboss_ignis', 'miniboss_mortis', 'miniboss_glacior', 'miniboss_voltair', 'miniboss_neantis'];
+    const id = pool[Math.floor(Math.random() * pool.length)];
+    const def = ENEMIES[id]; if (!def) return;
+    const a = Math.random() * Math.PI * 2, rr = FINAL_R * 0.6;
+    const x = FINAL_CX + Math.cos(a) * rr, y = FINAL_CY + Math.sin(a) * rr;
+    const diff = getDifficulty(RunState.difficultyId);
+    const zi = ZONES.length - 1;
+    // Améliorés & enragés : plus de PV, plus de dégâts, plus rapides.
+    const zoneHp = Math.pow(1.62, zi) * 3 * 1.7;
+    const zoneDmg = Math.pow(1.34, zi) * 1.5;
+    const e = new Enemy(this, x, y, def, diff.enemyHp * zoneHp, diff.enemyDamage * zoneDmg, { speedMul: 1.6, canDash: true, canBurst: true });
+    this.enemies.add(e); this.activeEnemies.add(e);
+    this.juice.ring(x, y, 90, 0xff5a3a, 420);
+    this.juice.popText(x, y - 34, 'ÉCHO ENRAGÉ !', '#ff9db0', 16);
+    this.sfx('bosscast');
   }
 
   onPlayerDead(): void {
@@ -1255,7 +1475,26 @@ export class GameScene extends Phaser.Scene {
   }
 
   canRevive(): boolean { return RunState.revivesUsed < this.reviveCharges; }
-  consumeRevive(): void { RunState.revivesUsed += 1; }
+  consumeRevive(): void { RunState.revivesUsed += 1; this.events.emit('revives', this.reviveLeft()); }
+  reviveLeft(): number { return Math.max(0, this.reviveCharges - RunState.revivesUsed); }
+
+  /** VFX du revive « Retombée Féline » : ailes d'ange, particules blanches, son. */
+  reviveFx(x: number, y: number): void {
+    this.sfx('revive');
+    this.juice.ring(x, y, 150, 0xffffff, 600);
+    this.juice.ring(x, y, 90, 0xf4f0ff, 500);
+    // ailes d'ange qui s'élèvent puis s'estompent
+    const wings = this.add.sprite(x, y - 6, 'angel_wings').setDepth(30).setScale(2.2).setAlpha(0);
+    this.tweens.add({ targets: wings, alpha: 1, y: y - 26, duration: 260, yoyo: true, hold: 500, ease: 'Sine.easeOut', onComplete: () => wings.destroy() });
+    // colonne de plumes/particules blanches
+    const p = this.add.particles(x, y, 'px', {
+      speed: { min: 40, max: 180 }, angle: { min: 250, max: 290 }, gravityY: -60,
+      scale: { start: 2, end: 0 }, lifespan: 700, quantity: 26, tint: [0xffffff, 0xdfeaff], blendMode: 'ADD', emitting: false,
+    }).setDepth(29);
+    p.explode(26);
+    this.time.delayedCall(760, () => p.destroy());
+    this.juice.popText(x, y - 46, 'RETOMBÉE FÉLINE !', '#eaf4ff', 20);
+  }
 
   // ---------------- pièges d'environnement ----------------
   private clearTraps(): void {
@@ -2097,6 +2336,7 @@ export class GameScene extends Phaser.Scene {
     this.updateHazards(now);
     this.updateTraps(now);
     this.updateSouls();
+    if (this.finalActive) { this.updateBossMines(now); this.clampFinalArena(); }
 
     // fin du ralentissement temporel (The World)
     if (this.enemyTimeScale !== 1 && now >= this.enemyTimeScaleUntil) this.enemyTimeScale = 1;

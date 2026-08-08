@@ -205,6 +205,30 @@ export const ENEMIES: Record<string, EnemyDef> = {
     attack: { telegraph: 480, cooldown: 1800, range: 340, chargeSpeed: 520 },
     signature: { type: 'spread', telegraph: 520, cooldown: 3000, damage: 13, count: 5, speed: 260, range: 320, color: 0xff6a1f },
   },
+  miniboss_mortis: {
+    id: 'miniboss_mortis', name: 'Écho de Mortis', sprite: 'archimage', texKey: 'boss_archimage', behavior: 'summoner',
+    hp: 200, speed: 88, damage: 16, scale: 0.5,
+    attack: { telegraph: 620, cooldown: 2600, range: 320, projectileSpeed: 240, projectileDamage: 13, summonId: 'zombie', summonCount: 1 },
+    signature: { type: 'castZone', telegraph: 700, cooldown: 3400, damage: 18, range: 340, radius: 60, color: 0xb26bff },
+  },
+  miniboss_glacior: {
+    id: 'miniboss_glacior', name: 'Écho de Glacior', sprite: 'leviathan', texKey: 'boss_leviathan', behavior: 'shooter',
+    hp: 240, speed: 92, damage: 17, scale: 0.55,
+    attack: { telegraph: 540, cooldown: 2200, range: 340, projectileSpeed: 320, projectileDamage: 13, status: 'freeze' },
+    signature: { type: 'coneSpray', telegraph: 620, cooldown: 3400, damage: 13, count: 9, speed: 300, range: 360, status: 'freeze', color: 0x9fd0e8 },
+  },
+  miniboss_voltair: {
+    id: 'miniboss_voltair', name: 'Écho de Voltaïr', sprite: 'rapace', texKey: 'boss_rapace', behavior: 'charger',
+    hp: 210, speed: 128, damage: 17, scale: 0.5,
+    attack: { telegraph: 460, cooldown: 1700, range: 360, chargeSpeed: 600 },
+    signature: { type: 'leap', telegraph: 520, cooldown: 3000, damage: 18, range: 360, radius: 56, speed: 1, color: 0xffe08a },
+  },
+  miniboss_neantis: {
+    id: 'miniboss_neantis', name: 'Écho de Néantis', sprite: 'reflet', texKey: 'boss_reflet', behavior: 'shooter',
+    hp: 260, speed: 110, damage: 18, scale: 0.55,
+    attack: { telegraph: 520, cooldown: 2000, range: 340, projectileSpeed: 300, projectileDamage: 14 },
+    signature: { type: 'castZone', telegraph: 720, cooldown: 3400, damage: 20, range: 360, radius: 62, color: 0xd05aff },
+  },
   bebeserpent: {
     id: 'bebeserpent', name: 'Serpenteau', sprite: 'bebeserpent', behavior: 'chaser',
     hp: 20, speed: 150, damage: 10, scale: 0.85,

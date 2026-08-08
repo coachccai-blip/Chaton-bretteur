@@ -558,21 +558,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const ty = this.y - 6 + Math.sin(this.kageAngle) * 30;
     c.setPosition(Phaser.Math.Linear(c.x, tx, 0.12), Phaser.Math.Linear(c.y, ty, 0.12));
     c.setAlpha(0.58 + 0.12 * Math.sin(now * 0.006));
-    // frappe périodique : coup de sabre spectral vers un ennemi à portée
-    if (now >= this.kageNextAt) {
-      const near = this.gs.enemiesNear(c.x, c.y, 175);
-      if (near.length) {
-        this.kageNextAt = now + 620;
-        const t = near[Math.floor(Math.random() * near.length)];
-        const ang = Math.atan2(t.y - c.y, t.x - c.x);
-        c.setFlipX(Math.cos(ang) < 0);
-        this.gs.spectralSlash(c.x, c.y - 8, ang, 150, 10 + this.stats.swordDamage[0] * 0.5);
-        this.gs.sfx('slash1');
-        this.gs.tweens.add({ targets: c, scaleX: 1.2, scaleY: 1.2, duration: 90, yoyo: true });
-      } else {
-        this.kageNextAt = now + 220; // scrute à nouveau bientôt
-      }
-    }
+    // Le clone ne frappe plus tout seul : il DUPLIQUE les attaques du chaton
+    // (voir cloneMirrorMelee), pour 10% des dégâts d'origine.
   }
 
   /** Première Danse de l'Eau : une vague écumeuse jaillit le long du dash. */
@@ -620,10 +607,26 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     this.gs.sfx(isFinisher ? 'slashfin' : `slash${(this.comboIndex % 3) + 1}`);
 
     // résolution des dégâts au milieu du swing
+    const hitDmg = this.stats.swordDamage[this.comboIndex] ?? this.stats.swordDamage[0];
     this.gs.time.delayedCall(this.attackDuration() * 0.35, () => {
       if (this.dead) return;
       this.resolveArcHit();
+      this.cloneMirrorMelee(hitDmg);
     });
+  }
+
+  /** Kage Bunshin : le clone DUPLIQUE la frappe du chaton pour 10% des dégâts. */
+  private cloneMirrorMelee(baseDmg: number): void {
+    const c = this.kageClone;
+    if (!c || this.dead) return;
+    const near = this.gs.enemiesNear(c.x, c.y, this.meleeRange() + 40);
+    const ang = near.length
+      ? Math.atan2(near[0].y - c.y, near[0].x - c.x)
+      : Math.atan2(this.aim.y, this.aim.x);
+    c.setFlipX(Math.cos(ang) < 0);
+    this.gs.spectralSlash(c.x, c.y - 8, ang, this.meleeRange() * 0.9, Math.max(1, Math.round(baseDmg * 0.1)));
+    this.gs.sfx('slash1');
+    this.gs.tweens.add({ targets: c, scaleX: 1.2, scaleY: 1.2, duration: 90, yoyo: true });
   }
 
   /** Couleur de croissant par coup du combo (pour LIRE la progression). */
@@ -915,9 +918,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (this.gs.canRevive()) {
       this.gs.consumeRevive();
       this.hp = Math.round(this.stats.maxHp * 0.4);
-      this.invulnUntil = performance.now() + 1500;
-      this.gs.juice.ring(this.x, this.y, 140, 0xf4c430, 500);
-      this.gs.juice.popText(this.x, this.y - 40, 'Neuf vies !', '#f4c430', 20);
+      this.invulnUntil = performance.now() + 3000; // 3 s d'invincibilité au revive
+      this.clearTint();
+      this.gs.reviveFx(this.x, this.y);
       this.gs.events.emit('hp', this.hp, this.stats.maxHp, this.shield, this.maxShield);
       return;
     }

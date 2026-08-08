@@ -9,6 +9,7 @@ import { RewardScene } from './scenes/RewardScene';
 import { PauseScene } from './scenes/PauseScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { VictoryScene } from './scenes/VictoryScene';
+import { FinalChoiceScene } from './scenes/FinalChoiceScene';
 import { RunState } from './systems/RunState';
 import { POWERS } from './config/powers';
 
@@ -39,7 +40,7 @@ const config: Phaser.Types.Core.GameConfig = {
   },
   scene: [
     BootScene, MenuScene, HubScene, GameScene, UIScene,
-    RewardScene, PauseScene, GameOverScene, VictoryScene,
+    RewardScene, PauseScene, GameOverScene, VictoryScene, FinalChoiceScene,
   ],
 };
 
@@ -55,6 +56,10 @@ const game = new Phaser.Game(config);
   boss(index = 0) {
     const g = game.scene.getScene('Game') as unknown as { debugBossZone(i: number): void };
     g.debugBossZone(index);
+  },
+  finalBoss() {
+    const g = game.scene.getScene('Game') as unknown as { startFinalBoss(): void };
+    g.startFinalBoss();
   },
   grant(id: string) {
     const g = game.scene.getScene('Game') as any;
