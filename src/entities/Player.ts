@@ -8,6 +8,9 @@ import type { IPlayerContext, IEnemyLike, ICombatScene, OnHitFn, OnKillFn, VoidF
 const AUTO_AIM_RANGE = 260;
 /** Portée de base de la mêlée (réduite de 20% ; rallongée par Bras Élastique / Susanoo). */
 const MELEE_RANGE = 156;
+/** Sprite héros haute résolution (26×30) : on le rend à cette échelle pour garder
+ * une taille à l'écran raisonnable tout en profitant du surcroît de détail. */
+const HERO_SCALE = 0.72;
 
 export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerContext {
   gs: GameScene;
@@ -312,9 +315,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     // ne pas être écrasé par le squash/stretch de chaque frame.
     const t = this.mods.transformActive ? (this.mods.transformScale || 1.5) : 1;
     if (this.dashing) {
-      this.setScale(1.15 * t, 0.85 * t);
+      this.setScale(1.15 * t * HERO_SCALE, 0.85 * t * HERO_SCALE);
     } else {
-      this.setScale((1 - bob * 0.5) * t, (1 + bob) * t);
+      this.setScale((1 - bob * 0.5) * t * HERO_SCALE, (1 + bob) * t * HERO_SCALE);
     }
     // Clignotement franc pendant l'invincibilité (période ~140 ms).
     if (this.isInvulnerable() && !this.dead) {
