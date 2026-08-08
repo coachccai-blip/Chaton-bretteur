@@ -1,7 +1,7 @@
 {
   "name": "chaton-bretteur",
   "version": "1.0.0",
-  "description": "Le Chaton Bretteur — roguelite d'action top-down (Phaser 3 + Vite + TypeScript). Graphismes pixel art générés par code.",
+  "description": "Chaton de guerre — roguelite d'action top-down (Phaser 3 + Vite + TypeScript). Graphismes pixel art générés par code.",
   "type": "module",
   "scripts": {
     "dev": "vite",

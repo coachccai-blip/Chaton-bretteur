@@ -10,11 +10,13 @@ export interface Difficulty {
   color: number;
 }
 
+// Courbe recalculée à la baisse : le Normal reprend l'ancien Facile, chaque
+// palier reprend celui juste en dessous, et Facile gagne une base encore plus douce.
 export const DIFFICULTIES: Difficulty[] = [
-  { id: 'easy', name: 'Facile', enemyHp: 0.8, enemyDamage: 0.7, enemySpeed: 0.9, enemyAttackSpeed: 0.85, waveDensity: 0.85, reward: 0.8, color: 0x6ad46a },
-  { id: 'normal', name: 'Normal', enemyHp: 1.0, enemyDamage: 1.0, enemySpeed: 1.0, enemyAttackSpeed: 1.0, waveDensity: 1.0, reward: 1.0, color: 0x59a8ff },
-  { id: 'hard', name: 'Difficile', enemyHp: 1.3, enemyDamage: 1.3, enemySpeed: 1.2, enemyAttackSpeed: 1.25, waveDensity: 1.2, reward: 1.3, color: 0xff8f3f },
-  { id: 'extreme', name: 'Extrême', enemyHp: 1.6, enemyDamage: 1.6, enemySpeed: 1.4, enemyAttackSpeed: 1.5, waveDensity: 1.45, reward: 1.6, color: 0xe8384f },
+  { id: 'easy', name: 'Facile', enemyHp: 0.6, enemyDamage: 0.55, enemySpeed: 0.8, enemyAttackSpeed: 0.75, waveDensity: 0.7, reward: 0.7, color: 0x6ad46a },
+  { id: 'normal', name: 'Normal', enemyHp: 0.8, enemyDamage: 0.7, enemySpeed: 0.9, enemyAttackSpeed: 0.85, waveDensity: 0.85, reward: 0.8, color: 0x59a8ff },
+  { id: 'hard', name: 'Difficile', enemyHp: 1.0, enemyDamage: 1.0, enemySpeed: 1.0, enemyAttackSpeed: 1.0, waveDensity: 1.0, reward: 1.0, color: 0xff8f3f },
+  { id: 'extreme', name: 'Extrême', enemyHp: 1.3, enemyDamage: 1.3, enemySpeed: 1.2, enemyAttackSpeed: 1.25, waveDensity: 1.2, reward: 1.3, color: 0xe8384f },
 ];
 
 export function getDifficulty(id: string): Difficulty {

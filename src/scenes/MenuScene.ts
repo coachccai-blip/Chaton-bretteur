@@ -26,8 +26,8 @@ export class MenuScene extends Phaser.Scene {
     this.tweens.add({ targets: sword, rotation: 0.7, y: 266, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
     // titre
-    label(this, GAME_WIDTH / 2, 90, 'LE CHATON', 52, '#f4e9c1');
-    label(this, GAME_WIDTH / 2, 140, 'BRETTEUR', 52, '#f4c430');
+    label(this, GAME_WIDTH / 2, 90, 'CHATON', 52, '#f4e9c1');
+    label(this, GAME_WIDTH / 2, 140, 'DE GUERRE', 52, '#f4c430');
     label(this, GAME_WIDTH / 2, 170, 'roguelite d’action', 16, '#9a8fb0');
 
     button(this, GAME_WIDTH / 2, 360, 240, 56, '⚔  JOUER', () => {

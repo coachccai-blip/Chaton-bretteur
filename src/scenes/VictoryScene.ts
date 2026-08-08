@@ -28,7 +28,7 @@ export class VictoryScene extends Phaser.Scene {
 
     label(this, GAME_WIDTH / 2, 250, 'VICTOIRE !', 44, '#f4c430');
     label(this, GAME_WIDTH / 2, 292, 'Le Roi des Monstres est vaincu.', 18, '#f4e9c1');
-    label(this, GAME_WIDTH / 2, 316, 'Le royaume est sauvé par le Chaton Bretteur !', 14, '#9a8fb0');
+    label(this, GAME_WIDTH / 2, 316, 'Le royaume est sauvé par le Chaton de guerre !', 14, '#9a8fb0');
 
     // chrono du run + record par difficulté
     const time = RunState.durationSec();

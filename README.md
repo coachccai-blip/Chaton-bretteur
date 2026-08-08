@@ -1,4 +1,4 @@
-# 🐾 Le Chaton Bretteur
+# 🐾 Chaton de guerre
 
 Un **roguelite d'action top-down** dans l'esprit de *Hades*, jouable au **clavier/souris**, à la **manette** et au **tactile** (mobile). Vous incarnez un petit chaton chevalier qui taille les monstres à l'épée à travers 4 zones, gagne des pouvoirs, et devient plus fort de run en run grâce à une progression permanente.
 
