@@ -25,6 +25,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   hp: number;
   alive = true;
   isBoss = true;
+  enraged = false; // clone enragé du round final (×3)
   contactDamage: number;
 
   private phaseIndex = 0;
@@ -197,8 +198,17 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     if (!this.busy && Math.abs(dx) > 6) this.setFlipX(dx < 0);
     if (frozen) this.setTint(0x8fdfff);
     else if (this.gs.bossInvincible()) this.setTint(0x8fb8e8); // givre : invincible
+    else if (this.enraged) this.setTint(0xff6a5a); // clone enragé (rouge furieux)
     else if (!this.phase.tint) this.clearTint(); else this.setTint(this.phase.tint);
     this.updateAura();
+  }
+
+  /** Passe le boss en mode ENRAGÉ : phase la plus agressive + teinte rouge. */
+  markEnraged(): void {
+    this.enraged = true;
+    this.phaseIndex = this.def.phases.length - 1; // moveset le plus agressif
+    this.resetMoveCooldowns();
+    this.aura.setTint(0xff5a3a);
   }
 
   /** Lance la meilleure attaque de la phase (ouverture de combat). */

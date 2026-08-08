@@ -98,6 +98,11 @@ export class GameScene extends Phaser.Scene {
   boss: Boss | null = null;
   private bossOverlap?: Phaser.Physics.Arcade.Collider;
   private bossPylons: Pylon[] = []; // pilônes d'invincibilité de Glacior
+  // Round final : le boss réapparaît ENRAGÉ en 3 exemplaires simultanés.
+  private rageBosses: Boss[] = [];
+  private rageActive = false;
+  private rageMaxTotal = 1;
+  private rageOverlaps: Phaser.Physics.Arcade.Collider[] = [];
 
   private activeBanner?: Phaser.GameObjects.Text;
   private activeEnemies = new Set<Enemy>();
@@ -147,6 +152,7 @@ export class GameScene extends Phaser.Scene {
     this.souls = [];
     this.activeEnemies.clear();
     this.bossPylons = [];
+    this.rageBosses = []; this.rageActive = false; this.rageOverlaps = [];
     this.pendingBoons = 0; this.rewardActive = false; this.boonOnEmpty = null;
     this.bossOverlap = undefined;
     this.boss = null;
@@ -212,6 +218,7 @@ export class GameScene extends Phaser.Scene {
       this.boss = null;
       this.clearSouls();
       this.clearPylons();
+      this.clearRageBosses();
       this.env?.destroy();
     });
   }
@@ -298,6 +305,7 @@ export class GameScene extends Phaser.Scene {
     this.activeEnemies.forEach((e) => e.destroy());
     this.activeEnemies.clear();
     this.clearPylons();
+    this.clearRageBosses();
     this.friendlyShots.forEach((s) => s.sprite.destroy());
     this.friendlyShots = [];
     this.enemyTimeScale = 1;
@@ -324,6 +332,7 @@ export class GameScene extends Phaser.Scene {
     this.activeEnemies.forEach((e) => e.destroy());
     this.activeEnemies.clear();
     this.clearPylons();
+    this.clearRageBosses();
     this.roomType = type;
     this.buildRoom();
     // replace le joueur en bas de la salle
@@ -713,6 +722,7 @@ export class GameScene extends Phaser.Scene {
     for (const e of this.activeEnemies) if (e.isAlive()) list.push(e);
     for (const p of this.bossPylons) if (p.isAlive()) list.push(p);
     if (this.boss?.isAlive()) list.push(this.boss);
+    for (const rb of this.rageBosses) if (rb !== this.boss && rb.isAlive()) list.push(rb);
     return list;
   }
 
@@ -991,39 +1001,112 @@ export class GameScene extends Phaser.Scene {
   }
 
   onBossKilled(b: Boss): void {
-    this.boss = null;
-    this.roomState = 'transition'; // évite l'auto-ouverture de boons pendant l'anim de mort
-    this.bossHazards = [];
-    this.awardXp(Math.round(b.maxHp * 0.03)); // gros gain d'XP (met des boons en file)
-    // Détruit le collider de contact du boss (évite l'accumulation d'un run à
-    // l'autre) et despawn les adds encore vivants, sinon ils continuent d'infliger
-    // des dégâts de contact pendant l'anim de mort/bannière — pouvant tuer après
-    // la victoire.
-    this.bossOverlap?.destroy();
-    this.bossOverlap = undefined;
-    this.activeEnemies.forEach((e) => e.destroy());
-    this.activeEnemies.clear();
-    this.clearPylons();
-    this.clearSouls();
+    const wasPrimary = b === this.boss;
+    if (wasPrimary) this.boss = null;
+    const wasRage = this.rageBosses.includes(b);
+    this.rageBosses = this.rageBosses.filter((x) => x !== b);
+
+    // récompenses (réduites pour chaque clone enragé)
+    this.awardXp(Math.round(b.maxHp * (wasRage ? 0.015 : 0.03)));
+    this.addRunCurrency(REWARDS.perBoss * getDifficulty(RunState.difficultyId).reward * (wasRage ? 0.34 : 1));
     AudioManager.play('bossdie');
-    // slow-mo + shake + particules
-    this.time.timeScale = 0.35;
-    this.physics.world.timeScale = 2.8;
-    this.juice.shake(600, 0.02);
-    for (let i = 0; i < 5; i++) {
-      this.time.delayedCall(i * 120, () => this.juice.burst(b.x, b.y - 20, 0xffe0b0, 20, 260, 2));
-    }
-    this.events.emit('bossHp', 0, b.maxHp);
-    this.addRunCurrency(REWARDS.perBoss * getDifficulty(RunState.difficultyId).reward);
-    // animation de mort puis destruction du sprite
+    this.juice.shake(wasRage ? 360 : 600, wasRage ? 0.014 : 0.02);
+    for (let i = 0; i < 4; i++) this.time.delayedCall(i * 110, () => this.juice.burst(b.x, b.y - 20, 0xffe0b0, 16, 240, 1.8));
     (b.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
-    this.tweens.add({ targets: b, alpha: 0, scaleY: 0, angle: 40, duration: 1100, ease: 'Cubic.easeIn', onComplete: () => b.destroy() });
-    this.time.delayedCall(1400, () => {
-      this.time.timeScale = 1;
-      this.physics.world.timeScale = 1;
-      // Distribue d'abord les boons gagnés (XP du boss), puis passe à la suite.
-      this.openBoons(() => this.afterBoss());
+    this.tweens.add({ targets: b, alpha: 0, scaleY: 0, angle: 40, duration: 1000, ease: 'Cubic.easeIn', onComplete: () => b.destroy() });
+
+    if (!this.rageActive && !wasRage) {
+      // PREMIÈRE défaite du boss → PAS de passage de zone : on enchaîne sur le
+      // round ENRAGÉ (dialogue puis 3 clones simultanés).
+      this.roomState = 'transition';
+      this.bossHazards = [];
+      this.bossOverlap?.destroy();
+      this.bossOverlap = undefined;
+      this.activeEnemies.forEach((e) => e.destroy());
+      this.activeEnemies.clear();
+      this.clearPylons();
+      this.clearSouls();
+      this.time.timeScale = 0.4;
+      this.physics.world.timeScale = 2.5;
+      this.events.emit('bossHp', 0, b.maxHp);
+      this.time.delayedCall(1300, () => {
+        this.time.timeScale = 1;
+        this.physics.world.timeScale = 1;
+        // Distribue d'abord les boons gagnés, puis lance le round enragé.
+        this.openBoons(() => this.startRageRound());
+      });
+      return;
+    }
+
+    // Un clone enragé vient de tomber : on n'avance QUE lorsqu'ils sont tous morts.
+    if (this.rageBosses.length === 0) {
+      this.rageActive = false;
+      this.roomState = 'transition';
+      this.bossHazards = [];
+      this.rageOverlaps.forEach((o) => o.destroy());
+      this.rageOverlaps = [];
+      this.activeEnemies.forEach((e) => e.destroy());
+      this.activeEnemies.clear();
+      this.clearPylons();
+      this.clearSouls();
+      this.time.timeScale = 0.35;
+      this.physics.world.timeScale = 2.8;
+      this.events.emit('bossHp', 0, this.rageMaxTotal);
+      this.time.delayedCall(1400, () => {
+        this.time.timeScale = 1;
+        this.physics.world.timeScale = 1;
+        this.banner('BOSS VRAIMENT VAINCU !', () => this.openBoons(() => this.afterBoss()));
+      });
+    }
+  }
+
+  /** Round final : le boss revient (dialogue) puis réapparaît ENRAGÉ en 3 clones. */
+  private startRageRound(): void {
+    const def = BOSSES[this.zone.bossId];
+    const diff = getDifficulty(RunState.difficultyId);
+    // Nouveau dialogue avec le boss avant qu'il ne se démultiplie.
+    this.bossIntro(def, () => {
+      this.banner(`${def.name} ENRAGÉ ×3 !`, () => {
+        this.roomState = 'boss';
+        this.rageActive = true;
+        this.rageBosses = [];
+        this.rageOverlaps.forEach((o) => o.destroy());
+        this.rageOverlaps = [];
+        // PV par clone ≈ 0,5× le boss simple (trio ≈ 1,5×) ; dégâts ×1,3.
+        const hpMult = (2 + this.zone.index) * 2 * Math.pow(1.28, this.zone.index) * 5 * 0.5;
+        const dmgMult = Math.pow(1.3, this.zone.index) * 1.3;
+        const spots = [
+          { x: WORLD_WIDTH / 2, y: ARENA.y + 110 },
+          { x: ARENA.x + 150, y: ARENA.y + ARENA.h - 140 },
+          { x: ARENA.x + ARENA.w - 150, y: ARENA.y + ARENA.h - 140 },
+        ];
+        this.rageMaxTotal = 0;
+        for (const s of spots) {
+          const rb = new Boss(this, s.x, s.y, def, diff.enemyHp * hpMult, diff.enemyDamage * dmgMult);
+          rb.markEnraged();
+          this.rageBosses.push(rb);
+          this.rageMaxTotal += rb.maxHp;
+          const ov = this.physics.add.overlap(this.player, rb, (_p, bb) => {
+            const bs = bb as Boss;
+            if (bs.isAlive()) this.player.takeDamage(bs.contactDamage, bs.x, bs.y);
+          });
+          this.rageOverlaps.push(ov);
+        }
+        this.boss = this.rageBosses[0]; // primaire (nom/HUD)
+        this.events.emit('bossName', `${def.name} ENRAGÉ ×3`);
+        this.events.emit('bossHp', this.rageMaxTotal, this.rageMaxTotal);
+        this.events.emit('bossPhase', def.phases.length, def.phases.length);
+        AudioManager.startMusic('boss');
+      });
     });
+  }
+
+  private clearRageBosses(): void {
+    this.rageOverlaps.forEach((o) => o.destroy());
+    this.rageOverlaps = [];
+    for (const rb of this.rageBosses) rb.destroy();
+    this.rageBosses = [];
+    this.rageActive = false;
   }
 
   private afterBoss(): void {
@@ -1048,6 +1131,7 @@ export class GameScene extends Phaser.Scene {
 
   private finishRun(victory: boolean): void {
     this.clearPylons();
+    this.clearRageBosses();
     SaveSystem.addCurrency(RunState.currencyEarned);
     if (victory) SaveSystem.recordClear();
     AudioManager.stopMusic();
@@ -1665,7 +1749,14 @@ export class GameScene extends Phaser.Scene {
       const ents: { x: number; y: number; displayHeight: number; scaleX: number }[] = [];
       for (const e of this.activeEnemies) if (e.isAlive()) ents.push(e);
       if (this.boss?.isAlive()) ents.push(this.boss);
+      for (const rb of this.rageBosses) if (rb !== this.boss && rb.isAlive()) ents.push(rb);
       this.env.update(this.player.x, this.player.y, ents);
+    }
+    // Round enragé : jauge de boss = PV cumulés des 3 clones.
+    if (this.rageActive) {
+      let hp = 0;
+      for (const rb of this.rageBosses) if (rb.isAlive()) hp += rb.hp;
+      this.events.emit('bossHp', hp, this.rageMaxTotal);
     }
 
     // choix de porte par proximité
