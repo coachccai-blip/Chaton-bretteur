@@ -9,12 +9,18 @@ interface StatusInfo { expire: number; nextTick: number; }
 
 /** Coups de corps-à-corps / approche (privilégiés en posture offensive « rush »). */
 const MELEE_MOVES = new Set(['charge', 'roll', 'diveBomb', 'shockwave', 'lineSweep']);
+// Sorts pouvant partir en « second » lors d'un dual-cast : effets de zone /
+// invocations auto-télégraphiés qui ne nécessitent pas que le boss se déplace.
+const DUAL_MOVES = new Set([
+  'iceRain', 'geysers', 'glyphs', 'summon', 'nova', 'mudFlood', 'arrowRain',
+  'spiral', 'ringShot', 'fireBurst', 'fireTornado', 'aimedBurst', 'fan',
+]);
 
 /** Classement des coups pour l'ouverture : le boss lance sa MEILLEURE attaque au début. */
 const OPENER_RANK: Record<string, number> = {
   icePylons: 100, fireTornado: 94, mudFlood: 92, nova: 88, crossBeams: 86, geysers: 84, iceRain: 82,
   fireBurst: 80, arrowRain: 74, spiral: 72, lineSweep: 66, diveBomb: 64, ringShot: 62,
-  shockwave: 60, roll: 58, summon: 54, glyphs: 52, charge: 48, fan: 44, aimedBurst: 38,
+  tornadoSweep: 78, shockwave: 60, roll: 58, summon: 54, glyphs: 52, charge: 48, fan: 44, aimedBurst: 38,
   teleport: 8,
 };
 
@@ -115,7 +121,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.auraRing.strokeEllipse(cx, this.y, rx * 2 + 7, ry * 2 + 6);
   }
 
-  private get phase(): BossPhase { return this.def.phases[this.phaseIndex]; }
+  private mergedPhase?: BossPhase; // Glacior enragé : moveset cumulé phases 1+2
+  private get phase(): BossPhase { return this.mergedPhase ?? this.def.phases[this.phaseIndex]; }
 
   private resetMoveCooldowns(): void {
     this.moveCooldowns = this.phase.moves.map(() => performance.now() + 450 + Math.random() * 450);
@@ -218,6 +225,15 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   markEnraged(): void {
     this.enraged = true;
     this.phaseIndex = this.def.phases.length - 1; // moveset le plus agressif
+    // Glacior enragé : conserve l'accès à TOUS ses sorts (phases 1 & 2, dont les
+    // pilônes d'invincibilité et le rayon rectiligne) — les 3 clones peuvent donc
+    // chacun invoquer des pilônes qui rendent les Glacior invincibles.
+    if (this.def.id === 'leviathan') {
+      const seen = new Set<string>();
+      const moves = [...this.def.phases[0].moves, ...this.def.phases[1].moves, ...this.def.phases[2].moves]
+        .filter((m) => { const k = m.type + (m.summonId ?? ''); if (seen.has(k)) return false; seen.add(k); return true; });
+      this.mergedPhase = { ...this.def.phases[this.def.phases.length - 1], moves };
+    }
     this.resetMoveCooldowns();
     this.aura.setTint(0xff5a3a);
   }
@@ -247,7 +263,20 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     const wantMelee = this.stance === 'rush';
     const preferred = ready.filter((i) => MELEE_MOVES.has(this.phase.moves[i].type) === wantMelee);
     const pool = preferred.length ? preferred : ready;
-    this.execMove(pool[Math.floor(Math.random() * pool.length)], dir);
+    const primary = pool[Math.floor(Math.random() * pool.length)];
+    this.execMove(primary, dir);
+    // DUAL-CAST : tous les boss lancent parfois un SECOND sort (zone/été) en même
+    // temps (ex. Glacior fait tomber des glaces PENDANT son rayon rectiligne).
+    if (Math.random() < 0.32) {
+      const extras = ready.filter((j) => j !== primary && DUAL_MOVES.has(this.phase.moves[j].type) && !this.moveSpent(j));
+      if (extras.length) {
+        const j = extras[Math.floor(Math.random() * extras.length)];
+        const em = this.phase.moves[j];
+        this.moveCooldowns[j] = now + em.telegraph + em.cooldown * 0.25;
+        this.gs.juice.ring(this.x, this.y, 64, em.color ?? 0x9fd0ff, 320);
+        this.runMove(em, dir, true); // secondaire : ne bloque pas le boss
+      }
+    }
   }
 
   /** Ruée commune à tous les boss : lunge rapide vers le joueur avec traînée. */
@@ -303,7 +332,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.moveCooldowns[i] = performance.now() + m.telegraph + m.cooldown * 0.25;
   }
 
-  private runMove(m: BossMove, dir: Phaser.Math.Vector2): void {
+  private runMove(m: BossMove, dir: Phaser.Math.Vector2, secondary = false): void {
     const p = this.gs.player;
     // Bruitage d'attaque signature selon le type de coup.
     const t = m.type;
@@ -313,7 +342,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     else if (t === 'crossBeams' || t === 'lineSweep') this.gs.sfx('zap');
     else if (t === 'teleport') this.gs.sfx('timestop');
     else this.gs.sfx('bossshot'); // aimedBurst / fan / ringShot / spiral / arrowRain
-    const done = (delay: number) => this.gs.time.delayedCall(delay, () => (this.busy = false));
+    // En dual-cast (sort secondaire), on ne touche PAS au flag `busy` : le boss
+    // reste occupé par son sort principal, le secondaire ne fait que son effet.
+    const done = secondary ? (_d: number) => { /* no-op */ } : (delay: number) => this.gs.time.delayedCall(delay, () => (this.busy = false));
     const col = m.color ?? 0xff6a3a;
     const fire = (dx: number, dy: number) =>
       this.gs.spawnEnemyProjectile(this.x, this.y - 10, dx, dy, m.speed ?? 190, m.damage ?? 12, undefined, col);
@@ -427,12 +458,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       }
       case 'lineSweep': {
         const base = aimAngle();
-        // balayage : le rail pivote légèrement (effet fouet/langue)
-        this.gs.telegraphLine(this.x, this.y, base - 0.18, m.length ?? 340, m.width ?? 42, col, m.telegraph, m.damage ?? 18);
-        this.gs.time.delayedCall(180, () => {
-          if (this.alive) this.gs.telegraphLine(this.x, this.y, base + 0.18, m.length ?? 340, m.width ?? 42, col, 220, m.damage ?? 18);
+        // balayage : le rail pivote (effet fouet) — TROIS rayons rectilignes.
+        const offs = [-0.26, 0, 0.26];
+        offs.forEach((o, k) => {
+          this.gs.time.delayedCall(k * 170, () => {
+            if (this.alive) this.gs.telegraphLine(this.x, this.y, base + o, m.length ?? 340, m.width ?? 42, col, k === 0 ? m.telegraph : 220, m.damage ?? 18);
+          });
         });
-        done(520);
+        done(offs.length * 170 + 360);
         break;
       }
       case 'crossBeams': {
@@ -562,6 +595,12 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         const px = p ? p.x : this.x, py = p ? p.y : this.y;
         this.gs.fireTornadoStorm(px, py, m.damage ?? 20);
         done((m.count ?? 5) * 200 + 700 + 400);
+        break;
+      }
+      case 'tornadoSweep': {
+        // Énorme tornade qui balaie tout l'écran — à esquiver au dash.
+        this.gs.bossTornadoSweep(m.damage ?? 24, m.telegraph);
+        done(m.telegraph + 1700);
         break;
       }
       case 'icePylons': {

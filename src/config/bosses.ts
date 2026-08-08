@@ -9,7 +9,8 @@ export type BossMoveType =
   | 'fireBurst'   // rafale de boules de feu vers le joueur (Ignis)
   | 'fireTornado' // tornades de feu traversant la map (Ignis)
   | 'icePylons'   // pilônes d'invincibilité aux 4 coins (Glacior)
-  | 'iceRain';    // pluie de stalactites, quelques zones sûres (Glacior)
+  | 'iceRain'     // pluie de stalactites, quelques zones sûres (Glacior)
+  | 'tornadoSweep'; // énorme tornade qui balaie tout l'écran (à esquiver au dash)
 
 export interface BossMove {
   type: BossMoveType;
@@ -180,6 +181,8 @@ export const BOSSES: Record<string, BossDef> = {
         { type: 'iceRain', telegraph: 640, cooldown: 3600, count: 14, safeCount: 2, radius: 48, damage: 22, color: 0x9fd0e8 },
         // 6. Cœur de Gel — nova gelante
         { type: 'nova', telegraph: 900, cooldown: 5000, count: 20, speed: 200, damage: 24, color: 0x7fdcff },
+        // Tornade Abyssale — énorme tornade qui balaie l'écran (esquive au dash).
+        { type: 'tornadoSweep', telegraph: 850, cooldown: 6000, damage: 26 },
       ]},
       { hpFrac: 0.3, speed: 230, tint: 0xcfeaff, moves: [
         // 5. Étreinte du Blizzard — onde tournante
@@ -187,6 +190,7 @@ export const BOSSES: Record<string, BossDef> = {
         { type: 'nova', telegraph: 640, cooldown: 3200, count: 26, speed: 210, damage: 26, color: 0x7fdcff },
         { type: 'geysers', telegraph: 620, cooldown: 3000, count: 7, radius: 52, damage: 26, duration: 1300, color: 0x9fe0f8 },
         { type: 'spiral', telegraph: 520, cooldown: 2600, count: 18, speed: 190, damage: 18, color: 0x9fd0e8 },
+        { type: 'tornadoSweep', telegraph: 750, cooldown: 5200, damage: 28 },
       ]},
     ],
   },

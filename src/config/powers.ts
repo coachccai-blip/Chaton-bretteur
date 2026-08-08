@@ -399,12 +399,12 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'boomerang_blade', name: 'Lame Boomerang', god: 'Guerrière du Désert', category: 'attack', rarity: 'rare', icon: 'wave',
-    description: 'Le dernier coup du combo lance une lame perçante (18 dégâts).',
+    description: 'Le dernier coup du combo lance un boomerang qui frappe à l’aller ET au retour (18 dégâts).',
     apply(p) {
       p.addOnHit((e, _d, _c, info) => {
         if (!info?.finisher) return;
         const d = Math.hypot(e.x - p.px(), e.y - p.py()) || 1;
-        p.combat.friendlyShot(p.px(), p.py(), (e.x - p.px()) / d, (e.y - p.py()) / d, 360, 18, { color: 0xe8d9a0, pierce: true });
+        p.combat.boomerang(p.px(), p.py(), (e.x - p.px()) / d, (e.y - p.py()) / d, 18);
       });
     },
   },
@@ -427,7 +427,7 @@ export const POWERS: PowerDef[] = [
       p.addOnHit((e, _d, _c, info) => {
         if (!info?.finisher) return;
         const d = Math.hypot(e.x - p.px(), e.y - p.py()) || 1;
-        p.combat.friendlyShot(p.px(), p.py(), (e.x - p.px()) / d, (e.y - p.py()) / d, 520, 26, { color: 0xffd24a, knockback: 260 });
+        p.combat.friendlyShot(p.px(), p.py(), (e.x - p.px()) / d, (e.y - p.py()) / d, 520, 26, { knockback: 260, texture: 'cat_paw', orient: true, scale: 1.3 });
       });
     },
   },

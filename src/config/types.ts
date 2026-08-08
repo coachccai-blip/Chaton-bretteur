@@ -30,8 +30,9 @@ export interface ICombatScene {
   playerY(): number;
   beam(x1: number, y1: number, x2: number, y2: number, color: number): void;
   /** projectile allié (toile, poing, boomerang…). immobilizeMs > 0 fige la cible. */
-  friendlyShot(x: number, y: number, dx: number, dy: number, speed: number, damage: number, opts?: { color?: number; pierce?: boolean; immobilizeMs?: number; knockback?: number }): void;
+  friendlyShot(x: number, y: number, dx: number, dy: number, speed: number, damage: number, opts?: { color?: number; pierce?: boolean; immobilizeMs?: number; knockback?: number; texture?: string; orient?: boolean; scale?: number }): void;
   tornado(x: number, y: number, dx: number, dy: number, damage: number): void;
+  boomerang(x: number, y: number, dx: number, dy: number, damage: number): void;
   /** balaye un rayon frontal (Kamehameha) qui inflige des dégâts en ligne. */
   beamSweep(x: number, y: number, dx: number, dy: number, dmgPerTick: number, ms: number, color: number): void;
   /** aspire un ennemi vers un point (Gomme élastique). */

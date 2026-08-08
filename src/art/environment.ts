@@ -279,6 +279,46 @@ export const FIREBALL: SpriteDef = {
   ],
 };
 
+/** Boomerang (12x12) : lame recourbée du boon Lame Boomerang (aller-retour). */
+export const BOOMERANG: SpriteDef = {
+  key: 'boomerang',
+  pal: { '.': null, '#': '#3a2408', 'W': '#c98f3a', 'y': '#f4d98a' },
+  rows: [
+    '.....###....',
+    '....#yWW#...',
+    '....#WWy#...',
+    '....#WyW#...',
+    '...#Wy#Wy#..',
+    '...#yW#yW#..',
+    '..#yW#.#Wy#.',
+    '..#WW#.#yW#.',
+    '.#WW#...#Wy#',
+    '.#Wy#...#yW#',
+    '#Wy#.....#Wy',
+    '.##.......##',
+  ],
+};
+
+/** Patte de chat (12x12) : projectile du boon Poing Pistolet (patte projetée). */
+export const CAT_PAW: SpriteDef = {
+  key: 'cat_paw',
+  pal: { '.': null, '#': '#3a1a20', 'p': '#e88aa0', 'P': '#ffb0c0', 'w': '#ffe0e8' },
+  rows: [
+    '...#######..',
+    '####PP#PP##.',
+    '#PPPPPPPPP##',
+    '#PPPPP#PPPPP',
+    '#PPP#####PPP',
+    '#PP#######PP',
+    '###PPwPPP###',
+    '.##PPwwPP##.',
+    '.#PPPPPPPP#.',
+    '.##PPPPPP##.',
+    '..#pppppp#..',
+    '..########..',
+  ],
+};
+
 /** Glob de boue (10x10) : projectile craché par Gorbak et les mini-gorbaks. */
 export const MUD_BLOB: SpriteDef = {
   key: 'mud_blob',

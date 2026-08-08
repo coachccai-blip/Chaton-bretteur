@@ -560,7 +560,9 @@ export class GameScene extends Phaser.Scene {
     // Difficulté croissante : le joueur monte TRÈS vite en puissance (jusqu'à ~36
     // boons au dernier boss), donc les monstres montent en flèche zone après zone
     // (croissance exponentielle) en plus du palier de salle.
-    const zoneHp = Math.pow(1.62, this.zone.index) * (1 + this.combatDone * 0.07);
+    // PV monstres ×3 dans les deux derniers mondes (Nécropole Céleste + Faille du Néant).
+    const lastWorldsHp = this.zone.index >= 5 ? 3 : 1;
+    const zoneHp = Math.pow(1.62, this.zone.index) * (1 + this.combatDone * 0.07) * lastWorldsHp;
     const zoneDmg = Math.pow(1.34, this.zone.index) * (1 + this.combatDone * 0.05);
     // Vitesse : de plus en plus rapide au fil des salles (et un peu par zone).
     const speedMul = (1 + this.combatDone * 0.07) * (1 + this.zone.index * 0.05);
@@ -1614,11 +1616,54 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Projectile allié générique (toile, poing, boomerang, cartes…). */
-  friendlyShot(x: number, y: number, dx: number, dy: number, speed: number, damage: number, opts?: { color?: number; pierce?: boolean; immobilizeMs?: number; knockback?: number }): void {
+  friendlyShot(x: number, y: number, dx: number, dy: number, speed: number, damage: number, opts?: { color?: number; pierce?: boolean; immobilizeMs?: number; knockback?: number; texture?: string; orient?: boolean; scale?: number }): void {
     const len = Math.hypot(dx, dy) || 1; const nx = dx / len, ny = dy / len;
     const col = opts?.color ?? 0xffffff;
-    const s = this.add.sprite(x, y, 'orb').setDepth(18).setTint(col).setScale(1.4).setRotation(Math.atan2(ny, nx));
+    const tex = opts?.texture ?? 'orb';
+    const s = this.add.sprite(x, y, tex).setDepth(18).setScale(opts?.scale ?? 1.4);
+    // Sprite dédié (patte de chat…) : garde ses couleurs ; sinon on teinte l'orbe.
+    if (opts?.texture) { if (opts.color) s.setTint(col); } else s.setTint(col);
+    if (opts?.orient) s.setRotation(Math.atan2(ny, nx)); else s.setRotation(Math.atan2(ny, nx));
+    if (opts?.texture) { this.tweens.add({ targets: s, angle: s.angle + 720, duration: 600, repeat: -1 }); }
     this.friendlyShots.push({ sprite: s, vx: nx * speed, vy: ny * speed, damage, dieAt: performance.now() + 900, hit: new Set(), pierce: !!opts?.pierce, immobilizeMs: opts?.immobilizeMs, knockback: opts?.knockback, color: col });
+  }
+
+  /**
+   * Boon Lame Boomerang : lance un boomerang qui part en ligne droite puis
+   * REVIENT vers le joueur — il inflige des dégâts à l'aller ET au retour.
+   */
+  boomerang(x: number, y: number, dx: number, dy: number, damage: number): void {
+    const len = Math.hypot(dx, dy) || 1; const nx = dx / len, ny = dy / len;
+    const reach = 300;
+    const tx = Phaser.Math.Clamp(x + nx * reach, ARENA.x + 20, ARENA.x + ARENA.w - 20);
+    const ty = Phaser.Math.Clamp(y + ny * reach, ARENA.y + 20, ARENA.y + ARENA.h - 20);
+    const s = this.add.sprite(x, y, 'boomerang').setDepth(19).setScale(1.6);
+    this.tweens.add({ targets: s, angle: 360, duration: 260, repeat: -1 });
+    let hit = new Set<IEnemyLike>();
+    const touch = () => {
+      if (!this.combatActive) return;
+      for (const e of this.getTargets()) {
+        if (!e.isAlive() || hit.has(e)) continue;
+        if (Math.hypot(e.x - s.x, e.y - s.y) <= 30) { hit.add(e); e.takeDamage(damage, s.x, s.y); this.juice.burst(e.x, e.y, 0xf4d98a, 5, 120, 0.8); }
+      }
+    };
+    // Aller
+    this.tweens.add({
+      targets: s, x: tx, y: ty, duration: 340, ease: 'Sine.easeOut',
+      onUpdate: touch,
+      onComplete: () => {
+        hit = new Set(); // le retour peut re-toucher les mêmes ennemis
+        // Retour : revient vers la position ACTUELLE du joueur.
+        const p = this.player;
+        const rx = p && !p.dead ? p.x : x, ry = p && !p.dead ? p.y : y;
+        this.tweens.add({
+          targets: s, x: rx, y: ry, duration: 360, ease: 'Sine.easeIn',
+          onUpdate: touch,
+          onComplete: () => s.destroy(),
+        });
+      },
+    });
+    this.sfx('slash2');
   }
 
   /**
@@ -1718,6 +1763,60 @@ export class GameScene extends Phaser.Scene {
       });
       this.sfx('bosscharge');
       this.juice.shake(160, 0.006);
+    });
+  }
+
+  /**
+   * Énorme tornade qui BALAIE tout l'écran d'un bord à l'autre : un mur de
+   * tornades traverse l'arène, à esquiver OBLIGATOIREMENT au dash (i-frames).
+   * Télégraphie le bord d'arrivée avant de déferler.
+   */
+  bossTornadoSweep(damage: number, telegraph = 800): void {
+    const A = ARENA;
+    const horizontal = Math.random() < 0.5;
+    const forward = Math.random() < 0.5;
+    const startC = horizontal ? (forward ? A.x - 20 : A.x + A.w + 20) : (forward ? A.y - 20 : A.y + A.h + 20);
+    const endC = horizontal ? (forward ? A.x + A.w + 20 : A.x - 20) : (forward ? A.y + A.h + 20 : A.y - 20);
+    const perpMin = horizontal ? A.y + 24 : A.x + 24;
+    const perpMax = horizontal ? A.y + A.h - 24 : A.x + A.w - 24;
+    // Télégraphe : flèche/mur clignotant au bord de départ.
+    const tel = this.add.graphics().setDepth(19);
+    let tt = 0;
+    const telEv = this.time.addEvent({ delay: 45, loop: true, callback: () => {
+      tt += 45; const a = 0.3 + 0.25 * Math.sin(tt / 80);
+      tel.clear();
+      tel.fillStyle(0x7fdcff, a * 0.35);
+      if (horizontal) tel.fillRect(startC - 26, A.y, 52, A.h); else tel.fillRect(A.x, startC - 26, A.w, 52);
+    } });
+    this.sfx('bosscast');
+    this.time.delayedCall(telegraph, () => {
+      telEv.remove(); tel.destroy();
+      const count = 8;
+      const sprites: Phaser.GameObjects.Sprite[] = [];
+      for (let k = 0; k < count; k++) {
+        const perp = Phaser.Math.Linear(perpMin, perpMax, k / (count - 1));
+        const s = this.add.sprite(horizontal ? startC : perp, horizontal ? perp : startC, 'tornado')
+          .setDepth(23).setScale(2.6).setTint(0xaee8ff);
+        this.tweens.add({ targets: s, angle: 360, duration: 280, repeat: -1 });
+        this.tweens.add({ targets: s, scaleX: 3.1, duration: 160, yoyo: true, repeat: -1 });
+        sprites.push(s);
+      }
+      this.sfx('bosscharge');
+      const band = 52;
+      let hitAt = 0;
+      this.tweens.addCounter({
+        from: startC, to: endC, duration: 1600, ease: 'Sine.easeInOut',
+        onUpdate: (tw) => {
+          const cur = tw.getValue() ?? endC;
+          for (const s of sprites) { if (horizontal) s.x = cur; else s.y = cur; }
+          const pl = this.player; const now = performance.now();
+          if (this.combatActive && pl && !pl.dead && now - hitAt > 300) {
+            const pc = horizontal ? pl.x : pl.y;
+            if (Math.abs(pc - cur) < band) { hitAt = now; pl.takeDamage(damage, pl.x, pl.y); }
+          }
+        },
+        onComplete: () => { sprites.forEach((s) => s.destroy()); },
+      });
     });
   }
 
