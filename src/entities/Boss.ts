@@ -580,7 +580,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   // ---------- IEnemyLike ----------
-  takeDamage(amount: number, _fx: number, _fy: number, opts?: { silent?: boolean }): void {
+  takeDamage(amount: number, _fx: number, _fy: number, opts?: { silent?: boolean; crit?: boolean }): void {
     if (!this.alive) return;
     // Invincible tant que ses pilônes de glace tiennent (Glacior).
     if (this.gs.bossInvincible()) {
@@ -594,6 +594,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.hp = Math.max(0, this.hp - amount);
     if (!opts?.silent) {
       this.gs.juice.flash(this, 60);
+      this.gs.juice.damageNumber(this.x, this.y - this.displayHeight * 0.75, Math.round(amount), !!opts?.crit);
       this.gs.sfx('hitmob');
     }
     this.gs.events.emit('bossHp', this.hp, this.maxHp);

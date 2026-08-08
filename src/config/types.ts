@@ -77,7 +77,7 @@ export interface IPlayerContext {
 export interface IEnemyLike {
   x: number;
   y: number;
-  takeDamage(amount: number, fromX: number, fromY: number, opts?: { silent?: boolean }): void;
+  takeDamage(amount: number, fromX: number, fromY: number, opts?: { silent?: boolean; crit?: boolean }): void;
   applyStatus(status: Element, duration: number): void;
   isAlive(): boolean;
   isBoss?: boolean;

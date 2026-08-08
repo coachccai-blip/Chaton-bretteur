@@ -681,7 +681,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (finisher) dmg *= 1.15;
     if (info?.first) dmg *= this.stats.firstComboMult; // Vitesse Extrême
     dmg = Math.round(dmg);
-    e.takeDamage(dmg, this.x, this.y);
+    e.takeDamage(dmg, this.x, this.y, { crit: isCrit });
     if (finisher) this.applyKnockback(e, this.stats.knockback);
     // crocs élémentaires (chance on-hit) + ralentissement (Toile Légère)
     if (this.stats.fangBurn && Math.random() < this.stats.fangBurn) e.applyStatus('burn', 1500);
@@ -690,7 +690,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (this.stats.hitSlow && anyE.applySlow) anyE.applySlow(1 - this.stats.hitSlow, 800);
     for (const fn of this.onHitFns) fn(e, dmg, isCrit, info);
     if (this.stats.lifesteal > 0) this.heal(dmg * this.stats.lifesteal);
-    if (isCrit) this.gs.juice.popText(e.x, e.y - 30, `${dmg}!`, '#ffe066', 18);
     // ORA ORA : coups instantanés supplémentaires (dégâts bruts)
     for (let i = 0; i < this.stats.extraHits; i++) {
       if (!e.isAlive()) break;

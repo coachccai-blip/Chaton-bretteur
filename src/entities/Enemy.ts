@@ -607,7 +607,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   // ---------------- IEnemyLike ----------------
-  takeDamage(amount: number, fromX: number, fromY: number, opts?: { silent?: boolean }): void {
+  takeDamage(amount: number, fromX: number, fromY: number, opts?: { silent?: boolean; crit?: boolean }): void {
     if (!this.alive) return;
     if (this.statuses.mark) amount = Math.round(amount * 1.3); // Marque (Haki)
     if (performance.now() < this.shieldedUntil) {
@@ -618,6 +618,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     if (!opts?.silent) {
       this.gs.juice.flash(this, 80);
       this.gs.juice.burst(this.x, this.y - 10, 0xffffff, 5, 120, 0.7);
+      this.gs.juice.damageNumber(this.x, this.y - this.displayHeight * 0.7, Math.round(amount), !!opts?.crit);
       this.gs.sfx('hitmob');
     }
     if (this.hp <= 0) this.kill(true);

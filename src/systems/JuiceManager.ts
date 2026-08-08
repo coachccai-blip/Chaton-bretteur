@@ -181,6 +181,25 @@ export class JuiceManager {
   }
 
   /** Texte flottant (dégâts, gains). */
+  /** Nombre de dégâts flottant : apparaît brièvement puis monte et s'efface. */
+  damageNumber(x: number, y: number, amount: number, crit = false): void {
+    if (amount <= 0) return;
+    const size = crit ? 22 : 15;
+    const color = crit ? '#ffd402' : '#ffffff';
+    const jx = x + Phaser.Math.Between(-9, 9);
+    const t = this.scene.add.text(jx, y, crit ? `${amount}!` : `${amount}`, {
+      fontFamily: 'monospace', fontSize: `${size}px`, color, fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: crit ? 4 : 3,
+    });
+    t.setOrigin(0.5).setDepth(81).setScale(0.5);
+    // petit « pop » d'apparition, puis montée + fondu
+    this.scene.tweens.add({ targets: t, scale: 1, duration: 90, ease: 'Back.easeOut' });
+    this.scene.tweens.add({
+      targets: t, y: y - 30, alpha: 0, duration: 560, delay: 110, ease: 'Cubic.easeIn',
+      onComplete: () => t.destroy(),
+    });
+  }
+
   popText(x: number, y: number, text: string, color: string, size = 16): void {
     const t = this.scene.add.text(x, y, text, {
       fontFamily: 'monospace',
