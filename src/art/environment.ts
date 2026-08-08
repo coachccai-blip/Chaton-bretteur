@@ -369,6 +369,88 @@ export const EXPLOSION: SpriteDef = {
   ],
 };
 
+/** Tourelle gatling (14x14) invoquée par le boss final. */
+export const TURRET: SpriteDef = {
+  key: 'turret',
+  pal: { '.': null, '#': '#12161a', 'd': '#2a3138', 'm': '#454e57', 'M': '#6b7680', 'r': '#ff4a3a' },
+  rows: [
+    '....#dmmd#....',
+    '....#dmmd#....',
+    '....#dmmd#....',
+    '....#dmmd#....',
+    '....#dmmd#....',
+    '...#mdmmdm#...',
+    '..#mMdmmdMm#..',
+    '..#mMdmrdMm#..',
+    '..#mMMmmMMm#..',
+    '..#mMMMMMMm#..',
+    '..#dmmMMmmd#..',
+    '..#ddmmmmdd#..',
+    '..#dddddddd#..',
+    '...########...',
+  ],
+};
+
+/** Char d'assaut (22x16) invoqué par le boss final, tire des roquettes. */
+export const TANK: SpriteDef = {
+  key: 'tank',
+  pal: { '.': null, '#': '#0e1410', 'd': '#22281f', 'm': '#4a5560', 'M': '#6b7680', 'C': '#5a6a38', 'c': '#3a4a28', 'r': '#ff4a3a' },
+  rows: [
+    '......................',
+    '......................',
+    '......................',
+    '.........#############',
+    '........#MMmmmmmmmmmmm',
+    '...#####MMMmmmmmmmmmmm',
+    '..#CCCCMMMMmmmmmmmmmmm',
+    '..#CcccMMMMrMMMcccC###',
+    '..#CccccMMMMMMccccC#..',
+    '..#CcccccMMMMcccccC#..',
+    '.##CccccccccccccccC##.',
+    '#d#CCCCCCCCCCCCCCCCdd#',
+    '#d##d##d##d##d##d##dd#',
+    '#d##d##d##d##d##d##dd#',
+    '#d##d##d##d##d##d##dd#',
+    '#d##d##d##d##d##d##dd#',
+  ],
+};
+
+/** Roquette de char (8x16). */
+export const TANK_MISSILE: SpriteDef = {
+  key: 'tank_missile',
+  pal: { '.': null, '#': '#20140a', 'r': '#b03020', 'R': '#ff5a3a', 'w': '#ffe0d0', 'o': '#ff7a1f', 'y': '#ffd24a' },
+  rows: [
+    '...##...',
+    '..#rr#..',
+    '.#rrrr#.',
+    '.#RRRR#.',
+    '.#RRRR#.',
+    '.#RRRR#.',
+    '.#RwwR#.',
+    '.#RwwR#.',
+    '.#RRRR#.',
+    '.#RRRR#.',
+    '#rRRRRr#',
+    '#rRRRRr#',
+    '#r####r#',
+    '.##oo##.',
+    '..#yy#..',
+    '..#yo#..',
+  ],
+};
+
+/** Balle traçante de gatling (6x4). */
+export const GATLING_BULLET: SpriteDef = {
+  key: 'gatling_bullet',
+  pal: { '.': null, '#': '#3a2a08', 'o': '#ff9a1f', 'y': '#ffe066', 'w': '#fff2c0' },
+  rows: [
+    '#####.',
+    'oyyyw#',
+    'oyyyw#',
+    '#####.',
+  ],
+};
+
 /** Ailes d'ange (22x14) : effet du revive « Retombée Féline ». */
 export const ANGEL_WINGS: SpriteDef = {
   key: 'angel_wings',

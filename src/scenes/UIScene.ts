@@ -417,6 +417,21 @@ export class UIScene extends Phaser.Scene {
     document.body.appendChild(root);
     this.domRoot = root;
 
+    // En plein écran, Phaser bascule le canvas dans un élément dédié : un overlay
+    // resté sur <body> DISPARAÎT. On replace donc les boutons tactiles DANS
+    // l'élément plein écran (et on les rend au <body> à la sortie).
+    const reparentControls = () => {
+      const fsEl = (document.fullscreenElement || (document as unknown as { webkitFullscreenElement?: Element }).webkitFullscreenElement) as HTMLElement | null;
+      const host = fsEl ? (fsEl.tagName === 'CANVAS' ? (fsEl.parentElement ?? document.body) : fsEl) : document.body;
+      if (root.parentElement !== host) host.appendChild(root);
+    };
+    document.addEventListener('fullscreenchange', reparentControls);
+    document.addEventListener('webkitfullscreenchange', reparentControls);
+    this.domCleanup.push(() => {
+      document.removeEventListener('fullscreenchange', reparentControls);
+      document.removeEventListener('webkitfullscreenchange', reparentControls);
+    });
+
     // -- déplacement : n'importe quel appui sur la moitié gauche de l'écran --
     let moveId: number | null = null, ox = 0, oy = 0;
     const R = 66; // rayon max (px écran)

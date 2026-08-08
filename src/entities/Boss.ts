@@ -279,17 +279,24 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     }
   }
 
-  /** Ruée commune à tous les boss : lunge rapide vers le joueur avec traînée. */
+  /** Ruée commune à tous les boss : zone rouge télégraphiée PUIS lunge rapide. */
   private startBossDash(dir: Phaser.Math.Vector2, now: number): void {
-    this.dashingUntil = now + 240;
+    const WIND = 300; // amorce télégraphiée (esquivable)
     this.nextDashAt = now + 2600 + Math.random() * 1600;
+    this.dashingUntil = now + WIND + 240; // reste « en ruée » (update n'écrase pas) pendant l'amorce + la ruée
     const body = this.body as Phaser.Physics.Arcade.Body;
-    const dashSpeed = 620 * this.gs.enemyTimeScale;
-    body.setVelocity(dir.x * dashSpeed, dir.y * dashSpeed);
-    this.gs.juice.dashTrail(this.x, this.y, this.def.auraColor);
-    this.gs.juice.burst(this.x, this.y, this.def.auraColor, 8, 150, 1);
-    this.gs.sfx('bosscharge');
+    body.setVelocity(0, 0);
+    const ang = Math.atan2(dir.y, dir.x);
+    this.gs.dashTelegraph(this.x, this.y, ang, 460, 64, WIND);
     if (Math.abs(dir.x) > 0.1) this.setFlipX(dir.x < 0);
+    this.gs.time.delayedCall(WIND, () => {
+      if (!this.alive) return;
+      const dashSpeed = 620 * this.gs.enemyTimeScale;
+      (this.body as Phaser.Physics.Arcade.Body).setVelocity(dir.x * dashSpeed, dir.y * dashSpeed);
+      this.gs.juice.dashTrail(this.x, this.y, this.def.auraColor);
+      this.gs.juice.burst(this.x, this.y, this.def.auraColor, 8, 150, 1);
+      this.gs.sfx('bosscharge');
+    });
   }
 
   private enterPhase(): void {
@@ -312,8 +319,18 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.gs.events.emit('bossPhase', this.phaseIndex + 1, this.def.phases.length);
   }
 
+  private lastSpeakAt = 0;
+  /** Réplique du boss (attaque signature) : bulle de texte au-dessus de lui. */
+  private speak(text: string): void {
+    const now = performance.now();
+    if (now - this.lastSpeakAt < 1400) return; // pas de spam
+    this.lastSpeakAt = now;
+    this.gs.juice.popText(this.x, this.y - this.displayHeight * 0.6 - 14, `« ${text} »`, '#ffe08a', 18);
+  }
+
   private execMove(i: number, dir: Phaser.Math.Vector2): void {
     const m = this.phase.moves[i];
+    if (m.say) this.speak(m.say);
     this.busy = true;
     (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     this.setTintFill(0xffffff);

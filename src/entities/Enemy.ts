@@ -113,14 +113,20 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
   /** Ruée : la bête bondit vers le joueur (mondes glacés et au-delà). */
   private startEnemyDash(dir: Phaser.Math.Vector2, now: number, body: Phaser.Physics.Arcade.Body): void {
-    this.dashingUntil = now + 220;
+    const WIND = 260; // amorce télégraphiée (zone rouge) avant la ruée
     this.nextDashAt = now + 2600 + Math.random() * 2400;
-    const ds = 520 * this.gs.enemyTimeScale;
-    body.setVelocity(dir.x * ds, dir.y * ds);
+    this.dashingUntil = now + WIND + 220; // update ne pilote pas pendant l'amorce + la ruée
+    body.setVelocity(0, 0);
     this.facingSign = dir.x > 0 ? 1 : -1;
     this.setFlipX(this.facingSign < 0);
-    this.gs.juice.dashTrail(this.x, this.y, 0xffffff);
-    this.atkSfx('bosscharge');
+    this.gs.dashTelegraph(this.x, this.y, Math.atan2(dir.y, dir.x), 320, 46, WIND);
+    this.gs.time.delayedCall(WIND, () => {
+      if (!this.alive) return;
+      const ds = 520 * this.gs.enemyTimeScale;
+      (this.body as Phaser.Physics.Arcade.Body).setVelocity(dir.x * ds, dir.y * ds);
+      this.gs.juice.dashTrail(this.x, this.y, 0xffffff);
+      this.atkSfx('bosscharge');
+    });
   }
 
   /** Rafale de projectiles visés, tirés en salve rapprochée vers le joueur. */
@@ -541,7 +547,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     const q = this.gs.player;
     let nx = dir.x, ny = dir.y;
     if (q && !q.dead) { const a2 = Math.atan2(q.y - this.y, q.x - this.x); nx = Math.cos(a2); ny = Math.sin(a2); }
-    this.gs.spawnEnemyProjectile(this.x, this.y - 16, nx, ny, a.projectileSpeed ?? 180, this.projDmg(a.projectileDamage ?? 8), a.status);
+    const opts = a.projTexture ? { texture: a.projTexture, radius: a.projRadius ?? 5, orient: !!a.projOrient, scale: 1.2 } : undefined;
+    this.gs.spawnEnemyProjectile(this.x, this.y - 16, nx, ny, a.projectileSpeed ?? 180, this.projDmg(a.projectileDamage ?? 8), a.status, undefined, opts);
   }
 
   private summon(): void {

@@ -36,6 +36,7 @@ export interface BossMove {
   summonCount?: number;
   chargeSpeed?: number;
   color?: number;
+  say?: string; // réplique lancée par le boss quand il déclenche ce coup (signature)
 }
 
 export interface BossPhase {
@@ -67,9 +68,9 @@ export const BOSSES: Record<string, BossDef> = {
     hp: 460, scale: 0.82, contactDamage: 14, auraColor: 0x59d9a0,
     phases: [
       { hpFrac: 1.0, speed: 150, moves: [
-        { type: 'arrowRain', telegraph: 700, cooldown: 2800, count: 7, radius: 46, damage: 16, color: 0x59d9a0 },
+        { type: 'arrowRain', telegraph: 700, cooldown: 2800, count: 7, radius: 46, damage: 16, color: 0x59d9a0, say: 'Pluie de flèches !' },
         { type: 'charge', telegraph: 620, cooldown: 3200, chargeSpeed: 540, damage: 20 },
-        { type: 'summon', telegraph: 700, cooldown: 8000, summonId: 'druide', summonCount: 2 },
+        { type: 'summon', telegraph: 700, cooldown: 8000, summonId: 'druide', summonCount: 2, say: 'À moi, druides !' },
       ]},
       { hpFrac: 0.5, speed: 190, tint: 0x9ee06a, moves: [
         { type: 'summon', telegraph: 700, cooldown: 8000, summonId: 'druide', summonCount: 2 },
@@ -87,7 +88,7 @@ export const BOSSES: Record<string, BossDef> = {
     hp: 620, scale: 0.82, contactDamage: 16, auraColor: 0x9fe04a,
     phases: [
       { hpFrac: 1.0, speed: 120, moves: [
-        { type: 'mudFlood', telegraph: 1100, cooldown: 5200, safeCount: 3, radius: 74, damage: 26, hazard: 'toxic', color: 0x8a6a3a },
+        { type: 'mudFlood', telegraph: 1100, cooldown: 5200, safeCount: 3, radius: 74, damage: 26, hazard: 'toxic', color: 0x8a6a3a, say: 'Bourbier !' },
         { type: 'shockwave', telegraph: 780, cooldown: 3000, radius: 165, damage: 20, color: 0x8a6a3a },
         // Gorbak invoque ses mini-gorbaks dès la phase 1.
         { type: 'summon', telegraph: 700, cooldown: 7000, summonId: 'minigorbak', summonCount: 2 },
@@ -110,7 +111,7 @@ export const BOSSES: Record<string, BossDef> = {
       { hpFrac: 1.0, speed: 205, movement: 'slither', moves: [
         { type: 'fireBurst', telegraph: 620, cooldown: 3000, count: 10, speed: 250, damage: 14, color: 0xff7a2a },
         // Signature : 5 tornades de feu venant de 5 directions (0,2 s d'intervalle).
-        { type: 'fireTornado', telegraph: 700, cooldown: 5600, count: 5, damage: 20, color: 0xff6a1f },
+        { type: 'fireTornado', telegraph: 700, cooldown: 5600, count: 5, damage: 20, color: 0xff6a1f, say: 'Tornades de feu !' },
         { type: 'geysers', telegraph: 640, cooldown: 3200, count: 5, radius: 74, damage: 22, hazard: 'lava', duration: 3000, color: 0xff6a1f },
       ]},
       { hpFrac: 0.5, speed: 250, movement: 'slither', tint: 0xff5522, moves: [
@@ -135,7 +136,7 @@ export const BOSSES: Record<string, BossDef> = {
       ]},
       { hpFrac: 0.66, speed: 185, moves: [
         // Mortis invoque des ÉCHOS de boss (Sylvaan / Gorbak / Ignis affaiblis) dès la phase 2.
-        { type: 'summon', telegraph: 800, cooldown: 8000, summonId: 'miniboss_sylvaan', summonCount: 1 },
+        { type: 'summon', telegraph: 800, cooldown: 8000, summonId: 'miniboss_sylvaan', summonCount: 1, say: 'Revenez d’entre les morts !' },
         { type: 'summon', telegraph: 800, cooldown: 8500, summonId: 'miniboss_gorbak', summonCount: 1 },
         { type: 'summon', telegraph: 800, cooldown: 9000, summonId: 'miniboss_ignis', summonCount: 1 },
         { type: 'glyphs', telegraph: 720, cooldown: 2800, count: 4, radius: 62, damage: 24, color: 0xb26bff },
@@ -160,7 +161,7 @@ export const BOSSES: Record<string, BossDef> = {
     phases: [
       { hpFrac: 1.0, speed: 160, moves: [
         // 0. Pilônes de Glace — invoqués au spawn, rendent Glacior invincible (damage = PV/pilône)
-        { type: 'icePylons', telegraph: 700, cooldown: 999999, damage: 130 },
+        { type: 'icePylons', telegraph: 700, cooldown: 999999, damage: 130, say: 'Gardiens de givre !' },
         // 1. Souffle du Zéro Absolu — rayon gelant balayé
         { type: 'lineSweep', telegraph: 900, cooldown: 3200, width: 70, length: 520, damage: 22, color: 0x7fdcff },
         // 2. Pluie de Stalactites — chute du ciel, quelques zones sûres
@@ -174,7 +175,7 @@ export const BOSSES: Record<string, BossDef> = {
         // Pluie de stalactites renforcée
         { type: 'iceRain', telegraph: 640, cooldown: 3200, count: 14, safeCount: 2, radius: 48, damage: 22, color: 0x9fd0e8 },
         // Tornade Abyssale — énorme tornade qui balaie l'écran (esquive au dash).
-        { type: 'tornadoSweep', telegraph: 850, cooldown: 6000, damage: 26 },
+        { type: 'tornadoSweep', telegraph: 850, cooldown: 6000, damage: 26, say: 'Tornade abyssale !' },
       ]},
       { hpFrac: 0.3, speed: 230, tint: 0xcfeaff, moves: [
         // 5. Étreinte du Blizzard — onde tournante
@@ -207,7 +208,7 @@ export const BOSSES: Record<string, BossDef> = {
       ]},
       { hpFrac: 0.3, speed: 235, tint: 0xffe08a, moves: [
         // 6. Jugement Céleste — grille de foudre
-        { type: 'crossBeams', telegraph: 640, cooldown: 3000, width: 60, damage: 26, color: 0xb0c8ff },
+        { type: 'crossBeams', telegraph: 640, cooldown: 3000, width: 60, damage: 26, color: 0xb0c8ff, say: 'Jugement céleste !' },
         { type: 'arrowRain', telegraph: 560, cooldown: 2400, count: 12, radius: 48, damage: 24, color: 0xffe08a },
         { type: 'diveBomb', telegraph: 480, cooldown: 2400, radius: 70, damage: 28, color: 0xb0c8ff },
         { type: 'shockwave', telegraph: 680, cooldown: 2800, radius: 175, damage: 24, color: 0xffe08a },
@@ -225,7 +226,7 @@ export const BOSSES: Record<string, BossDef> = {
       { hpFrac: 1.0, speed: 150, moves: [
         // 1. Combo Miroir — charge d'estoc
         { type: 'charge', telegraph: 520, cooldown: 2600, chargeSpeed: 600, damage: 22 },
-        { type: 'glyphs', telegraph: 760, cooldown: 3000, count: 4, radius: 60, damage: 20, color: 0xd05aff },
+        { type: 'glyphs', telegraph: 760, cooldown: 3000, count: 4, radius: 60, damage: 20, color: 0xd05aff, say: 'Gravité renversée !' },
         { type: 'arrowRain', telegraph: 640, cooldown: 3000, count: 8, radius: 46, damage: 20, color: 0x59d9ff },
       ]},
       { hpFrac: 0.75, speed: 185, tint: 0xe08aff, moves: [
@@ -260,24 +261,29 @@ export const BOSSES: Record<string, BossDef> = {
     hp: 2100, scale: 1.45, contactDamage: 34, auraColor: 0x8aa04a,
     phases: [
       { hpFrac: 1.0, speed: 175, moves: [
-        { type: 'mines', telegraph: 700, cooldown: 4200, count: 5, damage: 100, color: 0xff6a4a },
+        { type: 'mines', telegraph: 700, cooldown: 4200, count: 5, damage: 100, color: 0xff6a4a, say: 'Champ de mines !' },
         { type: 'grenades', telegraph: 700, cooldown: 3200, count: 3, damage: 55, color: 0x6a8a3a },
-        { type: 'missileRain', telegraph: 900, cooldown: 5000, count: 8, damage: 50, color: 0xff7a1f },
+        { type: 'missileRain', telegraph: 900, cooldown: 5000, count: 8, damage: 50, color: 0xff7a1f, say: 'MISSILE PRÉDATOR !' },
+        { type: 'summon', telegraph: 700, cooldown: 6000, summonId: 'turret', summonCount: 2, say: 'Tourelles, feu à volonté !' },
         { type: 'teleport', telegraph: 380, cooldown: 2600 },
       ]},
       { hpFrac: 0.6, speed: 205, tint: 0xc9d08a, moves: [
-        { type: 'missileRain', telegraph: 820, cooldown: 4200, count: 11, damage: 55, color: 0xff7a1f },
-        { type: 'summonBoss', telegraph: 900, cooldown: 9000 },
-        { type: 'mines', telegraph: 650, cooldown: 3800, count: 6, damage: 100, color: 0xff6a4a },
-        { type: 'tornadoSweep', telegraph: 800, cooldown: 6500, damage: 40 },
+        { type: 'missileRain', telegraph: 820, cooldown: 4200, count: 11, damage: 55, color: 0xff7a1f, say: 'MISSILE PRÉDATOR !' },
+        { type: 'summonBoss', telegraph: 900, cooldown: 9000, say: 'Debout, soldats déchus !' },
+        { type: 'summon', telegraph: 800, cooldown: 8000, summonId: 'tank', summonCount: 1, say: 'Char d’assaut, en avant !' },
+        { type: 'summon', telegraph: 650, cooldown: 6500, summonId: 'turret', summonCount: 2 },
+        { type: 'mines', telegraph: 650, cooldown: 3800, count: 6, damage: 100, color: 0xff6a4a, say: 'Champ de mines !' },
+        { type: 'tornadoSweep', telegraph: 800, cooldown: 6500, damage: 40, say: 'Ouragan d’acier !' },
         { type: 'charge', telegraph: 460, cooldown: 3000, chargeSpeed: 660, damage: 30 },
       ]},
       { hpFrac: 0.3, speed: 235, tint: 0xe0e0a0, moves: [
         { type: 'grenades', telegraph: 560, cooldown: 2600, count: 5, damage: 60, color: 0x6a8a3a },
-        { type: 'missileRain', telegraph: 720, cooldown: 3600, count: 14, damage: 60, color: 0xff7a1f },
-        { type: 'summonBoss', telegraph: 800, cooldown: 8000 },
+        { type: 'missileRain', telegraph: 720, cooldown: 3600, count: 14, damage: 60, color: 0xff7a1f, say: 'MISSILE PRÉDATOR !' },
+        { type: 'summonBoss', telegraph: 800, cooldown: 8000, say: 'Debout, soldats déchus !' },
+        { type: 'summon', telegraph: 700, cooldown: 6500, summonId: 'tank', summonCount: 2, say: 'Bataillon blindé !' },
+        { type: 'summon', telegraph: 600, cooldown: 5500, summonId: 'turret', summonCount: 3 },
         { type: 'mines', telegraph: 560, cooldown: 3400, count: 7, damage: 100, color: 0xff6a4a },
-        { type: 'tornadoSweep', telegraph: 700, cooldown: 5200, damage: 44 },
+        { type: 'tornadoSweep', telegraph: 700, cooldown: 5200, damage: 44, say: 'Ouragan d’acier !' },
         { type: 'teleport', telegraph: 300, cooldown: 1900 },
       ]},
     ],

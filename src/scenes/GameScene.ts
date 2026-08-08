@@ -1318,6 +1318,24 @@ export class GameScene extends Phaser.Scene {
     if (this.boss?.isAlive()) cl(this.boss as unknown as { x: number; y: number });
   }
 
+  /** Couloir rouge télégraphiant une RUÉE (dash) de monstre/boss avant l'élan. */
+  dashTelegraph(x: number, y: number, angle: number, len: number, width: number, ms = 280): void {
+    const nx = Math.cos(angle), ny = Math.sin(angle);
+    const ex = x + nx * len, ey = y + ny * len;
+    const g = this.add.graphics().setDepth(3);
+    let t = 0;
+    const draw = () => {
+      t += 40; const a = 0.26 + 0.2 * Math.sin(t / 55);
+      g.clear();
+      g.lineStyle(width, 0xff3020, a * 0.5); g.lineBetween(x, y, ex, ey);
+      g.lineStyle(Math.max(3, width * 0.4), 0xff7a5a, a); g.lineBetween(x, y, ex, ey);
+      g.fillStyle(0xff3020, a * 0.6); g.fillCircle(ex, ey, width * 0.5);
+    };
+    draw();
+    const ev = this.time.addEvent({ delay: 40, loop: true, callback: draw });
+    this.time.delayedCall(ms, () => { ev.remove(); g.destroy(); });
+  }
+
   /** Explosion (mine/grenade/missile) : sprite + dégâts de zone (esquive au dash). */
   detonate(x: number, y: number, r: number, dmg: number): void {
     const e = this.add.sprite(x, y, 'explosion').setDepth(28).setScale(0.5);

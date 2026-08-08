@@ -37,6 +37,9 @@ export interface EnemyDef {
     summonId?: string;
     summonCount?: number;
     mudCone?: number; // >1 : crache N globs de boue en cône qui deviennent des flaques
+    projTexture?: string; // texture dédiée du projectile (balle gatling, roquette…)
+    projRadius?: number;
+    projOrient?: boolean; // oriente le projectile selon sa trajectoire
   };
   signature?: EnemySignature;
 }
@@ -228,6 +231,19 @@ export const ENEMIES: Record<string, EnemyDef> = {
     hp: 260, speed: 110, damage: 18, scale: 0.55,
     attack: { telegraph: 520, cooldown: 2000, range: 340, projectileSpeed: 300, projectileDamage: 14 },
     signature: { type: 'castZone', telegraph: 720, cooldown: 3400, damage: 20, range: 360, radius: 62, color: 0xd05aff },
+  },
+  // -- Renforts mécaniques du boss final --
+  turret: {
+    id: 'turret', name: 'Tourelle', sprite: 'turret', texKey: 'turret', behavior: 'shooter',
+    hp: 90, speed: 0, damage: 8, scale: 0.9,
+    // Gatling : tir rapide et continu vers le joueur (balles traçantes).
+    attack: { telegraph: 80, cooldown: 120, range: 620, projectileSpeed: 470, projectileDamage: 8, projTexture: 'gatling_bullet', projRadius: 4, projOrient: true },
+  },
+  tank: {
+    id: 'tank', name: 'Char d’Assaut', sprite: 'tank', texKey: 'tank', behavior: 'shooter',
+    hp: 240, speed: 46, damage: 18, scale: 0.9,
+    // Tire des roquettes vers le joueur.
+    attack: { telegraph: 620, cooldown: 2200, range: 540, projectileSpeed: 270, projectileDamage: 18, projTexture: 'tank_missile', projRadius: 6, projOrient: true },
   },
   bebeserpent: {
     id: 'bebeserpent', name: 'Serpenteau', sprite: 'bebeserpent', behavior: 'chaser',
