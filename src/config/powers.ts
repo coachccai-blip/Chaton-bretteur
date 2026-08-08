@@ -637,7 +637,7 @@ export const POWERS: PowerDef[] = [
     apply(p) { p.stats.instakillChance += 0.07; },
   },
   {
-    id: 'alucard', name: 'Soif d’Alucard', god: 'Roi Vampire', category: 'divine', rarity: 'legendary', icon: 'lifesteal',
+    id: 'alucard', name: 'BT d’Arès', god: 'Dieu de la Guerre', category: 'divine', rarity: 'legendary', icon: 'lifesteal',
     description: 'Vol de vie (12% des dégâts) + 8 PV par ennemi tué — mais ne soigne QUE jusqu’à 30% des PV max.',
     apply(p) {
       p.addOnHit((_e, dmg) => p.healUpTo(dmg * 0.12, 0.30));

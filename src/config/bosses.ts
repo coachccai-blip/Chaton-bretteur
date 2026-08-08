@@ -56,6 +56,7 @@ export interface BossDef {
   scale: number;
   contactDamage: number;
   auraColor: number;
+  level: number; // niveau fictif affiché (Sylvaan 10, +5 par boss, BIG BOSS 99)
   phases: BossPhase[];
 }
 
@@ -65,7 +66,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   araignee: {
     id: 'araignee', name: 'Sylvaan', title: 'le Centaure Archer', sprite: 'centaure',
-    hp: 460, scale: 0.82, contactDamage: 14, auraColor: 0x59d9a0,
+    hp: 460, scale: 0.82, contactDamage: 14, auraColor: 0x59d9a0, level: 10,
     phases: [
       { hpFrac: 1.0, speed: 150, moves: [
         { type: 'arrowRain', telegraph: 700, cooldown: 2800, count: 7, radius: 46, damage: 16, color: 0x59d9a0, say: 'Pluie de flèches !' },
@@ -85,7 +86,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   crapaudroi: {
     id: 'crapaudroi', name: 'Gorbak', title: 'le Gobu Géant', sprite: 'gobugeant',
-    hp: 620, scale: 0.82, contactDamage: 16, auraColor: 0x9fe04a,
+    hp: 620, scale: 0.82, contactDamage: 16, auraColor: 0x9fe04a, level: 15,
     phases: [
       { hpFrac: 1.0, speed: 120, moves: [
         { type: 'mudFlood', telegraph: 1100, cooldown: 5200, safeCount: 3, radius: 74, damage: 26, hazard: 'toxic', color: 0x8a6a3a, say: 'Bourbier !' },
@@ -106,7 +107,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   golem: {
     id: 'golem', name: 'Ignis', title: 'le Serpent de Lave', sprite: 'serpentlave',
-    hp: 760, scale: 0.82, contactDamage: 18, auraColor: 0xff6a1f,
+    hp: 760, scale: 0.82, contactDamage: 18, auraColor: 0xff6a1f, level: 20,
     phases: [
       { hpFrac: 1.0, speed: 205, movement: 'slither', moves: [
         { type: 'fireBurst', telegraph: 620, cooldown: 3000, count: 10, speed: 250, damage: 14, color: 0xff7a2a },
@@ -127,7 +128,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   roi: {
     id: 'roi', name: 'Mortis', title: 'l’Archimage Mort-vivant', sprite: 'archimage',
-    hp: 1150, scale: 0.82, contactDamage: 20, auraColor: 0xb26bff,
+    hp: 1150, scale: 0.82, contactDamage: 20, auraColor: 0xb26bff, level: 30,
     phases: [
       { hpFrac: 1.0, speed: 140, moves: [
         { type: 'summon', telegraph: 700, cooldown: 6000, summonId: 'zombie', summonCount: 2 },
@@ -157,7 +158,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   leviathan: {
     id: 'leviathan', name: 'Glacior', title: 'le Léviathan des Abysses', sprite: 'leviathan',
-    hp: 1400, scale: 0.82, contactDamage: 22, auraColor: 0x7fdcff,
+    hp: 1400, scale: 0.82, contactDamage: 22, auraColor: 0x7fdcff, level: 40,
     phases: [
       { hpFrac: 1.0, speed: 160, moves: [
         // 0. Pilônes de Glace — invoqués au spawn, rendent Glacior invincible (damage = PV/pilône)
@@ -192,7 +193,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   rapace: {
     id: 'rapace', name: 'Voltaïr', title: 'le Rapace du Jugement', sprite: 'rapace',
-    hp: 1750, scale: 0.82, contactDamage: 24, auraColor: 0xb0c8ff,
+    hp: 1750, scale: 0.82, contactDamage: 24, auraColor: 0xb0c8ff, level: 50,
     phases: [
       { hpFrac: 1.0, speed: 175, moves: [
         { type: 'arrowRain', telegraph: 640, cooldown: 2600, count: 9, radius: 46, damage: 20, color: 0xb0c8ff },
@@ -221,7 +222,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   reflet: {
     id: 'reflet', name: 'Néantis', title: 'le Reflet Noir', sprite: 'reflet',
-    hp: 2100, scale: 0.82, contactDamage: 26, auraColor: 0xd05aff,
+    hp: 2100, scale: 0.82, contactDamage: 26, auraColor: 0xd05aff, level: 60,
     phases: [
       { hpFrac: 1.0, speed: 150, moves: [
         // 1. Combo Miroir — charge d'estoc
@@ -257,8 +258,8 @@ export const BOSSES: Record<string, BossDef> = {
   // échos enragés des boss vaincus. 20× les PV de Néantis.
   // =============================================================
   militaire: {
-    id: 'militaire', name: 'Général Kaptain Miaou', title: 'l’Ombre Militaire', sprite: 'militaire',
-    hp: 2100, scale: 1.45, contactDamage: 34, auraColor: 0x8aa04a,
+    id: 'militaire', name: 'BIG BOSS', title: 'le Chat Militaire', sprite: 'militaire',
+    hp: 2100, scale: 1.45, contactDamage: 34, auraColor: 0x8aa04a, level: 99,
     phases: [
       { hpFrac: 1.0, speed: 175, moves: [
         { type: 'mines', telegraph: 700, cooldown: 4200, count: 5, damage: 100, color: 0xff6a4a, say: 'Champ de mines !' },

@@ -10,6 +10,7 @@ export interface SaveData {
   bestZone: number;
   clears: number;
   bestTimes: Record<string, number>; // difficultyId -> meilleur temps de clear (secondes)
+  materials: Record<string, number>; // id de matériau -> quantité possédée
   settings: { volume: number; muted: boolean };
 }
 
@@ -21,6 +22,7 @@ function defaults(): SaveData {
     bestZone: 0,
     clears: 0,
     bestTimes: {},
+    materials: {},
     settings: { volume: 0.7, muted: false },
   };
 }
@@ -78,15 +80,34 @@ class Save {
     return def.costPerTier[tier];
   }
 
+  // ---- Matériaux de boss ----
+  materialCount(id: string): number { return this.data.materials[id] ?? 0; }
+  addMaterial(id: string, n = 1): void {
+    this.data.materials[id] = this.materialCount(id) + n;
+    this.save();
+  }
+  /** Coût en matériaux du prochain palier (vide si aucun / max atteint). */
+  matCostOf(id: string): Record<string, number> {
+    const def = getMetaById(id);
+    if (!def || !def.matCost || this.tierOf(id) >= def.maxTier) return {};
+    return def.matCost;
+  }
+  hasMaterialsFor(id: string): boolean {
+    const cost = this.matCostOf(id);
+    return Object.entries(cost).every(([k, v]) => this.materialCount(k) >= v);
+  }
+
   canBuy(id: string): boolean {
     const cost = this.nextCost(id);
-    return cost !== null && this.data.currency >= cost;
+    return cost !== null && this.data.currency >= cost && this.hasMaterialsFor(id);
   }
 
   buy(id: string): boolean {
     const cost = this.nextCost(id);
-    if (cost === null || this.data.currency < cost) return false;
+    if (cost === null || this.data.currency < cost || !this.hasMaterialsFor(id)) return false;
+    const mats = this.matCostOf(id);
     this.data.currency -= cost;
+    for (const [k, v] of Object.entries(mats)) this.data.materials[k] = this.materialCount(k) - v;
     this.data.upgrades[id] = this.tierOf(id) + 1;
     this.save();
     return true;

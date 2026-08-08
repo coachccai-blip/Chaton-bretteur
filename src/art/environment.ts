@@ -451,6 +451,70 @@ export const GATLING_BULLET: SpriteDef = {
   ],
 };
 
+/** ===== Matériaux lâchés par les boss (icônes récupérables + camp) ===== */
+export const MAT_WOOD: SpriteDef = {
+  key: 'mat_wood', pal: { '.': null, '#': '#2a1a0a', 't': '#8a5a2a', 'O': '#b8863a', 'o': '#5a3a18' },
+  rows: [
+    '.......#tttt', '......#ttttt', '.....#ttttt#', '....#ttttt#.', '.###ttttt#..',
+    '#OOttttt#...', 'OOOOttt#....', 'OOoOtt#.....', 'tOOtt#......', 'tttt#.......',
+  ],
+};
+export const MAT_MUD: SpriteDef = {
+  key: 'mat_mud', pal: { '.': null, '#': '#22160a', 'G': '#6a4a22', 'g': '#8a6a34', 'h': '#a7c24a' },
+  rows: [
+    '............', '.....##.....', '..###GG###..', '.#GggggGGG#.', '#GggggggGGG#',
+    '#GggggggGGG#', '#GGggggGGGG#', '#GGhGGGGGGG#', '.#GGGGGGhG#.', '..###GG###..',
+  ],
+};
+export const MAT_WING: SpriteDef = {
+  key: 'mat_wing', pal: { '.': null, '#': '#3a1200', 'o': '#ff6a1f', 'y': '#ffc24a' },
+  rows: [
+    '............', '..#.........', '.#o####.....', '..##ooo#####', '..##y#yooooo',
+    '..##y#y#yyy#', '..##y#y#y##.', '..##o#y#y##.', '..##o#y####.', '..##o#y####.',
+    '..##o######.', '...#o#.#.#..',
+  ],
+};
+export const MAT_TAIL: SpriteDef = {
+  key: 'mat_tail', pal: { '.': null, '#': '#1a0f28', 'P': '#b060ff', 'p': '#7a2ad0', 'y': '#ffe066' },
+  rows: [
+    '........#PP#', '.......#PPPP', '.......#PPyP', '........#PP#', '.......#Pp#.',
+    '......#Pp#..', '.....#Pp#...', '....#Pp#....', '...#Pp#.....', '..#Pp#......',
+    '.#Pp#.......', '.#p#........',
+  ],
+};
+export const MAT_SPIKE: SpriteDef = {
+  key: 'mat_spike', pal: { '.': null, '#': '#0a2438', 'B': '#59b8e8', 'c': '#bfeaff', 'w': '#ffffff' },
+  rows: [
+    '.....#B#....', '.....#B#....', '.....#c#....', '.....#c#....', '....#wwB#...',
+    '....#wwB#...', '....#wwB#...', '...#BwwcB#..', '...#BwwcB#..', '...#BwwcB#..',
+    '..#BBwwcBB#.', '..#BBwwcBB#.', '..#BcccccB#.', '.#BBBBBBBBB#',
+  ],
+};
+export const MAT_CAPE: SpriteDef = {
+  key: 'mat_cape', pal: { '.': null, '#': '#101828', 'v': '#3a4a7a', 'V': '#5a72b8', 'y': '#ffe08a' },
+  rows: [
+    '.....#v#....', '.....#v#....', '.....#V#....', '....#vyv#...', '....#vVv#...',
+    '....#vyv#...', '...#vVVVv#..', '...#vVyVv#..', '..#vvVVVvv#.', '..#vVVyVVv#.',
+    '..#vVVVVVv#.', '.#vvVVyVVvv#', '.#vVVVVVVVv#', '#vvvvvvvvvvv',
+  ],
+};
+export const MAT_SCEPTER: SpriteDef = {
+  key: 'mat_scepter', pal: { '.': null, '#': '#160f28', 'P': '#7a2ad0', 'e': '#c78aff', 'w': '#ffffff', 'm': '#8a7a4a' },
+  rows: [
+    '...#PPPP#...', '..#PPeePP#..', '..#PeeeeP#..', '..#PeeweP#..', '..#PPeePP#..',
+    '...#PPPP#...', '....#mm#....', '....#mm#....', '....#mm#....', '....#mm#....',
+    '....#mm#....', '....#mm#....', '....#mm#....', '....#mm#....',
+  ],
+};
+export const MAT_BANDANA: SpriteDef = {
+  key: 'mat_bandana', pal: { '.': null, '#': '#0e1408', 'g': '#3a5a2e', 'G': '#5a8a3a', 'r': '#d0402a' },
+  rows: [
+    '............', '............', '.##########.', '#gggggggggg#', '#GGrGGGrGGg#',
+    '#gggggggggg#', '.########gg#', '.......#ggg#', '........#ggg', '.........##g',
+  ],
+};
+export const MATERIAL_ART: SpriteDef[] = [MAT_WOOD, MAT_MUD, MAT_WING, MAT_TAIL, MAT_SPIKE, MAT_CAPE, MAT_SCEPTER, MAT_BANDANA];
+
 /** Ailes d'ange (22x14) : effet du revive « Retombée Féline ». */
 export const ANGEL_WINGS: SpriteDef = {
   key: 'angel_wings',

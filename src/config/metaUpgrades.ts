@@ -11,6 +11,8 @@ export interface MetaUpgradeDef {
   apply(base: PlayerStats, tier: number): void;
   /** effet spécial non couvert par les stats (ex: revive), lu par le moteur. */
   flag?: string;
+  /** coût EN MATÉRIAUX de boss (par achat) : {id_materiau: quantité}. */
+  matCost?: Record<string, number>;
 }
 
 export const META_UPGRADES: MetaUpgradeDef[] = [
@@ -38,12 +40,14 @@ export const META_UPGRADES: MetaUpgradeDef[] = [
     id: 'lucky_cat', name: 'Chat Chanceux', icon: 'luck', maxTier: 3, costPerTier: [90, 220, 480],
     description: 'Pouvoirs rares plus fréquents (+8% par palier).',
     apply(base, tier) { base.luck += 0.08 * tier; },
+    matCost: { voltair_cape: 1 },
   },
   {
     id: 'land_on_feet', name: 'Retombée Féline', icon: 'revive', maxTier: 3, costPerTier: [600, 1400, 3000],
     description: 'Une renaissance par palier et par run (revive à 40% des PV). Jusqu’à 3.',
     apply() { /* lu via flag + reviveCharges (nb de paliers) */ },
     flag: 'revive',
+    matCost: { neantis_scepter: 1 },
   },
   {
     id: 'room_purr', name: 'Ronronthérapie', icon: 'heart', maxTier: 5, costPerTier: [40, 85, 170, 340, 640],
@@ -60,6 +64,7 @@ export const META_UPGRADES: MetaUpgradeDef[] = [
     description: 'Ajoute des pouvoirs Légendaires au pool.',
     apply() { /* lu via flag */ },
     flag: 'arsenal',
+    matCost: { boss_bandana: 1 },
   },
 ];
 

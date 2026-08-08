@@ -3,6 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config/game';
 import { button, label, panel, iconBadge } from '../ui/theme';
 import { SaveSystem, formatTime } from '../systems/SaveSystem';
 import { META_UPGRADES } from '../config/metaUpgrades';
+import { MATERIALS, materialById } from '../config/materials';
 import { DIFFICULTIES } from '../config/difficulty';
 import { glyphTexture } from '../art/icons';
 import { AudioManager } from '../systems/AudioManager';
@@ -12,6 +13,7 @@ export class HubScene extends Phaser.Scene {
   private selectedDiff = 'normal';
   private currencyText!: Phaser.GameObjects.Text;
   private cardsLayer!: Phaser.GameObjects.Container;
+  private invLayer!: Phaser.GameObjects.Container;
   private diffButtons: { id: string; g: Phaser.GameObjects.Graphics; x: number; y: number; w: number; h: number }[] = [];
   private diffLayer!: Phaser.GameObjects.Container;
 
@@ -47,6 +49,10 @@ export class HubScene extends Phaser.Scene {
     // grille d'améliorations
     this.cardsLayer = this.add.container(0, 0);
     this.buildCards();
+
+    // inventaire de matériaux de boss (bande sous la grille)
+    this.invLayer = this.add.container(0, 0);
+    this.buildInventory();
 
     // partir
     button(this, GAME_WIDTH / 2, GAME_HEIGHT - 40, 300, 56, '🐾  PARTIR À L’AVENTURE', () => {
@@ -99,6 +105,22 @@ export class HubScene extends Phaser.Scene {
     this.diffLayer.add(label(this, GAME_WIDTH / 2, 150, recTxt, 13, '#f4c430'));
   }
 
+  private buildInventory(): void {
+    this.invLayer.removeAll(true);
+    const y = 458;
+    const n = MATERIALS.length;
+    const spacing = 60;
+    const startX = GAME_WIDTH / 2 - (n - 1) * spacing / 2;
+    this.invLayer.add(label(this, GAME_WIDTH / 2, y - 20, 'Ressources de boss (lâchées à leur 1re défaite)', 11, '#8a8098'));
+    MATERIALS.forEach((md, i) => {
+      const x = startX + i * spacing;
+      const cnt = SaveSystem.materialCount(md.id);
+      const img = this.add.image(x - 9, y, md.icon).setScale(1.0).setAlpha(cnt > 0 ? 1 : 0.35);
+      const t = label(this, x + 8, y, `×${cnt}`, 12, cnt > 0 ? '#f4e9c1' : '#6a6478', 0, 0.5);
+      this.invLayer.add([img, t]);
+    });
+  }
+
   private buildCards(): void {
     this.cardsLayer.removeAll(true);
     const cols = 4, cw = 210, ch = 86, gapX = 16, gapY = 10;
@@ -134,6 +156,19 @@ export class HubScene extends Phaser.Scene {
       const cLabel = label(this, x + cw / 2 - 12, y + ch / 2 - 13, costStr, 12, maxed ? '#6ad46a' : (canBuy ? '#f4c430' : '#8a8098'), 1, 0.5);
       this.cardsLayer.add(cLabel);
 
+      // coût EN MATÉRIAUX de boss (icône + quantité, à gauche du coût en pièces)
+      if (!maxed) {
+        const mats = Object.entries(SaveSystem.matCostOf(m.id));
+        mats.forEach(([mid, qty], k) => {
+          const md = materialById(mid);
+          const has = SaveSystem.materialCount(mid) >= qty;
+          const ix = x + cw / 2 - 62 - k * 30;
+          const mimg = this.add.image(ix, y + ch / 2 - 13, md?.icon ?? 'mat_wood').setScale(0.8);
+          const mtxt = label(this, ix + 9, y + ch / 2 - 13, `${qty}`, 11, has ? '#f4c430' : '#ff6a6a', 0, 0.5);
+          this.cardsLayer.add([mimg, mtxt]);
+        });
+      }
+
       if (!maxed) {
         const hit = this.add.rectangle(x, y, cw, ch, 0x000000, 0.001).setInteractive();
         hit.on('pointerdown', () => {
@@ -141,6 +176,7 @@ export class HubScene extends Phaser.Scene {
             AudioManager.play('coin');
             this.refreshCurrency();
             this.buildCards();
+            this.buildInventory();
           } else {
             AudioManager.play('ui');
             this.cameras.main.shake(120, 0.004);

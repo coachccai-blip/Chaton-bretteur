@@ -4,6 +4,7 @@ import { ZONES, type ZoneDef } from '../config/worlds';
 import { ENEMIES } from '../config/enemies';
 import { BOSSES } from '../config/bosses';
 import { BOSS_TAUNTS } from '../config/bossTaunts';
+import { materialByBoss, materialById } from '../config/materials';
 import { getDifficulty } from '../config/difficulty';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
@@ -145,6 +146,7 @@ export class GameScene extends Phaser.Scene {
   private enemyTimeScaleUntil = 0;
   private friendlyShots: FriendlyShot[] = [];
   private souls: Soul[] = [];
+  private materialPickups: { sprite: Phaser.GameObjects.Sprite; matId: string }[] = [];
 
   constructor() { super('Game'); }
 
@@ -164,6 +166,7 @@ export class GameScene extends Phaser.Scene {
     this.pendingBoons = 0; this.rewardActive = false;
     this.finalActive = false; this.finalGfx?.destroy(); this.finalGfx = undefined;
     this.bossMines.forEach((m) => m.sprite.destroy()); this.bossMines = [];
+    this.materialPickups.forEach((m) => m.sprite.destroy()); this.materialPickups = [];
     this.bossOverlap = undefined;
     this.boss = null;
     this.enemyTimeScale = 1;
@@ -242,6 +245,8 @@ export class GameScene extends Phaser.Scene {
   private clearRoom(): void {
     this.roomObjects.forEach((o) => o.destroy());
     this.roomObjects = [];
+    this.materialPickups.forEach((m) => m.sprite.destroy());
+    this.materialPickups = [];
     this.walls.clear(true, true);
     this.clearDoors();
     this.clearTraps();
@@ -666,7 +671,7 @@ export class GameScene extends Phaser.Scene {
           const bs = b as Boss;
           if (bs.isAlive()) this.player.takeDamage(bs.contactDamage, bs.x, bs.y);
         });
-        this.events.emit('bossName', `${def.name}, ${def.title}`);
+        this.events.emit('bossName', `Nv ${def.level} · ${def.name}, ${def.title}`);
         this.events.emit('bossHp', this.boss.hp, this.boss.maxHp);
         this.events.emit('bossPhase', 1, def.phases.length);
       });
@@ -1116,20 +1121,25 @@ export class GameScene extends Phaser.Scene {
 
     // BOSS FINAL : pas de round enragé — sa chute conclut le jeu (VICTOIRE ultime).
     if (this.finalActive && wasPrimary) {
+      // Lâche (et garantit) le Bandana du BIG BOSS.
+      this.spawnMaterialDrop(b.x, b.y, 'boss_bandana');
+      SaveSystem.addMaterial('boss_bandana', 1);
       this.roomState = 'transition';
       this.bossMines.forEach((m) => m.sprite.destroy()); this.bossMines = [];
       this.activeEnemies.forEach((e) => e.destroy()); this.activeEnemies.clear();
       this.time.timeScale = 0.35; this.physics.world.timeScale = 2.8;
       this.time.delayedCall(1600, () => {
         this.time.timeScale = 1; this.physics.world.timeScale = 1;
-        this.banner('L’OMBRE MILITAIRE EST VAINCUE !', () => this.finishRun(true));
+        this.banner('BIG BOSS VAINCU !', () => this.finishRun(true));
       });
       return;
     }
 
     if (!this.rageActive && !wasRage) {
-      // PREMIÈRE défaite du boss → PAS de passage de zone : on enchaîne sur le
-      // round ENRAGÉ (dialogue puis 3 clones simultanés).
+      // PREMIÈRE défaite du boss → il lâche son MATÉRIAU (à récupérer avant/pendant
+      // le round enragé), puis on enchaîne sur le round ENRAGÉ (3 clones).
+      const mat = materialByBoss(this.zone.bossId);
+      if (mat) this.spawnMaterialDrop(b.x, b.y, mat.id);
       this.roomState = 'transition';
       this.bossHazards = [];
       this.bossOverlap?.destroy();
@@ -1205,7 +1215,7 @@ export class GameScene extends Phaser.Scene {
           this.rageOverlaps.push(ov);
         }
         this.boss = this.rageBosses[0]; // primaire (nom/HUD)
-        this.events.emit('bossName', `${def.name} ENRAGÉ ×3`);
+        this.events.emit('bossName', `Nv ${def.level} · ${def.name} ENRAGÉ ×3`);
         this.events.emit('bossHp', this.rageMaxTotal, this.rageMaxTotal);
         this.events.emit('bossPhase', def.phases.length, def.phases.length);
         AudioManager.startMusic('boss');
@@ -1269,7 +1279,7 @@ export class GameScene extends Phaser.Scene {
         this.bossOverlap = this.physics.add.overlap(this.player, this.boss, (_p, b) => {
           const bs = b as Boss; if (bs.isAlive()) this.player.takeDamage(bs.contactDamage, bs.x, bs.y);
         });
-        this.events.emit('bossName', `${def.name}, ${def.title}`);
+        this.events.emit('bossName', `Nv ${def.level} · ${def.name}, ${def.title}`);
         this.events.emit('bossHp', this.boss.maxHp, this.boss.maxHp);
         this.events.emit('bossPhase', 1, def.phases.length);
         AudioManager.startMusic('boss');
@@ -1334,6 +1344,41 @@ export class GameScene extends Phaser.Scene {
     draw();
     const ev = this.time.addEvent({ delay: 40, loop: true, callback: draw });
     this.time.delayedCall(ms, () => { ev.remove(); g.destroy(); });
+  }
+
+  /** Lâche un matériau de boss récupérable (icône flottante) à collecter. */
+  spawnMaterialDrop(x: number, y: number, matId: string): void {
+    const def = materialById(matId); if (!def) return;
+    const s = this.add.sprite(x, y, def.icon).setDepth(17).setScale(2.4);
+    this.tweens.add({ targets: s, y: y - 10, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: s, scale: 2.8, duration: 700, yoyo: true, repeat: -1 });
+    this.juice.ring(x, y, 60, 0xffe08a, 500);
+    this.juice.popText(x, y - 44, `${def.name} !`, '#ffe08a', 18);
+    this.sfx('coin');
+    this.materialPickups.push({ sprite: s, matId });
+  }
+
+  private updateMaterialPickups(): void {
+    if (!this.materialPickups.length) return;
+    const p = this.player; if (!p || p.dead) return;
+    this.materialPickups = this.materialPickups.filter((m) => {
+      if (!m.sprite.active) return false;
+      const d = Math.hypot(p.x - m.sprite.x, p.y - m.sprite.y);
+      if (d < 200) { // aspiration douce vers le chaton
+        m.sprite.x = Phaser.Math.Linear(m.sprite.x, p.x, 0.12);
+        m.sprite.y = Phaser.Math.Linear(m.sprite.y, p.y, 0.12);
+      }
+      if (d < 34) {
+        const def = materialById(m.matId);
+        SaveSystem.addMaterial(m.matId, 1);
+        this.juice.burst(m.sprite.x, m.sprite.y, 0xffe08a, 10, 160, 1);
+        if (def) this.juice.popText(p.x, p.y - 40, `+1 ${def.name}`, '#ffe08a', 15);
+        this.sfx('coin');
+        m.sprite.destroy();
+        return false;
+      }
+      return true;
+    });
   }
 
   /** Explosion (mine/grenade/missile) : sprite + dégâts de zone (esquive au dash). */
@@ -2354,6 +2399,7 @@ export class GameScene extends Phaser.Scene {
     this.updateHazards(now);
     this.updateTraps(now);
     this.updateSouls();
+    this.updateMaterialPickups();
     if (this.finalActive) { this.updateBossMines(now); this.clampFinalArena(); }
 
     // fin du ralentissement temporel (The World)

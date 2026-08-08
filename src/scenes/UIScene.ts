@@ -107,7 +107,8 @@ export class UIScene extends Phaser.Scene {
     this.progressText = label(this, 400, 22, '', 15, '#f4e9c1', 0).setDepth(3);
 
     // powers acquis (décalés sous la barre d'XP)
-    this.powersLayer = this.add.container(0, 64).setDepth(3);
+    // abaissé pour ne pas masquer le niveau (Nv X) sous la barre d'XP.
+    this.powersLayer = this.add.container(0, 82).setDepth(3);
 
     // boss bar
     this.bossLayer = this.add.container(0, 0).setDepth(5).setVisible(false);
