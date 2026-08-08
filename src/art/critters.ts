@@ -254,6 +254,40 @@ export const MONSTER_RECIPES: Record<string, Recipe> = {
   bebeserpent: { w: 14, h: 13, body: '#7a2a14', belly: '#ff8a3a', outline: '#1a0a05', eye: 'glow', eyeColor: '#ffd24a', feature: 'spikes', accent: '#ff5522' },
   zombie: { w: 17, h: 19, body: '#5a6a4a', belly: '#7a8a5a', outline: '#161d10', eye: 'glow', eyeColor: '#9ee06a', feature: 'none', accent: '#3a4a2a' },
   araigneemini: { w: 16, h: 13, body: '#3a2c5a', belly: '#5a4a7a', outline: '#140f24', eye: 'glow', eyeColor: '#c78aff', feature: 'spider', accent: '#8a5cff' },
+
+  // ==================================================================
+  //  Monde 5 — Abysses de Givre (bleus glaciers, blancs, cyan)
+  // ==================================================================
+  yeti: { w: 24, h: 22, body: '#dce8f0', belly: '#9fc0d8', outline: '#1a2634', eye: 'angry', eyeColor: '#7fdcff', feature: 'spikes', accent: '#b8d4e8' },
+  spectregivre: { w: 18, h: 18, body: '#bfd8e8', outline: '#2a3a4a', eye: 'glow', eyeColor: '#7fdcff', feature: 'ghost', accent: '#8fb8d8' },
+  stalactite: { w: 16, h: 20, body: '#9fd0e8', belly: '#cfeaf8', outline: '#1e3644', eye: 'glow', eyeColor: '#e8f8ff', feature: 'spikes', accent: '#6ab0d8' },
+  pingouin: { w: 18, h: 18, body: '#1c2430', belly: '#f0f4f8', outline: '#0a0e14', eye: 'glow', eyeColor: '#ffd24a', feature: 'none', accent: '#ffa53a' },
+  sculpteur: { w: 17, h: 21, body: '#d8e8f4', belly: '#b0cce0', outline: '#2a3e4e', eye: 'glow', eyeColor: '#7fdcff', feature: 'hat', accent: '#9fd0e8' },
+  sorciereblizzard: { w: 18, h: 21, body: '#2a3a50', belly: '#3a4e68', outline: '#101824', eye: 'glow', eyeColor: '#7fdcff', feature: 'hat', accent: '#cfe8ff' },
+  brochet: { w: 24, h: 15, body: '#3a5a6a', belly: '#7fb0c8', outline: '#122430', eye: 'angry', eyeColor: '#e8f8ff', feature: 'spikes', accent: '#9fd0e8' },
+
+  // ==================================================================
+  //  Monde 6 — Nécropole Céleste (or terni, marbre nocturne, éclair)
+  // ==================================================================
+  harpie: { w: 22, h: 18, body: '#3a3a5a', belly: '#5a5a7a', outline: '#141428', eye: 'angry', eyeColor: '#ffe08a', feature: 'wings', accent: '#ffe08a' },
+  nuagetonnerre: { w: 20, h: 16, body: '#2a2a3f', belly: '#5a5a7a', outline: '#101018', eye: 'glow', eyeColor: '#b0c8ff', feature: 'none', accent: '#8a9aff' },
+  djinn: { w: 19, h: 20, body: '#4a4a6a', belly: '#6a6a8a', outline: '#161624', eye: 'glow', eyeColor: '#ffe08a', feature: 'crown', accent: '#b0c8ff' },
+  chevalierceleste: { w: 18, h: 21, body: '#8a7a4a', belly: '#b0a068', outline: '#241e10', eye: 'glow', eyeColor: '#ffe08a', feature: 'horns', accent: '#ffe08a' },
+  idole: { w: 20, h: 22, body: '#2a2a3a', belly: '#3a3a52', outline: '#0e0e18', eye: 'glow', eyeColor: '#59b8ff', feature: 'crown', accent: '#ffe08a' },
+  oiseauplasma: { w: 20, h: 15, body: '#b0c8ff', belly: '#e8f0ff', outline: '#4a5a8a', eye: 'glow', eyeColor: '#ffffff', feature: 'wings', accent: '#ffffff' },
+  porteursarco: { w: 22, h: 20, body: '#3a3a5a', belly: '#ffe08a', outline: '#141428', eye: 'glow', eyeColor: '#b0c8ff', feature: 'wings', accent: '#ffe08a' },
+  momie: { w: 15, h: 17, body: '#c9b878', belly: '#e8dca8', outline: '#2a2410', eye: 'glow', eyeColor: '#b0c8ff', feature: 'none', accent: '#8a9aff' },
+
+  // ==================================================================
+  //  Monde 7 — Faille du Néant (magenta du néant, cyan froid, obsidienne)
+  // ==================================================================
+  oeilneant: { w: 20, h: 18, body: '#0c0a16', belly: '#1a1428', outline: '#040209', eye: 'glow', eyeColor: '#d05aff', feature: 'none', accent: '#d05aff' },
+  golemstellaire: { w: 22, h: 22, body: '#1c1830', belly: '#2a2444', outline: '#0a0812', eye: 'glow', eyeColor: '#59d9ff', feature: 'spikes', accent: '#d05aff' },
+  doppelchat: { w: 18, h: 18, body: '#14101f', belly: '#241c34', outline: '#d05aff', eye: 'glow', eyeColor: '#ffffff', feature: 'ears', accent: '#d05aff' },
+  mangeurames: { w: 20, h: 17, body: '#1c1428', belly: '#3a2c50', outline: '#0a0612', eye: 'angry', eyeColor: '#7fff9a', feature: 'none', accent: '#d05aff' },
+  faucheurdim: { w: 18, h: 20, body: '#0c0a16', outline: '#2a1440', eye: 'glow', eyeColor: '#d05aff', feature: 'ghost', accent: '#d05aff' },
+  etoilenaine: { w: 16, h: 16, body: '#ffffff', belly: '#ffe8ff', outline: '#7a2ab0', eye: 'glow', eyeColor: '#d05aff', feature: 'spikes', accent: '#d05aff' },
+  larvechaos: { w: 19, h: 16, body: '#14101f', belly: '#3a2c50', outline: '#080510', eye: 'glow', eyeColor: '#d05aff', feature: 'none', accent: '#59d9ff' },
 };
 
 /** Recettes des boss (plus grands), accordées à leur nouvelle identité. */

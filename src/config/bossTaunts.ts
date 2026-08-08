@@ -32,4 +32,22 @@ export const BOSS_TAUNTS: Record<string, Taunt[]> = {
     { cat: 'Chapeau pointu, blagues plates.', boss: 'Insolence ! Meurs dans les ombres !' },
     { cat: 'Tu sens le vieux grimoire moisi, tu sais ?', boss: 'Le silence éternel t’apprendra le respect.' },
   ],
+  // Glacior — Léviathan des Abysses (Abysses de Givre)
+  leviathan: [
+    { cat: 'Un poisson-chat ? C’est moi qui devrais te manger.', boss: 'Les abysses ont englouti cent héros. Tu feras un amuse-gueule.' },
+    { cat: 'J’ai horreur des congélateurs. On m’y a déjà enfermé une fois.', boss: 'Le froid conserve. Je te garderai parfait. Immobile. Éternel.' },
+    { cat: 'Ta patinoire est nulle, y’a même pas de musique.', boss: 'Le craquement de la glace SERA ta musique.' },
+  ],
+  // Voltaïr — Rapace du Jugement (Nécropole Céleste)
+  rapace: [
+    { cat: 'Chouette, un poulet géant. J’ai justement faim.', boss: 'Je suis le JUGEMENT. Et le verdict est : coupable d’exister.' },
+    { cat: 'Parfait, je comptais pas rester.', boss: 'Cent rois reposent dans ma nécropole. Tu ne mérites même pas une tombe.' },
+    { cat: 'Tu juges les gens ? Juge un peu ma lame.', boss: 'L’orage précède toujours la sentence.' },
+  ],
+  // Néantis — le Reflet Noir (Faille du Néant)
+  reflet: [
+    { cat: 'Alors t’es pas bien épais.', boss: 'Je suis chaque doute que tu as eu entre deux salles.' },
+    { cat: 'Copier mon style, mes pouvoirs, ma tête… T’as pas d’idées à toi ?', boss: 'Pourquoi créer, quand tout finit ici, en moi ?' },
+    { cat: 'Parfait. Personne me connaît mieux que moi. Et je me bats mieux que toi.', boss: 'Sept mondes pour finir face à toi-même.' },
+  ],
 };

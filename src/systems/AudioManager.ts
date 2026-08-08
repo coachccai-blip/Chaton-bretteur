@@ -316,6 +316,24 @@ const MOODS: Record<string, MoodDef> = {
     chords: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [7, 11, 14]],
     lead: [null, null, 12, null, null, 15, null, 14, null, null, 12, null, 10, null, null, null], leadLong: true,
   },
+  // Abysses de Givre — Sol mineur cristallin, lent et éthéré
+  givre: {
+    bpm: 80, root: 196, padVol: 0.07, bass: true, arp: 'updown', arpEvery: 4, arpWave: 'sine', arpOct: true,
+    chords: [[0, 3, 7], [-2, 3, 7], [-4, 0, 5], [-5, 2, 7]],
+    lead: [null, 19, null, null, 15, null, 12, null, null, 14, null, null, 10, null, null, null], leadLong: true,
+  },
+  // Nécropole Céleste — Fa mineur solennel, orageux (batterie)
+  celeste: {
+    bpm: 102, root: 174.61, padVol: 0.06, bass: true, arp: 'up', arpEvery: 4, arpWave: 'square', arpOct: true,
+    chords: [[0, 3, 7], [5, 8, 12], [3, 7, 10], [-2, 5, 8]], drums: 'basic',
+    lead: [12, null, 15, null, 19, null, 17, 15, null, 12, null, 14, null, null, null, null], leadLong: true,
+  },
+  // Faille du Néant — Do dièse mineur dissonant, cosmique et pressant
+  neant: {
+    bpm: 126, root: 138.59, padVol: 0.055, bass: true, arp: 'updown', arpEvery: 2, arpWave: 'sawtooth', arpOct: true,
+    chords: [[0, 3, 6], [-1, 3, 7], [-4, 1, 6], [-2, 2, 8]], drums: 'busy',
+    lead: [12, null, 13, null, 11, null, 12, null, 8, null, 6, null, 3, null, null, null],
+  },
   // Boss — Ré mineur, épique et rapide (batterie soutenue + stabs)
   boss: {
     bpm: 134, root: 146.83, padVol: 0.05, bass: true, arp: 'up', arpEvery: 2, arpWave: 'sawtooth', arpOct: true,

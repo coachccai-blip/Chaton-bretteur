@@ -114,4 +114,79 @@ export const BOSS_ARCHIMAGE: SpriteDef = {
   ],
 };
 
-export const BOSS_CATS: SpriteDef[] = [BOSS_CENTAURE, BOSS_GOBU, BOSS_SERPENT, BOSS_ARCHIMAGE];
+/** Glacior — chat-léviathan des glaces : crinière de cristaux, fanons de givre. */
+export const BOSS_LEVIATHAN: SpriteDef = {
+  key: 'boss_leviathan',
+  pal: {
+    '.': null, '#': '#0e1826', 'k': '#14283a',
+    'W': '#dcecf8', 'w': '#a8c8e0', 'm': '#2a4a60',
+    'B': '#2a4258', 'b': '#182a3c',
+    'R': '#3a6a8a', 'r': '#254a64', 'H': '#7fdcff',
+    'C': '#9fe0f8', 'e': '#e8f8ff', 'i': '#0a1420', 'y': '#cfeaff',
+  },
+  rows: [
+    '..C..C..C.C..C..C.',
+    '...CC..CC.CC..CC..',
+    '....HHHHHHHHHH....',
+    '...#kkkkkkkkkk#...',
+    '..#kWWkkkkkkWWk#..',
+    '..#kWeWkkkkWeWk#..',
+    '..#kkkkHHHHkkkk#..',
+    '..#kkCkkkkkkCkk#..',
+    '...#kkkkkkkkkk#...',
+    ...BODY,
+  ],
+};
+
+/** Voltaïr — chat-rapace du jugement : couronne-heaume, rémiges d'or, éclairs. */
+export const BOSS_RAPACE: SpriteDef = {
+  key: 'boss_rapace',
+  pal: {
+    '.': null, '#': '#12121f', 'k': '#1c1c30',
+    'W': '#e8e8ff', 'w': '#b0b0d0', 'm': '#8a7a4a',
+    'B': '#2a2a44', 'b': '#181828',
+    'R': '#3a3a5a', 'r': '#24243a', 'H': '#ffe08a',
+    'e': '#ffffff', 'y': '#ffe08a', 'i': '#0c0c16', 'L': '#b0c8ff',
+  },
+  rows: [
+    '....y..y..y..y....',
+    '...yHy.LL.LL.yHy..',
+    '....yHHHHHHHHy.....',
+    '...#kkkkkkkkkk#...',
+    '..#kkHkkkkkkHkk#..',
+    '..#keekkkkkkeek#..',
+    '..#kkkyHHHHykkk#..',
+    '..#kkkkkmmkkkkk#..',
+    '...#kkLkkkkLkk#...',
+    ...BODY,
+  ],
+};
+
+/** Néantis — le reflet noir : double du chaton en négatif, contour magenta. */
+export const BOSS_REFLET: SpriteDef = {
+  key: 'boss_reflet',
+  pal: {
+    '.': null, '#': '#d05aff', 'k': '#14101f',
+    'W': '#241c34', 'w': '#1a1428', 'm': '#3a2c50',
+    'B': '#1a1428', 'b': '#100a1a',
+    'R': '#14101f', 'r': '#0c0a16', 'H': '#d05aff',
+    'e': '#ffffff', 'y': '#59d9ff', 'i': '#0a0612', 'S': '#d05aff',
+  },
+  rows: [
+    '..#kk#......#kk#..',
+    '..#kkk#....#kkk#..',
+    '...#kkk#..#kkk#...',
+    '....#kkkkkkkk#....',
+    '...#kkkkkkkkkk#...',
+    '..#kkeekkkkeekk#..',
+    '..#kkkkkkkkkkkk#..',
+    '..#kSkkkkkkkkSk#..',
+    '...#kkkkkkkkkk#...',
+    ...BODY,
+  ],
+};
+
+export const BOSS_CATS: SpriteDef[] = [
+  BOSS_CENTAURE, BOSS_GOBU, BOSS_SERPENT, BOSS_ARCHIMAGE,
+  BOSS_LEVIATHAN, BOSS_RAPACE, BOSS_REFLET,
+];

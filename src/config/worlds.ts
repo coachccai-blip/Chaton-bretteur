@@ -5,7 +5,7 @@ export interface ZoneDef {
   rooms: number; // salles de combat avant le boss
   enemyPool: string[]; // ids d'ennemis
   bossId: string;
-  hazard: 'thorns' | 'toxic' | 'lava' | 'shadow' | 'none';
+  hazard: 'thorns' | 'toxic' | 'lava' | 'shadow' | 'frost' | 'void' | 'none';
   palette: {
     floor: number;
     floorAlt: number;
@@ -43,5 +43,26 @@ export const ZONES: ZoneDef[] = [
     enemyPool: ['fantome', 'squelette', 'sorcier', 'archer'],
     bossId: 'roi', hazard: 'shadow',
     palette: { floor: 0x1c2436, floorAlt: 0x161d2e, wall: 0x121829, accent: 0xf2a53a, fog: 0x090d18 },
+  },
+  {
+    // Abysses de Givre : caverne glaciaire sous un lac gelé, cyan glacier
+    id: 'givre', name: 'Les Abysses de Givre', index: 4, rooms: 8,
+    enemyPool: ['yeti', 'spectregivre', 'stalactite', 'pingouin', 'sculpteur', 'sorciereblizzard', 'brochet'],
+    bossId: 'leviathan', hazard: 'frost',
+    palette: { floor: 0x203040, floorAlt: 0x18283a, wall: 0x141e2c, accent: 0x7fdcff, fog: 0x0a1220 },
+  },
+  {
+    // Nécropole Céleste : ruines flottantes dans un orage éternel, or et éclair
+    id: 'celeste', name: 'La Nécropole Céleste', index: 5, rooms: 8,
+    enemyPool: ['harpie', 'nuagetonnerre', 'djinn', 'chevalierceleste', 'idole', 'oiseauplasma', 'porteursarco'],
+    bossId: 'rapace', hazard: 'void',
+    palette: { floor: 0x2a2a4a, floorAlt: 0x22223e, wall: 0x1c1c38, accent: 0xffe08a, fog: 0x10101f },
+  },
+  {
+    // Faille du Néant : fragments de tous les mondes dans un cosmos noir, magenta
+    id: 'neant', name: 'La Faille du Néant', index: 6, rooms: 9,
+    enemyPool: ['oeilneant', 'golemstellaire', 'doppelchat', 'mangeurames', 'faucheurdim', 'etoilenaine', 'larvechaos'],
+    bossId: 'reflet', hazard: 'void',
+    palette: { floor: 0x14101f, floorAlt: 0x100c18, wall: 0x0c0a16, accent: 0xd05aff, fog: 0x060410 },
   },
 ];

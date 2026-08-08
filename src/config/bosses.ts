@@ -140,4 +140,106 @@ export const BOSSES: Record<string, BossDef> = {
       ]},
     ],
   },
+
+  // =============================================================
+  // ABYSSES DE GIVRE — Glacior, le Léviathan des Abysses
+  // =============================================================
+  leviathan: {
+    id: 'leviathan', name: 'Glacior', title: 'le Léviathan des Abysses', sprite: 'leviathan',
+    hp: 1400, scale: 1.25, contactDamage: 22, auraColor: 0x7fdcff,
+    phases: [
+      { hpFrac: 1.0, speed: 160, moves: [
+        // 1. Souffle du Zéro Absolu — rayon gelant balayé
+        { type: 'lineSweep', telegraph: 900, cooldown: 3200, width: 70, length: 520, damage: 22, color: 0x7fdcff },
+        // 2. Pluie de Stalactites — 8 impacts télégraphiés
+        { type: 'arrowRain', telegraph: 720, cooldown: 3000, count: 8, radius: 46, damage: 20, color: 0x9fd0e8 },
+        // éclats de givre visés
+        { type: 'aimedBurst', telegraph: 480, cooldown: 1900, count: 3, speed: 240, damage: 15, color: 0xcfe8ff },
+      ]},
+      { hpFrac: 0.6, speed: 200, tint: 0x9fe0f8, moves: [
+        // 3. Plongée Abyssale — plonge et jaillit
+        { type: 'diveBomb', telegraph: 620, cooldown: 3400, radius: 70, damage: 26, color: 0x7fdcff },
+        // 4. Miroirs de Glace — flipper de projectiles
+        { type: 'ringShot', telegraph: 560, cooldown: 2400, count: 16, speed: 200, damage: 16, color: 0x9fe0f8 },
+        { type: 'arrowRain', telegraph: 600, cooldown: 2600, count: 12, radius: 48, damage: 22, color: 0x9fd0e8 },
+        // 6. Cœur de Gel — nova gelante
+        { type: 'nova', telegraph: 900, cooldown: 5000, count: 20, speed: 200, damage: 24, color: 0x7fdcff },
+      ]},
+      { hpFrac: 0.3, speed: 230, tint: 0xcfeaff, moves: [
+        // 5. Étreinte du Blizzard — onde tournante
+        { type: 'shockwave', telegraph: 720, cooldown: 2800, radius: 175, damage: 22, color: 0xcfe8ff },
+        { type: 'nova', telegraph: 640, cooldown: 3200, count: 26, speed: 210, damage: 26, color: 0x7fdcff },
+        { type: 'geysers', telegraph: 620, cooldown: 3000, count: 7, radius: 52, damage: 26, duration: 1300, color: 0x9fe0f8 },
+        { type: 'spiral', telegraph: 520, cooldown: 2600, count: 18, speed: 190, damage: 18, color: 0x9fd0e8 },
+      ]},
+    ],
+  },
+
+  // =============================================================
+  // NÉCROPOLE CÉLESTE — Voltaïr, le Rapace du Jugement
+  // =============================================================
+  rapace: {
+    id: 'rapace', name: 'Voltaïr', title: 'le Rapace du Jugement', sprite: 'rapace',
+    hp: 1750, scale: 1.2, contactDamage: 24, auraColor: 0xb0c8ff,
+    phases: [
+      { hpFrac: 1.0, speed: 175, moves: [
+        // Tempête de Plumes — éventails d'éclairs
+        { type: 'fan', telegraph: 520, cooldown: 2000, count: 7, spread: 0.7, speed: 240, damage: 16, color: 0xffe08a },
+        { type: 'arrowRain', telegraph: 700, cooldown: 3000, count: 8, radius: 46, damage: 20, color: 0xb0c8ff },
+        { type: 'charge', telegraph: 560, cooldown: 3000, chargeSpeed: 600, damage: 22 },
+      ]},
+      { hpFrac: 0.65, speed: 210, tint: 0xd8e0ff, moves: [
+        // 1. Piqué Fulgurant
+        { type: 'diveBomb', telegraph: 560, cooldown: 2800, radius: 66, damage: 26, color: 0xb0c8ff },
+        // 5. Ouragan Central
+        { type: 'nova', telegraph: 820, cooldown: 4400, count: 22, speed: 210, damage: 22, color: 0xffe08a },
+        // Largage : momies-éclair
+        { type: 'summon', telegraph: 700, cooldown: 6500, summonId: 'momie', summonCount: 2 },
+        { type: 'spiral', telegraph: 520, cooldown: 2800, count: 18, speed: 200, damage: 16, color: 0xb0c8ff },
+      ]},
+      { hpFrac: 0.3, speed: 235, tint: 0xffe08a, moves: [
+        // 6. Jugement Céleste — grille de foudre
+        { type: 'crossBeams', telegraph: 640, cooldown: 3000, width: 60, damage: 26, color: 0xb0c8ff },
+        { type: 'arrowRain', telegraph: 560, cooldown: 2400, count: 12, radius: 48, damage: 24, color: 0xffe08a },
+        { type: 'diveBomb', telegraph: 480, cooldown: 2400, radius: 70, damage: 28, color: 0xb0c8ff },
+        { type: 'shockwave', telegraph: 680, cooldown: 2800, radius: 175, damage: 24, color: 0xffe08a },
+      ]},
+    ],
+  },
+
+  // =============================================================
+  // FAILLE DU NÉANT — Néantis, le Reflet Noir (boss final, 4 phases)
+  // =============================================================
+  reflet: {
+    id: 'reflet', name: 'Néantis', title: 'le Reflet Noir', sprite: 'reflet',
+    hp: 2100, scale: 1.15, contactDamage: 26, auraColor: 0xd05aff,
+    phases: [
+      { hpFrac: 1.0, speed: 150, moves: [
+        // 1. Combo Miroir — charge d'estoc
+        { type: 'charge', telegraph: 520, cooldown: 2600, chargeSpeed: 600, damage: 22 },
+        { type: 'aimedBurst', telegraph: 440, cooldown: 1800, count: 3, speed: 240, damage: 16, color: 0xd05aff },
+        { type: 'fan', telegraph: 500, cooldown: 2200, count: 5, spread: 0.5, speed: 230, damage: 16, color: 0x59d9ff },
+      ]},
+      { hpFrac: 0.75, speed: 185, tint: 0xe08aff, moves: [
+        // 4. Éclipse du Reflet — téléportation
+        { type: 'teleport', telegraph: 420, cooldown: 2400 },
+        { type: 'spiral', telegraph: 500, cooldown: 2600, count: 20, speed: 200, damage: 16, color: 0xd05aff },
+        { type: 'nova', telegraph: 620, cooldown: 3200, count: 20, speed: 205, damage: 20, color: 0x59d9ff },
+      ]},
+      { hpFrac: 0.5, speed: 220, tint: 0xd05aff, moves: [
+        // 5. Gravité Renversée — glyphes + invocation de Doppelchats
+        { type: 'glyphs', telegraph: 720, cooldown: 2800, count: 5, radius: 62, damage: 24, color: 0xd05aff },
+        { type: 'summon', telegraph: 700, cooldown: 7000, summonId: 'doppelchat', summonCount: 2 },
+        { type: 'ringShot', telegraph: 520, cooldown: 2200, count: 18, speed: 205, damage: 18, color: 0x59d9ff },
+        { type: 'crossBeams', telegraph: 560, cooldown: 3000, width: 60, damage: 24, color: 0xd05aff },
+      ]},
+      { hpFrac: 0.25, speed: 250, tint: 0xf0a0ff, moves: [
+        // Chœur des Vaincus + Néant Dévorant (approx. : salve totale)
+        { type: 'nova', telegraph: 520, cooldown: 2400, count: 26, speed: 220, damage: 24, color: 0xd05aff },
+        { type: 'geysers', telegraph: 560, cooldown: 2600, count: 8, radius: 54, damage: 26, duration: 1300, color: 0x59d9ff },
+        { type: 'shockwave', telegraph: 600, cooldown: 2600, radius: 180, damage: 26, color: 0xd05aff },
+        { type: 'teleport', telegraph: 300, cooldown: 1800 },
+      ]},
+    ],
+  },
 };
