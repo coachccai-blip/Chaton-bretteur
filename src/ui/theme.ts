@@ -51,24 +51,34 @@ export function button(
   };
   draw(fill, border);
   const txt = label(scene, 0, 0, text, opts.size ?? 18, opts.textColor ?? '#f4e9c1');
-  const c = scene.add.container(x, y, [bg, txt]);
+  // La zone cliquable est un objet dédié (Zone) enfant du conteneur, JAMAIS le
+  // conteneur lui-même : rendre un Container interactif donne une hitbox qui ne
+  // répond correctement qu'au centre (quirk Phaser) — on pouvait donc cliquer
+  // « à côté » d'un bouton sans déclencher l'action. Une Zone, comme dans les
+  // autres écrans, couvre toute la surface de façon fiable.
+  const zone = scene.add.zone(0, 0, w, h).setInteractive({ useHandCursor: true });
+  const c = scene.add.container(x, y, [bg, txt, zone]);
   c.setSize(w, h);
-  c.setInteractive(new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h), Phaser.Geom.Rectangle.Contains);
   let enabled = true;
-  c.on('pointerover', () => { if (enabled) draw(border, border, 0.35); });
-  c.on('pointerout', () => { if (enabled) draw(fill, border); });
-  c.on('pointerdown', () => { if (enabled) { c.setScale(0.95); } });
-  c.on('pointerup', () => {
+  let pressed = false;
+  const restore = () => { pressed = false; txt.setY(0); draw(fill, border); };
+  zone.on('pointerover', () => { if (enabled && !pressed) draw(border, border, 0.35); });
+  zone.on('pointerout', () => { if (enabled) restore(); });
+  zone.on('pointerdown', () => { if (!enabled) return; pressed = true; txt.setY(1); draw(border, border, 0.5); });
+  zone.on('pointerup', () => {
     if (!enabled) return;
-    c.setScale(1);
-    draw(fill, border);
-    onClick();
+    const fire = pressed;
+    restore();
+    if (fire) onClick();
   });
+  // relâchement en dehors du bouton (glissé puis lâché ailleurs) : on annule
+  zone.on('pointerupoutside', () => { if (enabled) restore(); });
   return {
     container: c,
     setEnabled(v: boolean) {
       enabled = v;
       c.setAlpha(v ? 1 : 0.45);
+      if (v) zone.setInteractive({ useHandCursor: true }); else zone.disableInteractive();
       draw(fill, border);
     },
     setLabel(s: string) { txt.setText(s); },
