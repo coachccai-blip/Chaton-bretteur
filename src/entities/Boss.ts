@@ -184,6 +184,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
   private runMove(m: BossMove, dir: Phaser.Math.Vector2): void {
     const p = this.gs.player;
+    // Bruitage d'attaque signature selon le type de coup.
+    const t = m.type;
+    if (t === 'shockwave' || t === 'geysers' || t === 'mudFlood' || t === 'glyphs' || t === 'nova') this.gs.sfx('bossslam');
+    else if (t === 'charge' || t === 'roll' || t === 'diveBomb') this.gs.sfx('bosscharge');
+    else if (t === 'summon') this.gs.sfx('bosscast');
+    else if (t === 'crossBeams' || t === 'lineSweep') this.gs.sfx('zap');
+    else if (t === 'teleport') this.gs.sfx('timestop');
+    else this.gs.sfx('bossshot'); // aimedBurst / fan / ringShot / spiral / arrowRain
     const done = (delay: number) => this.gs.time.delayedCall(delay, () => (this.busy = false));
     const col = m.color ?? 0xff6a3a;
     const fire = (dx: number, dy: number) =>

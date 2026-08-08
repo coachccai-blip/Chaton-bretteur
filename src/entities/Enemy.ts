@@ -8,6 +8,8 @@ type State = 'idle' | 'telegraph' | 'charging' | 'recover' | 'signature';
 
 /** Limite globale du son d'élément (évite la saturation quand plusieurs ennemis sont touchés). */
 let lastElemSfxAt = 0;
+/** Limite globale des sons d'attaque des monstres (évite la cacophonie). */
+let lastAtkSfxAt = 0;
 
 interface StatusInfo { expire: number; nextTick: number; }
 
@@ -75,6 +77,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   isAlive(): boolean { return this.alive; }
+
+  /** Son d'attaque throttlé globalement (évite la saturation en meute). */
+  private atkSfx(key: string): void {
+    const now = performance.now();
+    if (now - lastAtkSfxAt < 65) return;
+    lastAtkSfxAt = now;
+    this.gs.sfx(key);
+  }
 
   update(time: number, dt: number): void {
     if (!this.alive) return;
@@ -229,6 +239,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   // ---------------- attaque signature ----------------
   private startSignature(sig: EnemySignature, dir: Phaser.Math.Vector2, dist: number): void {
     this.aiState = 'signature';
+    this.atkSfx('ecast');
     (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     const color = sig.color ?? 0xffd24a;
     const p = this.gs.player;
@@ -308,6 +319,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   private fireSpread(sig: EnemySignature): void {
+    this.atkSfx('eshot');
     const p = this.gs.player;
     const base = p ? Math.atan2(p.y - this.y, p.x - this.x) : 0;
     const n = sig.count ?? 3;
@@ -341,6 +353,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
   private explode(r: number): void {
     if (!this.alive) return;
+    this.atkSfx('eslam');
     this.gs.juice.ring(this.x, this.y, r, 0xff5a3a, 260);
     this.gs.juice.burst(this.x, this.y, 0xff7a3a, 14, 200, 1.2);
     this.gs.juice.shake(140, 0.006);
@@ -379,11 +392,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
   private shoot(dir: Phaser.Math.Vector2): void {
     if (!this.alive) return;
+    this.atkSfx('eshot');
     const a = this.def.attack!;
     this.gs.spawnEnemyProjectile(this.x, this.y - 16, dir.x, dir.y, a.projectileSpeed ?? 180, a.projectileDamage ?? 8, a.status);
   }
 
   private summon(): void {
+    this.atkSfx('ecast');
     const a = this.def.attack!;
     this.gs.summonMinions(this.x, this.y, a.summonId ?? 'fantome', a.summonCount ?? 2);
     this.gs.juice.ring(this.x, this.y, 60, 0xb26bff, 300);

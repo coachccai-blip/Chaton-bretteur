@@ -105,6 +105,15 @@ class Audio {
       case 'clone': this.blip(520, 0.12, 'sawtooth', 0.12, -260); break;
       case 'rayon': this.blip(240, 0.9, 'sawtooth', 0.24, 620); this.noise(0.85, 0.14); this.blip(680, 0.7, 'sine', 0.12, 200); break;
       case 'splash': this.noise(0.16, 0.12); this.blip(300, 0.14, 'sine', 0.12, -160); this.blip(520, 0.1, 'triangle', 0.08, -220); break;
+      // --- attaques des monstres ---
+      case 'eshot': this.blip(440, 0.06, 'square', 0.10, -180); break;
+      case 'ecast': this.blip(200, 0.18, 'sawtooth', 0.10, 140); break;
+      case 'eslam': this.noise(0.12, 0.13); this.blip(120, 0.16, 'sine', 0.14, -60); break;
+      // --- attaques signatures des boss (plus fortes) ---
+      case 'bossshot': this.blip(360, 0.1, 'sawtooth', 0.17, -160); this.noise(0.03, 0.06); break;
+      case 'bosscast': this.blip(150, 0.28, 'sawtooth', 0.18, 150); this.noise(0.12, 0.09); break;
+      case 'bossslam': this.blip(90, 0.42, 'sawtooth', 0.26, 120); this.noise(0.32, 0.18); break;
+      case 'bosscharge': this.blip(200, 0.3, 'square', 0.2, 280); this.noise(0.16, 0.11); break;
       case 'toon': this.blip(320, 0.3, 'triangle', 0.2, 640); this.blip(880, 0.22, 'square', 0.12, 320); this.blip(1320, 0.16, 'sine', 0.1, 220); break;
       case 'domain': this.blip(160, 0.4, 'sine', 0.16, 120); this.blip(240, 0.4, 'triangle', 0.1, 90); break;
       // --- âmes ---

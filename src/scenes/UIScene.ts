@@ -273,24 +273,49 @@ export class UIScene extends Phaser.Scene {
     thumb.className = 'tc-joy';
     Object.assign(thumb.style, { width: '66px', height: '66px', background: 'rgba(255,255,255,0.22)', border: '2px solid rgba(255,255,255,0.45)' });
 
-    // -- boutons d'action (grands, dans les coins) --
-    const mkBtn = (glyph: string, size: number, col: string, ring: string, css: Partial<CSSStyleDeclaration>) => {
+    // -- boutons d'action : grands, translucides-vifs, TAILLE RELATIVE À L'ÉCRAN --
+    const mkBtn = (glyph: string, col: string, ring: string) => {
       const el = document.createElement('div');
       el.className = 'tc-btn';
       el.dataset.tcbtn = '1';
       el.textContent = glyph;
-      Object.assign(el.style, {
-        width: `${size}px`, height: `${size}px`, fontSize: `${Math.round(size * 0.42)}px`,
-        background: col, border: `3px solid ${ring}`, boxShadow: `0 0 18px ${ring}`,
-      } as CSSStyleDeclaration, css);
+      Object.assign(el.style, { background: col, border: `3px solid ${ring}`, boxShadow: `0 0 22px ${ring}` });
       return el;
     };
-    const sbi = 'env(safe-area-inset-bottom, 0px)';
-    const sri = 'env(safe-area-inset-right, 0px)';
-    const attack = mkBtn('⚔', 104, 'rgba(244,210,48,0.22)', 'rgba(244,210,48,0.9)', { right: `calc(${sri} + 26px)`, bottom: `calc(${sbi} + 30px)` });
-    const dash = mkBtn('»', 82, 'rgba(89,200,255,0.22)', 'rgba(89,200,255,0.9)', { right: `calc(${sri} + 140px)`, bottom: `calc(${sbi} + 40px)` });
-    const special = mkBtn('✷', 82, 'rgba(178,107,255,0.22)', 'rgba(178,107,255,0.9)', { right: `calc(${sri} + 44px)`, bottom: `calc(${sbi} + 142px)` });
-    const pause = mkBtn('⏸', 46, 'rgba(20,15,30,0.55)', 'rgba(255,255,255,0.5)', { top: 'calc(env(safe-area-inset-top,0px) + 10px)', right: `calc(${sri} + 12px)`, fontSize: '18px' });
+    const attack = mkBtn('⚔', 'rgba(244,210,48,0.32)', 'rgba(244,210,48,1)');
+    const dash = mkBtn('»', 'rgba(89,200,255,0.32)', 'rgba(89,200,255,1)');
+    const special = mkBtn('✷', 'rgba(178,107,255,0.32)', 'rgba(178,107,255,1)');
+    const pause = mkBtn('⏸', 'rgba(20,15,30,0.6)', 'rgba(255,255,255,0.6)');
+
+    // Disposition responsive : les tailles suivent la plus petite dimension de
+    // l'écran (vmin), recalculées à chaque rotation/redimensionnement.
+    const layout = () => {
+      const vmin = Math.min(window.innerWidth, window.innerHeight);
+      const big = Math.round(Math.max(96, Math.min(vmin * 0.30, 168)));
+      const med = Math.round(Math.max(74, Math.min(vmin * 0.23, 132)));
+      const sml = Math.round(Math.max(42, Math.min(vmin * 0.12, 62)));
+      const gap = Math.round(big * 0.14);
+      const sbi = 'env(safe-area-inset-bottom, 0px)';
+      const sri = 'env(safe-area-inset-right, 0px)';
+      const set = (el: HTMLElement, s: number, css: Partial<CSSStyleDeclaration>) => {
+        el.style.width = el.style.height = `${s}px`;
+        el.style.fontSize = `${Math.round(s * 0.42)}px`;
+        el.style.left = el.style.top = el.style.right = el.style.bottom = '';
+        Object.assign(el.style, css as CSSStyleDeclaration);
+      };
+      set(attack, big, { right: `calc(${sri} + ${gap}px)`, bottom: `calc(${sbi} + ${gap}px)` });
+      set(dash, med, { right: `calc(${sri} + ${big + gap * 2}px)`, bottom: `calc(${sbi} + ${Math.round(gap * 1.3)}px)` });
+      set(special, med, { right: `calc(${sri} + ${gap}px)`, bottom: `calc(${sbi} + ${big + gap * 2}px)` });
+      set(pause, sml, { top: 'calc(env(safe-area-inset-top,0px) + 10px)', right: `calc(${sri} + 12px)` });
+      pause.style.fontSize = `${Math.round(sml * 0.5)}px`;
+    };
+    layout();
+    window.addEventListener('resize', layout);
+    window.addEventListener('orientationchange', layout);
+    this.domCleanup.push(() => {
+      window.removeEventListener('resize', layout);
+      window.removeEventListener('orientationchange', layout);
+    });
 
     root.append(base, thumb, attack, dash, special, pause);
     document.body.appendChild(root);
