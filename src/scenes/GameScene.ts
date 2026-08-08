@@ -30,9 +30,11 @@ import type { PowerDef } from '../config/powers';
 const ARENA = { x: 60, y: 96, w: 1080, h: 496 };
 export const ARENA_RECT = ARENA;
 
-// Arène du BOSS FINAL : circulaire et ~2× plus grande qu'une arène classique.
-const FINAL_CX = 900, FINAL_CY = 720, FINAL_R = 560;
-const FINAL_WORLD_W = 1800, FINAL_WORLD_H = 1440;
+// Arène du BOSS FINAL : hélipad circulaire (avec le « H » au sol) qui tient
+// désormais dans la fenêtre du terrain carré habituel (même caméra/monde 1200×675).
+const FINAL_CX = WORLD_WIDTH / 2;          // 600 : centré horizontalement
+const FINAL_CY = ARENA.y + ARENA.h / 2;    // 344 : centre vertical de l'arène classique
+const FINAL_R = 230;                        // tient dans les 496 px de haut de l'arène
 
 function shade(c: number, amt: number): number {
   const r = Math.min(255, Math.max(0, ((c >> 16) & 255) + amt));
@@ -1316,14 +1318,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private setupFinalArena(): void {
-    this.physics.world.setBounds(0, 0, FINAL_WORLD_W, FINAL_WORLD_H);
+    // Même fenêtre que le terrain habituel : monde 1200×675, caméra fixe centrée.
+    this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     const cam = this.cameras.main;
-    cam.setBounds(0, 0, FINAL_WORLD_W, FINAL_WORLD_H);
-    cam.setZoom(0.6);
-    cam.startFollow(this.player, true, 0.09, 0.09);
+    cam.stopFollow();
+    cam.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    cam.setZoom(WORLD_ZOOM);
+    cam.setScroll((WORLD_WIDTH - GAME_WIDTH) / 2, (WORLD_HEIGHT - GAME_HEIGHT) / 2);
     cam.setBackgroundColor(0x0a0d08);
-    // ARENA (rectangle englobant du cercle) : réutilisé par les clamps existants.
-    ARENA.x = FINAL_CX - FINAL_R; ARENA.y = FINAL_CY - FINAL_R; ARENA.w = FINAL_R * 2; ARENA.h = FINAL_R * 2;
     this.clearRoom(); // retire murs, bordures et props de la salle précédente
     this.floor?.setVisible(false);
     this.walls.clear(true, true);
@@ -1377,9 +1379,10 @@ export class GameScene extends Phaser.Scene {
   /** Lâche un matériau de boss récupérable (icône flottante) à collecter. */
   spawnMaterialDrop(x: number, y: number, matId: string): void {
     const def = materialById(matId); if (!def) return;
-    const s = this.add.sprite(x, y, def.icon).setDepth(17).setScale(2.4);
+    // Un peu plus petit que le chaton (le joueur fait ~84 px de haut) : base 1,4 → pulse 1,6.
+    const s = this.add.sprite(x, y, def.icon).setDepth(17).setScale(1.4);
     this.tweens.add({ targets: s, y: y - 10, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.tweens.add({ targets: s, scale: 2.8, duration: 700, yoyo: true, repeat: -1 });
+    this.tweens.add({ targets: s, scale: 1.6, duration: 700, yoyo: true, repeat: -1 });
     this.juice.ring(x, y, 60, 0xffe08a, 500);
     this.juice.popText(x, y - 44, `${def.name} !`, '#ffe08a', 18);
     this.sfx('coin');

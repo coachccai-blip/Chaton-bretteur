@@ -27,6 +27,10 @@ const config: Phaser.Types.Core.GameConfig = {
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
+    // Plein écran sur le conteneur #game (stable) plutôt que sur le seul <canvas> :
+    // ainsi l'overlay des boutons tactiles (enfant de #game) reste visible en plein
+    // écran au lieu d'être masqué par le canvas fullscreené seul.
+    fullscreenTarget: 'game',
   },
   input: {
     gamepad: true,
