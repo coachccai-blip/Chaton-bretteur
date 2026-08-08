@@ -85,9 +85,11 @@ export class UIScene extends Phaser.Scene {
     // chronomètre du run (stoppé pendant le choix des boons)
     this.timerText = label(this, GAME_WIDTH - 138, 27, '⏱ 0:00', 14, '#f4e9c1', 1).setDepth(3);
 
-    // Compteur de Retombées Félines restantes (logo = tête du chaton) près des pièces.
-    this.reviveIcon = this.add.sprite(GAME_WIDTH - 232, 24, 'cat').setScale(0.62).setDepth(2).setVisible(false);
-    this.reviveText = label(this, GAME_WIDTH - 218, 26, '', 16, '#eaf4ff', 0).setDepth(3).setVisible(false);
+    // Compteur de Retombées Félines restantes (logo = chaton) près des pièces,
+    // en tout petit (≈ taille de la pièce).
+    this.reviveIcon = this.add.sprite(GAME_WIDTH - 208, 27, 'cat').setDepth(2).setVisible(false);
+    this.reviveIcon.setScale(22 / Math.max(this.reviveIcon.width, this.reviveIcon.height));
+    this.reviveText = label(this, GAME_WIDTH - 196, 26, '', 14, '#eaf4ff', 0).setDepth(3).setVisible(false);
     this.onRevives(this.gs.reviveLeft());
 
     // Consommables portés (2 slots cliquables, sous le bouton compétence).
