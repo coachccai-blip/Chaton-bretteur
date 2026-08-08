@@ -469,12 +469,12 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'last_breath', name: 'Dernier Souffle', god: 'Vagabond', category: 'attack', rarity: 'rare', icon: 'wave',
-    description: 'Le 3e coup crée une mini-tornade qui avance (20 dégâts, soulève).',
+    description: 'Le 3e coup lance une tornade qui avance puis explose à l’arrivée (20 dégâts, +zone).',
     apply(p) {
       p.addOnHit((e, _d, _c, info) => {
         if (!info?.finisher) return;
         const d = Math.hypot(e.x - p.px(), e.y - p.py()) || 1;
-        p.combat.friendlyShot(p.px(), p.py(), (e.x - p.px()) / d, (e.y - p.py()) / d, 300, 20, { color: 0x9fe6ff, pierce: true, knockback: 180 });
+        p.combat.tornado(p.px(), p.py(), (e.x - p.px()) / d, (e.y - p.py()) / d, 20);
       });
     },
   },
@@ -638,8 +638,11 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'alucard', name: 'Soif d’Alucard', god: 'Roi Vampire', category: 'divine', rarity: 'legendary', icon: 'lifesteal',
-    description: '+12% de vol de vie et +8 PV soignés à chaque ennemi tué.',
-    apply(p) { p.stats.lifesteal += 0.12; p.addOnKill(() => p.heal(8)); },
+    description: 'Vol de vie (12% des dégâts) + 8 PV par ennemi tué — mais ne soigne QUE jusqu’à 30% des PV max.',
+    apply(p) {
+      p.addOnHit((_e, dmg) => p.healUpTo(dmg * 0.12, 0.30));
+      p.addOnKill(() => p.healUpTo(8, 0.30));
+    },
   },
   {
     id: 'ultra_instinct', name: 'Ultra Instinct', god: 'Instinct Suprême', category: 'divine', rarity: 'legendary', icon: 'eye',

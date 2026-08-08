@@ -12,7 +12,7 @@ const MELEE_MOVES = new Set(['charge', 'roll', 'diveBomb', 'shockwave', 'lineSwe
 
 /** Classement des coups pour l'ouverture : le boss lance sa MEILLEURE attaque au début. */
 const OPENER_RANK: Record<string, number> = {
-  icePylons: 100, mudFlood: 92, nova: 88, crossBeams: 86, geysers: 84, iceRain: 82,
+  icePylons: 100, fireTornado: 94, mudFlood: 92, nova: 88, crossBeams: 86, geysers: 84, iceRain: 82,
   fireBurst: 80, arrowRain: 74, spiral: 72, lineSweep: 66, diveBomb: 64, ringShot: 62,
   shockwave: 60, roll: 58, summon: 54, glyphs: 52, charge: 48, fan: 44, aimedBurst: 38,
   teleport: 8,
@@ -39,6 +39,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   private openingDone = false; // meilleure attaque lancée en début de combat
   private openingAt = 0;
   private druidHealUsed = false; // Sylvaan n'invoque ses druides soigneurs qu'une fois
+  private lavaTrailAt = 0; // Ignis : prochaine flaque de lave laissée en marchant
   private statuses: Partial<Record<Element, StatusInfo>> = {};
   private aura!: Phaser.GameObjects.Image;
   private auraEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -165,6 +166,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
           this.stance = this.stance === 'rush' ? 'kite' : 'rush';
           this.nextStanceAt = now + 3500 + Math.random() * 3500;
         }
+        // Ignis reste TOUJOURS à l'assaut : il cherche sans cesse à foncer.
+        if (this.def.id === 'golem') this.stance = 'rush';
         // Dash surtout en posture offensive (fonce sur le joueur).
         const wantDash = now >= this.nextDashAt && dist > 80 && (this.stance === 'rush' || Math.random() < 0.35);
         if (wantDash) {
@@ -190,6 +193,13 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       }
     } else if (frozen) {
       body.setVelocity(0, 0);
+    }
+
+    // Ignis : laisse une traînée de lave partout où il passe (disparaît en 8 s).
+    if (this.def.id === 'golem' && !frozen && now >= this.lavaTrailAt) {
+      this.lavaTrailAt = now + 420;
+      this.gs.spawnHazardZone(this.x, this.y + 8, 26, 'lava', 0, 8000);
+      this.gs.juice.burst(this.x, this.y + 8, 0xff6a1f, 3, 70, 0.6);
     }
 
     this.bobT += dt / 1000 * 5;
@@ -471,9 +481,19 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         break;
       }
       case 'mudFlood': {
-        // inonde toute l'arène SAUF quelques zones d'esquive
-        this.gs.floodArena(m.safeCount ?? 3, m.radius ?? 70, m.telegraph, m.damage ?? 26, m.hazard ?? 'toxic', col);
-        done(m.telegraph + 400);
+        if (this.enraged) {
+          // Gorbak enragé (round ×3) : au lieu d'inonder tout le sol, il crache
+          // un barrage de boue sur la position du joueur (en ligne OU en cône) ;
+          // chaque glob retombe en flaque toxique.
+          const mode: 'line' | 'cone' = Math.random() < 0.5 ? 'line' : 'cone';
+          const px = p ? p.x : this.x, py = p ? p.y : this.y;
+          this.gs.mudBarrage(this.x, this.y - 10, px, py, mode, m.damage ?? 26);
+          done(m.telegraph + 300);
+        } else {
+          // inonde toute l'arène SAUF quelques zones d'esquive
+          this.gs.floodArena(m.safeCount ?? 3, m.radius ?? 70, m.telegraph, m.damage ?? 26, m.hazard ?? 'toxic', col);
+          done(m.telegraph + 400);
+        }
         break;
       }
       case 'roll': {
@@ -534,6 +554,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
           });
         }
         done(n * 110 + 160);
+        break;
+      }
+      case 'fireTornado': {
+        // Signature d'Ignis : 5 tornades de feu venant de 5 directions, chacune
+        // traversant toute la map le long d'une ligne passant par le joueur.
+        const px = p ? p.x : this.x, py = p ? p.y : this.y;
+        this.gs.fireTornadoStorm(px, py, m.damage ?? 20);
+        done((m.count ?? 5) * 200 + 700 + 400);
         break;
       }
       case 'icePylons': {

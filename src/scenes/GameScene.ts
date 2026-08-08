@@ -708,6 +708,77 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Glob de boue craché vers un point au sol : file en ligne droite vers (tx,ty),
+   * inflige des dégâts une fois s'il touche le joueur en vol, puis retombe en
+   * flaque toxique là où il atterrit. Utilisé par Gorbak et les mini-gorbaks.
+   */
+  mudGlob(sx: number, sy: number, tx: number, ty: number, damage: number, puddleR = 34): void {
+    tx = Phaser.Math.Clamp(tx, ARENA.x + 24, ARENA.x + ARENA.w - 24);
+    ty = Phaser.Math.Clamp(ty, ARENA.y + 24, ARENA.y + ARENA.h - 24);
+    const dist = Math.hypot(tx - sx, ty - sy);
+    const dur = Phaser.Math.Clamp(dist / 0.62, 260, 720); // vitesse ~0,62 px/ms
+    const glob = this.add.image(sx, sy - 12, 'mud_blob').setDepth(24).setScale(1.5);
+    const shadow = this.add.ellipse(tx, ty, 20, 9, 0x000000, 0.32).setDepth(3);
+    let hit = false;
+    this.tweens.add({
+      targets: glob, x: tx, y: ty, duration: dur, ease: 'Sine.easeIn',
+      onUpdate: () => {
+        if (hit) return;
+        const p = this.player;
+        if (this.combatActive && p && !p.dead && Math.hypot(p.x - glob.x, p.y - glob.y) < 18) {
+          hit = true;
+          p.takeDamage(damage, glob.x, glob.y);
+          this.poisonPlayer();
+        }
+      },
+    });
+    this.tweens.add({ targets: glob, scale: 2.0, duration: dur / 2, yoyo: true });
+    this.tweens.add({ targets: glob, angle: 360, duration: dur });
+    this.time.delayedCall(dur, () => {
+      glob.destroy();
+      shadow.destroy();
+      this.juice.burst(tx, ty, 0x7a8a3a, 8, 150, 1.1);
+      // éclaboussures de boue à l'impact
+      const sp = this.add.particles(tx, ty, 'mud_splat', {
+        speedX: { min: -110, max: 110 }, speedY: { min: -150, max: -40 },
+        scale: { start: 1, end: 0.2 }, lifespan: 380, quantity: 7, gravityY: 260, emitting: false,
+      }).setDepth(26);
+      sp.explode(7);
+      this.time.delayedCall(420, () => sp.destroy());
+      this.eruptAt(tx, ty, puddleR, 0x8a6a3a, Math.round(damage * 0.6), 'toxic', 2600);
+    });
+  }
+
+  /**
+   * Barrage de boue de Gorbak enragé : vise la position du joueur au lancer.
+   * mode 'line' = globs alignés qui traversent le joueur ; mode 'cone' = gerbe
+   * de globs étalés autour de lui. Chaque glob retombe en flaque toxique.
+   */
+  mudBarrage(sx: number, sy: number, px: number, py: number, mode: 'line' | 'cone', damage: number): void {
+    const base = Math.atan2(py - sy, px - sx);
+    const dist = Math.max(120, Math.hypot(px - sx, py - sy));
+    if (mode === 'line') {
+      // trois flaques le long de l'axe boss→joueur (avant, sur, après le joueur)
+      const factors = [0.7, 1.0, 1.32];
+      factors.forEach((f, i) => {
+        this.time.delayedCall(i * 150, () => {
+          if (!this.combatActive) return;
+          this.mudGlob(sx, sy, sx + Math.cos(base) * dist * f, sy + Math.sin(base) * dist * f, damage, 32);
+        });
+      });
+    } else {
+      // cône de globs autour de la position visée
+      const n = 5, spread = 0.6;
+      for (let k = 0; k < n; k++) {
+        const t = k / (n - 1);
+        const a = base + Phaser.Math.Linear(-spread, spread, t);
+        const d = dist * (0.85 + Math.random() * 0.3);
+        this.mudGlob(sx, sy, sx + Math.cos(a) * d, sy + Math.sin(a) * d, damage, 30);
+      }
+    }
+  }
+
   // ---------------- callbacks entités ----------------
   private onScenePause(): void { RunState.pauseTimer(); }
   private onSceneResume(): void { RunState.resumeTimer(); }
@@ -1548,6 +1619,117 @@ export class GameScene extends Phaser.Scene {
     const col = opts?.color ?? 0xffffff;
     const s = this.add.sprite(x, y, 'orb').setDepth(18).setTint(col).setScale(1.4).setRotation(Math.atan2(ny, nx));
     this.friendlyShots.push({ sprite: s, vx: nx * speed, vy: ny * speed, damage, dieAt: performance.now() + 900, hit: new Set(), pierce: !!opts?.pierce, immobilizeMs: opts?.immobilizeMs, knockback: opts?.knockback, color: col });
+  }
+
+  /**
+   * Tornade du boon Dernier Souffle : lancée au 3e coup du combo, elle file en
+   * ligne droite en malmenant les ennemis traversés, puis EXPLOSE à l'arrivée
+   * (gerbe de vent + dégâts de zone).
+   */
+  tornado(x: number, y: number, dx: number, dy: number, damage: number): void {
+    const len = Math.hypot(dx, dy) || 1; const nx = dx / len, ny = dy / len;
+    const range = 300;
+    const tx = Phaser.Math.Clamp(x + nx * range, ARENA.x + 24, ARENA.x + ARENA.w - 24);
+    const ty = Phaser.Math.Clamp(y + ny * range, ARENA.y + 24, ARENA.y + ARENA.h - 24);
+    const s = this.add.sprite(x, y, 'tornado').setDepth(20).setScale(1.4);
+    this.tweens.add({ targets: s, angle: 360, duration: 260, repeat: -1 });
+    this.tweens.add({ targets: s, scaleX: 1.75, duration: 150, yoyo: true, repeat: -1 });
+    const hit = new Set<IEnemyLike>();
+    const dur = 440;
+    this.tweens.add({
+      targets: s, x: tx, y: ty, duration: dur, ease: 'Sine.easeOut',
+      onUpdate: () => {
+        if (!this.combatActive) return;
+        for (const e of this.getTargets()) {
+          if (!e.isAlive() || hit.has(e)) continue;
+          if (Math.hypot(e.x - s.x, e.y - s.y) <= 34) {
+            hit.add(e);
+            e.takeDamage(damage, s.x, s.y);
+            const anyE = e as unknown as { body?: Phaser.Physics.Arcade.Body };
+            if (anyE.body) { anyE.body.velocity.x += nx * 140; anyE.body.velocity.y += ny * 140; }
+            this.juice.burst(e.x, e.y, 0xbfe6ff, 5, 120, 0.8);
+          }
+        }
+      },
+      onComplete: () => {
+        // EXPLOSION à l'arrivée : bourrasque circulaire + dégâts de zone.
+        const ex = s.x, ey = s.y;
+        this.juice.ring(ex, ey, 82, 0x9fd6f0, 320);
+        this.juice.burst(ex, ey, 0xbfe6ff, 22, 280, 1.7);
+        this.juice.shake(120, 0.006);
+        this.sfx('slashfin');
+        const puff = this.add.particles(ex, ey, 'frost', {
+          speed: { min: 60, max: 240 }, scale: { start: 1.4, end: 0 }, lifespan: 460,
+          quantity: 18, tint: 0xbfe6ff, blendMode: 'ADD', emitting: false,
+        }).setDepth(28);
+        puff.explode(18);
+        this.time.delayedCall(500, () => puff.destroy());
+        if (this.combatActive) {
+          for (const e of this.getTargets()) {
+            if (e.isAlive() && Math.hypot(e.x - ex, e.y - ey) <= 82) e.takeDamage(Math.round(damage * 1.2), ex, ey);
+          }
+        }
+        s.destroy();
+      },
+    });
+  }
+
+  /**
+   * Grosse tornade de feu d'Ignis : télégraphie une ligne droite passant par la
+   * position du joueur (angle libre), puis une tornade traverse TOUTE la map le
+   * long de cette ligne en infligeant des dégâts. Traînée d'étincelles.
+   */
+  fireTornado(px: number, py: number, angle: number, damage: number, telegraph = 700): void {
+    const nx = Math.cos(angle), ny = Math.sin(angle);
+    const D = Math.hypot(ARENA.w, ARENA.h) * 0.62;
+    const sx = px - nx * D, sy = py - ny * D;
+    const tx = px + nx * D, ty = py + ny * D;
+    // Télégraphe : trait large qui pulse le long de la trajectoire.
+    const g = this.add.graphics().setDepth(19);
+    let tt = 0;
+    const ev = this.time.addEvent({ delay: 40, loop: true, callback: () => {
+      tt += 40; const a = 0.3 + 0.22 * Math.sin(tt / 70);
+      g.clear();
+      g.lineStyle(48, 0xff4410, a * 0.4); g.lineBetween(sx, sy, tx, ty);
+      g.lineStyle(18, 0xffb020, a); g.lineBetween(sx, sy, tx, ty);
+    } });
+    this.sfx('bosscast');
+    this.time.delayedCall(telegraph, () => {
+      ev.remove(); g.destroy();
+      const s = this.add.sprite(sx, sy, 'fire_tornado').setDepth(22).setScale(1.7);
+      this.tweens.add({ targets: s, angle: 360, duration: 220, repeat: -1 });
+      this.tweens.add({ targets: s, scaleX: 2.15, duration: 150, yoyo: true, repeat: -1 });
+      const emit = this.add.particles(0, 0, 'px', {
+        follow: s, speed: { min: 20, max: 130 }, scale: { start: 2.2, end: 0 },
+        lifespan: 420, quantity: 3, tint: [0xff6a1f, 0xffb020, 0xfff2c0], blendMode: 'ADD',
+      }).setDepth(21);
+      const speed = 540; const dur = (Math.hypot(tx - sx, ty - sy) / speed) * 1000;
+      let hitAt = 0;
+      this.tweens.add({
+        targets: s, x: tx, y: ty, duration: dur, ease: 'Linear',
+        onUpdate: () => {
+          const now = performance.now();
+          const pl = this.player;
+          if (this.combatActive && pl && !pl.dead && now - hitAt > 400 && Math.hypot(pl.x - s.x, pl.y - s.y) < 40) {
+            hitAt = now; pl.takeDamage(damage, s.x, s.y);
+          }
+        },
+        onComplete: () => { emit.destroy(); this.juice.burst(s.x, s.y, 0xff8a3a, 16, 240, 1.5); s.destroy(); },
+      });
+      this.sfx('bosscharge');
+      this.juice.shake(160, 0.006);
+    });
+  }
+
+  /** Signature d'Ignis : 5 tornades de feu venant de 5 directions (intervalle 0,2 s). */
+  fireTornadoStorm(px: number, py: number, damage: number): void {
+    const off = Math.random() * Math.PI;
+    for (let k = 0; k < 5; k++) {
+      const angle = off + (k / 5) * Math.PI * 2;
+      this.time.delayedCall(k * 200, () => {
+        if (this.combatActive) this.fireTornado(px, py, angle, damage, 620);
+      });
+    }
   }
 
   /** Aspire un ennemi vers un point et l'étourdit brièvement (Gomme élastique). */

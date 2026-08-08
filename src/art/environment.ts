@@ -279,6 +279,89 @@ export const FIREBALL: SpriteDef = {
   ],
 };
 
+/** Glob de boue (10x10) : projectile craché par Gorbak et les mini-gorbaks. */
+export const MUD_BLOB: SpriteDef = {
+  key: 'mud_blob',
+  pal: {
+    '.': null, '#': '#2a1c0a', 'm': '#6a4a22', 'M': '#8a6a34', 'g': '#7a8a3a', 'h': '#a7c24a', 'w': '#c9e07a',
+  },
+  rows: [
+    '...####...',
+    '..#mMhg#..',
+    '.#mMMwgh#.',
+    '#mmMMhggh#',
+    '#mMMMwgggM',
+    '#mmMMhgggM',
+    '#mmmMgggM#',
+    '.#mmMggh#.',
+    '..#mmgg#..',
+    '...####...',
+  ],
+};
+
+/** Éclaboussure de boue (6x6) : particule du crachat en cône. */
+export const MUD_SPLAT: SpriteDef = {
+  key: 'mud_splat',
+  pal: { '.': null, '#': '#2a1c0a', 'm': '#6a4a22', 'g': '#7a8a3a', 'h': '#a7c24a' },
+  rows: [
+    '..##..',
+    '.#mh#.',
+    '#mggh#',
+    '#gmmg#',
+    '.#mm#.',
+    '..##..',
+  ],
+};
+
+/** Tornade (12x15) : projectile en entonnoir du boon Dernier Souffle. */
+export const TORNADO: SpriteDef = {
+  key: 'tornado',
+  pal: { '.': null, 'b': '#4a86a8', 'c': '#9fd6f0', 'w': '#ffffff' },
+  rows: [
+    'bcwbcwbcwbcw',
+    'wcbwcbwcbwcb',
+    '.cbwcbwcbwc.',
+    '.wbcwbcwbcw.',
+    '.bcwbcwbcwb.',
+    '..cbwcbwcb..',
+    '..wbcwbcwb..',
+    '..bcwbcwbc..',
+    '...cbwcbw...',
+    '...wbcwbc...',
+    '...bcwbcw...',
+    '....cbwc....',
+    '....wbcw....',
+    '.....bc.....',
+    '.....wc.....',
+  ],
+};
+
+/** Tornade de feu (14x18) : grosse attaque télégraphiée d'Ignis, traverse la map. */
+export const FIRE_TORNADO: SpriteDef = {
+  key: 'fire_tornado',
+  pal: { '.': null, 'r': '#7a1e08', 'o': '#ff5a1f', 'y': '#ffb020', 'w': '#fff2c0' },
+  rows: [
+    'rywroyoywroyor',
+    'rroyoywroyoywr',
+    'ryoywroyoywror',
+    '.rywroyoywror.',
+    '.rroyoywroyor.',
+    '.ryoywroyoywr.',
+    '..rywroyoywr..',
+    '..rroyoywror..',
+    '..ryoywroyor..',
+    '...rywroyor...',
+    '...rroyoywr...',
+    '...ryoywror...',
+    '....rywror....',
+    '....rroyor....',
+    '....ryoywr....',
+    '.....rywr.....',
+    '.....rror.....',
+    '......rr......',
+  ],
+};
+
 /** Bloc de glace (10x10) : projectile cristallin tiré par les monstres de givre. */
 export const ICE_SHARD: SpriteDef = {
   key: 'ice_shard',

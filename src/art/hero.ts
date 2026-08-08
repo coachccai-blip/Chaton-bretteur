@@ -180,13 +180,17 @@ export const HAMMER: SpriteDef = {
 export const WATER_WAVE: SpriteDef = {
   key: 'water_wave',
   pal: { '.': null, '#': '#0a3048', 'b': '#2a7ab0', 'B': '#59b8ff', 'w': '#bfe8ff', 'W': '#eaffff' },
+  // Vague écumeuse en croissant : crête d'écume claire, cœur bleu, embruns.
   rows: [
-    '..W..WW..W..',
-    '.wBBBBBBBBw.',
-    'WBBbbbbbbBBW',
-    'wBb##..##bBw',
-    '.b#......#b.',
-    '..w......w..',
+    '....WWWWWW....',
+    '..WWwbbbbwWW..',
+    '.WwbBBBBBBbwW.',
+    'WwbBBwWWwBBbwW',
+    'wbBBw....wBBbw',
+    '.wBw......wBw.',
+    '..w........w..',
+    '.....B..B.....',
+    '......ww......',
   ],
 };
 

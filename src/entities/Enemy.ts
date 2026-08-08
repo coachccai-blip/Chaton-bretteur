@@ -62,7 +62,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
   constructor(scene: GameScene, x: number, y: number, def: EnemyDef, hpMul: number, dmgMul: number,
               opts?: { speedMul?: number; canDash?: boolean; canBurst?: boolean }) {
-    super(scene, x, y, `mob_${def.sprite}`);
+    super(scene, x, y, def.texKey ?? `mob_${def.sprite}`);
     this.gs = scene;
     this.def = def;
     this.maxHp = Math.round(def.hp * hpMul);
@@ -514,9 +514,34 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
   private shoot(dir: Phaser.Math.Vector2): void {
     if (!this.alive) return;
-    this.atkSfx('eshot');
     const a = this.def.attack!;
-    this.gs.spawnEnemyProjectile(this.x, this.y - 16, dir.x, dir.y, a.projectileSpeed ?? 180, this.projDmg(a.projectileDamage ?? 8), a.status);
+    // Mini-Gorbak : crache N globs de boue en cône vers le joueur (au lieu de
+    // simples billes vertes) ; chaque glob retombe en flaque toxique.
+    if (a.mudCone && a.mudCone > 1) {
+      this.atkSfx('ecast');
+      const p = this.gs.player;
+      const base = p ? Math.atan2(p.y - this.y, p.x - this.x) : Math.atan2(dir.y, dir.x);
+      const px = p ? p.x : this.x + Math.cos(base) * 240;
+      const py = p ? p.y : this.y + Math.sin(base) * 240;
+      const dist = Math.max(120, Math.hypot(px - this.x, py - this.y));
+      const n = a.mudCone, spread = 0.55;
+      for (let k = 0; k < n; k++) {
+        const t = n === 1 ? 0.5 : k / (n - 1);
+        const ang = base + Phaser.Math.Linear(-spread, spread, t);
+        const d = dist * (0.85 + Math.random() * 0.3);
+        this.gs.mudGlob(this.x, this.y - 12, this.x + Math.cos(ang) * d, this.y + Math.sin(ang) * d, this.projDmg(a.projectileDamage ?? 10), 28);
+      }
+      // gerbe de boue à la bouche pour l'animation d'attaque
+      this.gs.juice.burst(this.x, this.y - 8, 0x7a8a3a, 10, 170, 1.2);
+      return;
+    }
+    this.atkSfx('eshot');
+    // Vise la position ACTUELLE du joueur au moment du tir (et non la direction
+    // figée au début du télégraphe) : le projectile fonce droit sur le joueur.
+    const q = this.gs.player;
+    let nx = dir.x, ny = dir.y;
+    if (q && !q.dead) { const a2 = Math.atan2(q.y - this.y, q.x - this.x); nx = Math.cos(a2); ny = Math.sin(a2); }
+    this.gs.spawnEnemyProjectile(this.x, this.y - 16, nx, ny, a.projectileSpeed ?? 180, this.projDmg(a.projectileDamage ?? 8), a.status);
   }
 
   private summon(): void {

@@ -109,6 +109,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     this.hp = Math.min(this.stats.maxHp, this.hp + amount * this.stats.healReceivedMult);
     this.gs.events.emit('hp', this.hp, this.stats.maxHp, this.shield, this.maxShield);
   }
+  /** Soin plafonné à une fraction des PV max (Soif d'Alucard) : ne remonte jamais
+   *  au-dessus de ce seuil, mais soigne bien si le chaton est en dessous. */
+  healUpTo(amount: number, frac: number): void {
+    const cap = this.stats.maxHp * frac;
+    if (this.hp >= cap) return;
+    this.hp = Math.min(cap, this.hp + amount * this.stats.healReceivedMult);
+    this.gs.events.emit('hp', this.hp, this.stats.maxHp, this.shield, this.maxShield);
+  }
   /** Paye un coût en points de vie (marchand). Laisse toujours au moins 1 PV. */
   spendLife(amount: number): void {
     this.hp = Math.max(1, this.hp - amount);
@@ -572,13 +580,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const ang = Math.atan2(dir.y, dir.x);
     const wx = this.x + dir.x * 34, wy = this.y - 8 + dir.y * 34;
     const wave = this.gs.add.sprite(wx, wy, 'water_wave').setDepth(23).setOrigin(0.5, 0.5)
-      .setRotation(ang + Math.PI / 2).setScale(1.3).setAlpha(0.95);
-    this.gs.tweens.add({ targets: wave, scaleX: 2.8, scaleY: 2.2, alpha: 0, duration: 300, ease: 'Cubic.easeOut', onComplete: () => wave.destroy() });
+      .setRotation(ang + Math.PI / 2).setScale(1.4).setAlpha(0.95);
+    this.gs.tweens.add({ targets: wave, scaleX: 3.1, scaleY: 2.4, alpha: 0, duration: 320, ease: 'Cubic.easeOut', onComplete: () => wave.destroy() });
+    // anneau d'onde + embruns le long du croissant
+    this.gs.juice.ring(wx, wy, 40, 0x59b8ff, 280);
     for (let k = 0; k < 5; k++) {
       const px = this.x + dir.x * (10 + k * 22), py = this.y - 8 + dir.y * (10 + k * 22);
       this.gs.juice.burst(px, py, 0x59b8ff, 4, 120, 0.7);
     }
+    // gerbe de gouttelettes projetées en éventail (animation aquatique)
+    const drops = this.gs.add.particles(wx, wy, 'px', {
+      speed: { min: 80, max: 220 }, angle: { min: (ang * 180 / Math.PI) - 55, max: (ang * 180 / Math.PI) + 55 },
+      scale: { start: 1.6, end: 0 }, lifespan: 380, quantity: 14, gravityY: 220,
+      tint: [0x59b8ff, 0xbfe8ff, 0xeaffff], blendMode: 'ADD', emitting: false,
+    }).setDepth(24);
+    drops.explode(14);
+    this.gs.time.delayedCall(420, () => drops.destroy());
     this.gs.sfx('splash');
+    this.gs.time.delayedCall(70, () => this.gs.sfx('splash'));
   }
 
   private tryAttack(): void {

@@ -292,6 +292,7 @@ export const MONSTER_RECIPES: Record<string, Recipe> = {
   bebeserpent: { w: 14, h: 13, body: '#7a2a14', belly: '#ff8a3a', outline: '#1a0a05', eye: 'glow', eyeColor: '#ffd24a', feature: 'spikes', accent: '#ff5522' },
   zombie: { w: 17, h: 19, body: '#5a6a4a', belly: '#7a8a5a', outline: '#161d10', eye: 'glow', eyeColor: '#9ee06a', feature: 'none', accent: '#3a4a2a' },
   araigneemini: { w: 16, h: 13, body: '#3a2c5a', belly: '#5a4a7a', outline: '#140f24', eye: 'glow', eyeColor: '#c78aff', feature: 'spider', accent: '#8a5cff' },
+  minigorbak: { w: 18, h: 18, body: '#5f8a34', belly: '#b8d97a', outline: '#16240e', eye: 'angry', eyeColor: '#dfff9a', feature: 'horns', accent: '#3a5a24' },
 
   // ==================================================================
   //  Monde 5 — Abysses de Givre (bleus glaciers, blancs, cyan)

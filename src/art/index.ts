@@ -4,7 +4,7 @@ import { CAT, SWORD, KATANA, MERCHANT_CAT, HAMMER, WATER_WAVE, SUSANOO, KAGE_BUN
 import { GLYPHS } from './icons';
 import { genCritter, MONSTER_RECIPES } from './critters';
 import { BOSS_CATS } from './bosscats';
-import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, MINE, FIREBALL, ICE_SHARD, FROST, ICE_STALACTITE, ICE_PYLON, BLACK_FLAME } from './environment';
+import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, MINE, FIREBALL, ICE_SHARD, FROST, ICE_STALACTITE, ICE_PYLON, BLACK_FLAME, MUD_BLOB, MUD_SPLAT, TORNADO, FIRE_TORNADO } from './environment';
 import { ZONES } from '../config/worlds';
 
 let generated = false;
@@ -25,6 +25,10 @@ export function generateAll(scene: Phaser.Scene): void {
   genSprite(scene, RASENSHURIKEN); // shuriken de vent (Spécial Rasenshuriken)
   genSprite(scene, MINE);   // marqueur de danger au sol
   genSprite(scene, FIREBALL); // boule de feu d'Ignis
+  genSprite(scene, MUD_BLOB); // glob de boue (Gorbak & mini-gorbaks)
+  genSprite(scene, MUD_SPLAT); // éclaboussure de boue (particule)
+  genSprite(scene, TORNADO); // tornade du boon Dernier Souffle
+  genSprite(scene, FIRE_TORNADO); // tornade de feu d'Ignis
   genSprite(scene, ICE_SHARD); // bloc de glace (projectile givre)
   genSprite(scene, FROST);  // particule de givre (spray en cône)
   genSprite(scene, ICE_STALACTITE); // stalactite tombante (Glacior)

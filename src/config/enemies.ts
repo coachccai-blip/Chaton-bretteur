@@ -19,6 +19,7 @@ export interface EnemyDef {
   id: string;
   name: string;
   sprite: string;
+  texKey?: string; // texture explicite (ex: réutiliser un sprite de boss pour un mini-boss)
   behavior: Behavior;
   hp: number;
   speed: number;
@@ -35,6 +36,7 @@ export interface EnemyDef {
     status?: 'poison' | 'freeze';
     summonId?: string;
     summonCount?: number;
+    mudCone?: number; // >1 : crache N globs de boue en cône qui deviennent des flaques
   };
   signature?: EnemySignature;
 }
@@ -177,6 +179,32 @@ export const ENEMIES: Record<string, EnemyDef> = {
     hp: 30, speed: 96, damage: 6, scale: 0.9,
     attack: { cooldown: 2600, range: 240 },
   },
+  // Mini-Gorbak : add invoqué par Gorbak. Crache 4 globs de boue en cône vers
+  // le joueur ; chaque glob laisse une flaque toxique là où il retombe.
+  minigorbak: {
+    id: 'minigorbak', name: 'Mini-Gorbak', sprite: 'minigorbak', behavior: 'shooter',
+    hp: 34, speed: 78, damage: 11, scale: 0.82,
+    attack: { telegraph: 560, cooldown: 2600, range: 320, projectileDamage: 10, status: 'poison', mudCone: 4 },
+  },
+  // -- Échos de boss invoqués par Mortis : versions réduites (sprite de boss,
+  //    ~0,5× taille) et affaiblies (¼ des PV de base des boss d'origine). --
+  miniboss_sylvaan: {
+    id: 'miniboss_sylvaan', name: 'Écho de Sylvaan', sprite: 'centaure', texKey: 'boss_centaure', behavior: 'shooter',
+    hp: 115, speed: 100, damage: 14, scale: 0.5,
+    attack: { telegraph: 520, cooldown: 1900, range: 330, projectileSpeed: 240, projectileDamage: 12 },
+    signature: { type: 'spread', telegraph: 560, cooldown: 3200, damage: 12, count: 5, speed: 240, range: 340, color: 0x9ee06a },
+  },
+  miniboss_gorbak: {
+    id: 'miniboss_gorbak', name: 'Écho de Gorbak', sprite: 'gobugeant', texKey: 'boss_gobugeant', behavior: 'shooter',
+    hp: 155, speed: 84, damage: 15, scale: 0.5,
+    attack: { telegraph: 560, cooldown: 2600, range: 320, projectileDamage: 12, status: 'poison', mudCone: 4 },
+  },
+  miniboss_ignis: {
+    id: 'miniboss_ignis', name: 'Écho d’Ignis', sprite: 'serpentlave', texKey: 'boss_serpentlave', behavior: 'charger',
+    hp: 190, speed: 122, damage: 16, scale: 0.5,
+    attack: { telegraph: 480, cooldown: 1800, range: 340, chargeSpeed: 520 },
+    signature: { type: 'spread', telegraph: 520, cooldown: 3000, damage: 13, count: 5, speed: 260, range: 320, color: 0xff6a1f },
+  },
   bebeserpent: {
     id: 'bebeserpent', name: 'Serpenteau', sprite: 'bebeserpent', behavior: 'chaser',
     hp: 20, speed: 150, damage: 10, scale: 0.85,
@@ -205,14 +233,14 @@ export const ENEMIES: Record<string, EnemyDef> = {
   spectregivre: {
     id: 'spectregivre', name: 'Spectre de Givre', sprite: 'spectregivre', behavior: 'shooter',
     hp: 56, speed: 74, damage: 14, scale: 1,
-    attack: { telegraph: 600, cooldown: 1900, range: 250, projectileSpeed: 190, projectileDamage: 12, status: 'freeze' },
+    attack: { telegraph: 600, cooldown: 1900, range: 300, projectileSpeed: 340, projectileDamage: 12, status: 'freeze' },
     // Souffle polaire : nappe de blocs de glace crachée en cône.
-    signature: { type: 'coneSpray', telegraph: 640, cooldown: 3600, damage: 11, count: 9, speed: 220, range: 320, status: 'freeze', color: 0x7fdcff },
+    signature: { type: 'coneSpray', telegraph: 640, cooldown: 3600, damage: 11, count: 9, speed: 300, range: 340, status: 'freeze', color: 0x7fdcff },
   },
   stalactite: {
     id: 'stalactite', name: 'Stalactite Vivante', sprite: 'stalactite', behavior: 'shooter',
     hp: 30, speed: 22, damage: 22, scale: 1,
-    attack: { telegraph: 620, cooldown: 2600, range: 320, projectileSpeed: 220, projectileDamage: 12 },
+    attack: { telegraph: 620, cooldown: 2600, range: 320, projectileSpeed: 330, projectileDamage: 12 },
     // Chute empalante : impact au sol télégraphié par l'ombre grandissante.
     signature: { type: 'leap', telegraph: 720, cooldown: 4200, damage: 22, range: 300, radius: 42, speed: 1, color: 0x9fd0e8 },
   },
@@ -231,9 +259,9 @@ export const ENEMIES: Record<string, EnemyDef> = {
   sorciereblizzard: {
     id: 'sorciereblizzard', name: 'Sorcière du Blizzard', sprite: 'sorciereblizzard', behavior: 'shooter',
     hp: 52, speed: 70, damage: 12, scale: 1,
-    attack: { telegraph: 560, cooldown: 2000, range: 300, projectileSpeed: 210, projectileDamage: 11, status: 'freeze' },
+    attack: { telegraph: 560, cooldown: 2000, range: 320, projectileSpeed: 340, projectileDamage: 11, status: 'freeze' },
     // Blizzard soufflé : large cône de blocs de glace gelants.
-    signature: { type: 'coneSpray', telegraph: 560, cooldown: 3800, damage: 12, count: 11, speed: 230, range: 360, status: 'freeze', color: 0xcfe8ff },
+    signature: { type: 'coneSpray', telegraph: 560, cooldown: 3800, damage: 12, count: 11, speed: 310, range: 380, status: 'freeze', color: 0xcfe8ff },
   },
   brochet: {
     id: 'brochet', name: 'Brochet des Glaces', sprite: 'brochet', behavior: 'charger',
