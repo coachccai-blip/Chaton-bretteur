@@ -51,6 +51,9 @@ interface FriendlyShot {
   dieAt: number;
   hit: Set<IEnemyLike>;
   pierce: boolean;
+  immobilizeMs?: number;
+  knockback?: number;
+  color?: number;
 }
 interface Hazard {
   x: number; y: number; r: number; type: HazardType;
@@ -301,6 +304,7 @@ export class GameScene extends Phaser.Scene {
     this.setupTraps();
     this.wavesTotal = Phaser.Math.Between(1, 3);
     this.waveIndex = 0;
+    this.player.onRoomStart(); // réinitialise les accumulateurs de salle (boons)
     this.events.emit('progress', this.zone.name, this.combatDone + 1, this.zone.rooms, false, 'Combat');
     this.spawnWave();
   }
@@ -692,7 +696,8 @@ export class GameScene extends Phaser.Scene {
       s.ring.arc(s.x, s.orb.y, 15, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2, false);
       s.ring.strokePath();
       s.orb.setTint(urgent ? 0xff8a8a : 0xbff7f6);
-      if (this.player && !this.player.dead && Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y) < 36) {
+      const grab = 36 + (this.player?.stats.soulMagnet ?? 0); // Cueilleur d'Âmes : aspiration
+      if (this.player && !this.player.dead && Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y) < grab) {
         this.collectSoul(i); continue;
       }
       if (t >= s.expireAt) this.respawnFromSoul(i);
@@ -705,6 +710,7 @@ export class GameScene extends Phaser.Scene {
     this.juice.popText(s.x, s.orb.y - 18, 'Âme', '#bff7f6', 14);
     AudioManager.play('soul');
     this.addRunCurrency(1);
+    if (this.player.stats.soulHealBonus > 0) this.player.heal(this.player.stats.soulHealBonus); // Senzu / Cueilleur
     s.orb.destroy(); s.ring.destroy();
     this.souls.splice(i, 1);
     this.checkWaveCleared();
@@ -1059,6 +1065,49 @@ export class GameScene extends Phaser.Scene {
     this.sfx('sword');
   }
 
+  /** Projectile allié générique (toile, poing, boomerang, cartes…). */
+  friendlyShot(x: number, y: number, dx: number, dy: number, speed: number, damage: number, opts?: { color?: number; pierce?: boolean; immobilizeMs?: number; knockback?: number }): void {
+    const len = Math.hypot(dx, dy) || 1; const nx = dx / len, ny = dy / len;
+    const col = opts?.color ?? 0xffffff;
+    const s = this.add.sprite(x, y, 'orb').setDepth(18).setTint(col).setScale(1.4).setRotation(Math.atan2(ny, nx));
+    this.friendlyShots.push({ sprite: s, vx: nx * speed, vy: ny * speed, damage, dieAt: performance.now() + 900, hit: new Set(), pierce: !!opts?.pierce, immobilizeMs: opts?.immobilizeMs, knockback: opts?.knockback, color: col });
+  }
+
+  /** Aspire un ennemi vers un point et l'étourdit brièvement (Gomme élastique). */
+  pullEnemy(e: IEnemyLike, tx: number, ty: number, stunMs: number): void {
+    const anyE = e as unknown as { applySlow?: (f: number, ms: number) => void; setPosition?: (x: number, y: number) => void; x: number; y: number };
+    const nx = tx - anyE.x, ny = ty - anyE.y, d = Math.hypot(nx, ny) || 1;
+    const step = Math.min(d, 90);
+    anyE.setPosition?.(anyE.x + (nx / d) * step, anyE.y + (ny / d) * step);
+    anyE.applySlow?.(0.05, stunMs);
+    this.juice.burst(anyE.x, anyE.y, 0xff9db0, 8, 140, 0.9);
+  }
+
+  /** Rayon frontal balayable (Kamehameha) : dégâts en ligne pendant `ms`. */
+  beamSweep(x: number, y: number, dx: number, dy: number, dmgPerTick: number, ms: number, color: number): void {
+    const player = this.player;
+    let elapsed = 0; const interval = 120;
+    const gfx = this.add.graphics().setDepth(46);
+    const tick = this.time.addEvent({ delay: interval, loop: true, callback: () => {
+      elapsed += interval;
+      if (!player || player.dead || elapsed >= ms) { gfx.destroy(); tick.remove(); return; }
+      const a = player.aimAngle();
+      const ex = player.x + Math.cos(a) * 900, ey = player.y + Math.sin(a) * 900;
+      gfx.clear();
+      gfx.lineStyle(70, color, 0.25); gfx.lineBetween(player.x, player.y, ex, ey);
+      gfx.lineStyle(30, 0xffffff, 0.5); gfx.lineBetween(player.x, player.y, ex, ey);
+      // dégâts en ligne
+      const nx = Math.cos(a), ny = Math.sin(a);
+      for (const e of this.getTargets()) {
+        if (!e.isAlive()) continue;
+        const t = Phaser.Math.Clamp((e.x - player.x) * nx + (e.y - player.y) * ny, 0, 900);
+        const px = player.x + nx * t, py = player.y + ny * t;
+        if (Math.hypot(e.x - px, e.y - py) <= 45) e.takeDamage(dmgPerTick, player.x, player.y);
+      }
+      this.juice.shake(60, 0.004);
+    } });
+  }
+
   /** Grande explosion (Megumin / Rasengan). */
   explosionAt(x: number, y: number, radius: number, damage: number): void {
     this.juice.ring(x, y, radius, 0xffa53a, 360);
@@ -1233,7 +1282,10 @@ export class GameScene extends Phaser.Scene {
         if (Phaser.Math.Distance.Between(sh.sprite.x, sh.sprite.y, e.x, e.y) < 30) {
           sh.hit.add(e);
           e.takeDamage(Math.round(sh.damage), sh.sprite.x, sh.sprite.y);
-          this.juice.burst(sh.sprite.x, sh.sprite.y, 0x9fe6ff, 5, 120, 0.8);
+          this.juice.burst(sh.sprite.x, sh.sprite.y, sh.color ?? 0x9fe6ff, 5, 120, 0.8);
+          const anyE = e as unknown as { applySlow?: (f: number, ms: number) => void; body?: Phaser.Physics.Arcade.Body };
+          if (sh.immobilizeMs && anyE.applySlow) anyE.applySlow(0.05, sh.immobilizeMs);
+          if (sh.knockback && anyE.body) { const a = Math.atan2(sh.vy, sh.vx); anyE.body.velocity.x += Math.cos(a) * sh.knockback; anyE.body.velocity.y += Math.sin(a) * sh.knockback; }
           if (!sh.pierce) { sh.sprite.destroy(); return false; }
         }
       }

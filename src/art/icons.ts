@@ -36,7 +36,7 @@ const ICON_MAP: Record<string, string> = {
   bleed: 'glyph_drop', lifesteal: 'glyph_drop',
   freeze: 'glyph_snow',
   dash: 'glyph_chevron', movespeed: 'glyph_chevron', clawtrail: 'glyph_claw',
-  cooldown: 'glyph_clock', atkspeed: 'glyph_lightning',
+  cooldown: 'glyph_clock', atkspeed: 'glyph_lightning', lightning: 'glyph_lightning',
   armor: 'glyph_shield', shield: 'glyph_shield', thorns: 'glyph_spike',
   luck: 'glyph_clover', coin: 'glyph_coin',
   // boons divins

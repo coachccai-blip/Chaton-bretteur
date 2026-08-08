@@ -1,15 +1,20 @@
 import type { PlayerStats } from './game';
 
 /** Éléments/statuts appliqués aux ennemis (base des réactions de combo). */
-export type Element = 'shock' | 'burn' | 'freeze' | 'poison' | 'bleed' | 'mark';
+export type Element = 'shock' | 'burn' | 'freeze' | 'poison' | 'bleed' | 'mark' | 'blackburn';
 
-export type OnHitFn = (target: IEnemyLike, damage: number, isCrit: boolean) => void;
+/** Infos de contexte d'un coup (combo). */
+export interface HitInfo { finisher: boolean; first: boolean; index: number; }
+export type OnHitFn = (target: IEnemyLike, damage: number, isCrit: boolean, info?: HitInfo) => void;
 export type OnKillFn = (target: IEnemyLike) => void;
 export type VoidFn = () => void;
 
+/** Modificateurs temporaires (vitesse / dégâts / vitesse d'attaque). */
+export interface BuffMods { spd?: number; dmg?: number; as?: number; }
+
 /** Drapeaux modifiant le Spécial et le Dash (boons divins). */
-export type SpecialFlag = 'wave' | 'explosion' | 'timestop' | 'bigger';
-export type DashFlag = 'shock' | 'burst' | 'clone';
+export type SpecialFlag = 'wave' | 'explosion' | 'timestop' | 'bigger' | 'pika' | 'rasenshuriken' | 'kamehameha';
+export type DashFlag = 'shock' | 'burst' | 'clone' | 'water' | 'thunder6' | 'kunai';
 
 /** Helpers de combat exposés par GameScene aux boons (effets actifs). */
 export interface ICombatScene {
@@ -23,25 +28,45 @@ export interface ICombatScene {
   enemiesNear(x: number, y: number, r: number): IEnemyLike[];
   playerX(): number;
   playerY(): number;
+  beam(x1: number, y1: number, x2: number, y2: number, color: number): void;
+  /** projectile allié (toile, poing, boomerang…). immobilizeMs > 0 fige la cible. */
+  friendlyShot(x: number, y: number, dx: number, dy: number, speed: number, damage: number, opts?: { color?: number; pierce?: boolean; immobilizeMs?: number; knockback?: number }): void;
+  /** balaye un rayon frontal (Kamehameha) qui inflige des dégâts en ligne. */
+  beamSweep(x: number, y: number, dx: number, dy: number, dmgPerTick: number, ms: number, color: number): void;
+  /** aspire un ennemi vers un point (Gomme élastique). */
+  pullEnemy(e: IEnemyLike, tx: number, ty: number, stunMs: number): void;
 }
 
 /** Ce qu'un pouvoir/boon peut manipuler à l'exécution (implémenté par Player). */
 export interface IPlayerContext {
   stats: PlayerStats;
   combat: ICombatScene;
+  /** Modificateurs libres lus en direct par le joueur (drapeaux/valeurs). */
+  mods: Record<string, number>;
+  /** Accumulateur de dégâts de la salle (Nettoyage Parfait), remis à zéro au départ. */
+  roomDamageBonus: number;
   heal(amount: number): void;
   grantMaxShield(amount: number): void;
   addOnHit(fn: OnHitFn): void;
   addOnKill(fn: OnKillFn): void;
   addOnDash(fn: VoidFn): void;
   addOnRoomClear(fn: VoidFn): void;
+  addOnRoomStart(fn: VoidFn): void;
   addComboHit(): void;
   /** effet récurrent (clone, domaine, lames orbitales…). */
   addPeriodic(intervalMs: number, fn: VoidFn): void;
+  /** buff temporaire cumulable-par-clé (vitesse/dégâts/vitesse d'attaque). */
+  addBuff(key: string, ms: number, mods: BuffMods): void;
   addSpecialFlag(flag: SpecialFlag): void;
   addDashFlag(flag: DashFlag): void;
   /** Relance l'effet du Spécial (avec tous ses bonus), sans cooldown. */
   castSpecial(): void;
+  px(): number;
+  py(): number;
+  hpFrac(): number;
+  inCombat(): boolean;
+  /** Recalcule le nombre de charges de dash après un gain (+1 charge). */
+  syncDashCharges(): void;
 }
 
 /** Vue minimale d'un ennemi exposée aux hooks/boons. */

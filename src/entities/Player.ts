@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { GameScene } from '../scenes/GameScene';
 import type { PlayerStats } from '../config/game';
-import type { IPlayerContext, IEnemyLike, ICombatScene, OnHitFn, OnKillFn, VoidFn, SpecialFlag, DashFlag } from '../config/types';
+import type { IPlayerContext, IEnemyLike, ICombatScene, OnHitFn, OnKillFn, VoidFn, SpecialFlag, DashFlag, BuffMods, HitInfo } from '../config/types';
 
 /** Portée d'auto-visée : au-delà, l'attaque suit la visée manuelle/déplacement. */
 const AUTO_AIM_RANGE = 260;
@@ -48,11 +48,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   private onKillFns: OnKillFn[] = [];
   private onDashFns: VoidFn[] = [];
   private onRoomClearFns: VoidFn[] = [];
+  private onRoomStartFns: VoidFn[] = [];
 
   // boons divins
   private periodics: { interval: number; nextAt: number; fn: VoidFn }[] = [];
   private specialFlags = new Set<SpecialFlag>();
   private dashFlags = new Set<DashFlag>();
+
+  // extensions catalogue 100 pouvoirs
+  mods: Record<string, number> = {};
+  private buffs: { key: string; exp: number; spd: number; dmg: number; as: number }[] = [];
+  private lastCombatAt = 0;
+  private nextRegenAt = 0;
+  roomDamageBonus = 0;   // accumulateurs remis à zéro en début de salle (Danse-Lames, Nettoyage…)
+  roomTimeBonus = 0;     // Orgueil du Lion (par seconde)
+  private blockReadyAt = 0;
+  private dashCount = 0;
+  private kunaiPos: { x: number; y: number; at: number } | null = null;
+  private transformUsedRoom = false;
 
   constructor(scene: GameScene, x: number, y: number, stats: PlayerStats) {
     super(scene, x, y, 'cat');
@@ -76,7 +89,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
 
   // ---------- IPlayerContext ----------
   heal(amount: number): void {
-    this.hp = Math.min(this.stats.maxHp, this.hp + amount);
+    this.hp = Math.min(this.stats.maxHp, this.hp + amount * this.stats.healReceivedMult);
     this.gs.events.emit('hp', this.hp, this.stats.maxHp, this.shield, this.maxShield);
   }
   /** Paye un coût en points de vie (marchand). Laisse toujours au moins 1 PV. */
@@ -94,10 +107,41 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   addOnKill(fn: OnKillFn): void { this.onKillFns.push(fn); }
   addOnDash(fn: VoidFn): void { this.onDashFns.push(fn); }
   addOnRoomClear(fn: VoidFn): void { this.onRoomClearFns.push(fn); }
+  addOnRoomStart(fn: VoidFn): void { this.onRoomStartFns.push(fn); }
   addComboHit(): void { this.maxCombo += 1; }
   get combat(): ICombatScene { return this.gs; }
   addPeriodic(interval: number, fn: VoidFn): void { this.periodics.push({ interval, nextAt: performance.now() + interval, fn }); }
   addSpecialFlag(flag: SpecialFlag): void { this.specialFlags.add(flag); }
+  // --- extensions catalogue ---
+  px(): number { return this.x; }
+  py(): number { return this.y; }
+  aimAngle(): number { return Math.atan2(this.aim.y, this.aim.x); }
+  hpFrac(): number { return this.hp / this.stats.maxHp; }
+  inCombat(): boolean { return performance.now() - this.lastCombatAt < 2500; }
+  addBuff(key: string, ms: number, mods: BuffMods): void {
+    const exp = performance.now() + ms;
+    const ex = this.buffs.find((b) => b.key === key);
+    if (ex) { ex.exp = exp; ex.spd = mods.spd ?? 1; ex.dmg = mods.dmg ?? 1; ex.as = mods.as ?? 1; }
+    else this.buffs.push({ key, exp, spd: mods.spd ?? 1, dmg: mods.dmg ?? 1, as: mods.as ?? 1 });
+  }
+  private buffProduct(sel: 'spd' | 'dmg' | 'as'): number {
+    const now = performance.now();
+    let m = 1;
+    for (const b of this.buffs) if (b.exp > now) m *= b[sel];
+    return m;
+  }
+  /** Signale que le joueur est en combat (pour les effets hors-combat). */
+  markCombat(): void { this.lastCombatAt = performance.now(); }
+  /** Appelé au début d'une salle de combat. */
+  onRoomStart(): void {
+    this.roomDamageBonus = 0; this.roomTimeBonus = 0; this.transformUsedRoom = false;
+    this.mods.firstHitRoom = 1; this.mods.baieUsed = 0; this.mods.hitThisRoom = 0;
+    for (const fn of this.onRoomStartFns) fn();
+  }
+  /** Facteur de dégâts additionnel (buffs + accumulateurs de salle). */
+  private extraDamageMult(): number {
+    return this.buffProduct('dmg') * (1 + this.roomDamageBonus + this.roomTimeBonus);
+  }
   addDashFlag(flag: DashFlag): void { this.dashFlags.add(flag); }
 
   // appelé quand le nombre de charges de dash change via pouvoir
@@ -160,7 +204,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     // déplacement (bloqué pendant le dash)
     const body = this.body as Phaser.Physics.Arcade.Body;
     if (!this.dashing) {
-      const spd = this.stats.speed * this.stats.moveSpeedMult * this.slowFactor;
+      let sm = this.stats.moveSpeedMult * this.buffProduct('spd');
+      if (this.mods.courseDiable && this.hpFrac() < 0.5) sm *= 1.18;   // Course du Diable
+      if (this.mods.celerite && !this.inCombat()) sm *= 1.16;          // Célérité hors combat
+      const spd = this.stats.speed * sm * this.slowFactor;
       body.setVelocity(move.x * spd, move.y * spd);
     } else if (now >= this.dashEndAt) {
       this.dashing = false;
@@ -196,8 +243,34 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       this.gs.events.emit('hp', this.hp, this.stats.maxHp, this.shield, this.maxShield);
     }
 
+    this.updateBuffsAndModes(now);
     this.animate(move, dt);
     this.updateSword(now);
+  }
+
+  /** Régénérations, accumulateurs par seconde, transformations (Titan/Gear Fifth). */
+  private updateBuffsAndModes(now: number): void {
+    if (now >= this.nextRegenAt) {
+      this.nextRegenAt = now + 1000;
+      if (this.mods.regenOoc && !this.inCombat() && this.hp < this.stats.maxHp) this.heal(this.mods.regenOoc);
+      if (this.mods.regenLow && this.hpFrac() < 0.3) this.heal(this.mods.regenLow);
+      // Orgueil du Lion : +1 %/s de dégâts dans la salle (plafonné à +30 %)
+      if (this.mods.orgueil) this.roomTimeBonus = Math.min(0.30, this.roomTimeBonus + 0.01 * this.mods.orgueil);
+      // Baie Oran : soin d'urgence sous 50 % PV (1 fois par salle)
+      if (this.mods.baie && !this.mods.baieUsed && this.hpFrac() < 0.5) { this.mods.baieUsed = 1; this.heal(12); this.gs.juice.popText(this.x, this.y - 30, '+12', '#6ad46a', 14); }
+    }
+    // Transformations à bas PV (Titan Assaillant / Gear Fifth) : 1 fois par salle
+    if (this.mods.transformAt && !this.transformUsedRoom && this.hpFrac() < this.mods.transformAt) {
+      this.transformUsedRoom = true;
+      const dur = this.mods.transformMs || 6000;
+      this.addBuff('transform', dur, { dmg: this.mods.transformDmg || 1.5, spd: this.mods.transformSpd || 1.1 });
+      this.mods.transformActive = 1;
+      this.setScale(this.mods.transformScale || 1.5);
+      this.gs.time.delayedCall(dur, () => { this.mods.transformActive = 0; this.setScale(1); });
+      this.gs.juice.ring(this.x, this.y, 120, this.mods.transformColor || 0xffffff, 500);
+      this.gs.juice.burst(this.x, this.y, this.mods.transformColor || 0xffffff, 24, 260, 1.8);
+      this.gs.sfx(this.mods.transformSfx === 2 ? 'toon' : 'special');
+    }
   }
 
   private animate(move: Phaser.Math.Vector2, dt: number): void {
@@ -247,7 +320,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   }
 
   private attackDuration(): number {
-    return this.stats.attackDuration / this.stats.attackSpeedMult;
+    return this.stats.attackDuration / (this.stats.attackSpeedMult * this.buffProduct('as'));
   }
 
   // ---------- actions ----------
@@ -259,22 +332,60 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
 
     let dir = move.lengthSq() > 0.02 ? move.clone().normalize() : this.aim.clone().normalize();
     if (dir.lengthSq() < 0.02) dir.set(this.facing, 0);
+    // Grappin d'Exploration : légère aimantation vers l'ennemi le plus proche
+    if (this.mods.dashMagnet) { const to = this.nearestTargetDir(300); if (to) dir = dir.lerp(to, 0.4).normalize(); }
+
+    // Kunai Éclair : re-dasher dans les 3 s téléporte au kunai planté
+    if (this.dashFlags.has('kunai')) {
+      if (this.kunaiPos && now - this.kunaiPos.at < 3000) {
+        this.setPosition(this.kunaiPos.x, this.kunaiPos.y);
+        this.gs.juice.burst(this.x, this.y, 0xffe08a, 12, 170, 1.1); this.kunaiPos = null;
+      } else {
+        this.kunaiPos = { x: this.x, y: this.y, at: now };
+        this.gs.juice.burst(this.x, this.y, 0xffe08a, 4, 90, 0.7);
+      }
+    }
+
     const body = this.body as Phaser.Physics.Arcade.Body;
     const speed = (this.stats.dashDistance / this.stats.dashDuration) * 1000;
     body.setVelocity(dir.x * speed, dir.y * speed);
     this.dashing = true;
     this.dashEndAt = now + this.stats.dashDuration;
     this.invulnUntil = Math.max(this.invulnUntil, now + this.stats.dashIFrames);
+    this.dashCount++;
 
     const shockDash = this.dashFlags.has('shock');
-    this.gs.juice.dashTrail(this.x, this.y, shockDash ? 0xfff27a : 0x9fe6ff);
+    const waterDash = this.dashFlags.has('water');
+    this.gs.juice.dashTrail(this.x, this.y, shockDash ? 0xfff27a : waterDash ? 0x59c8ff : 0x9fe6ff);
     this.gs.sfx(shockDash ? 'chidori' : 'dash');
     for (const fn of this.onDashFns) fn();
+    if (this.stats.dashDamage > 0) this.dashHitAccumulator = new Set();
 
-    // dégâts de dash (traînée de griffes)
-    if (this.stats.dashDamage > 0) {
-      this.gs.time.delayedCall(0, () => {});
-      this.dashHitAccumulator = new Set();
+    // Queue Équilibrière : un coup d'épée tranche pendant le dash.
+    if (this.mods.dashAttack) {
+      this.slashVfx(dir.angle(), false);
+      for (const e of this.gs.getTargets()) {
+        if (e.isAlive() && Math.hypot(e.x - this.x, e.y - this.y) <= MELEE_RANGE) this.dealDamage(e, this.stats.swordDamage[0], false);
+      }
+    }
+    // Souffle du Tonnerre : tous les 6 dashes, éclair qui traverse la ligne
+    if (this.dashFlags.has('thunder6') && this.dashCount % 6 === 0) {
+      const ex = this.x + dir.x * 420, ey = this.y + dir.y * 420;
+      this.lineDamage(this.x, this.y, ex, ey, 34, 45, 0xfff27a);
+      this.gs.sfx('zap');
+    }
+  }
+
+  /** Dégâts en ligne (dash-éclair, Kamehameha instantané). */
+  lineDamage(x1: number, y1: number, x2: number, y2: number, width: number, damage: number, color: number): void {
+    this.gs.beam(x1, y1, x2, y2, color);
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    const nx = dx / len, ny = dy / len;
+    for (const e of this.gs.getTargets()) {
+      if (!e.isAlive()) continue;
+      const t = Phaser.Math.Clamp(((e.x - x1) * nx + (e.y - y1) * ny), 0, len);
+      const px = x1 + nx * t, py = y1 + ny * t;
+      if (Math.hypot(e.x - px, e.y - py) <= width) this.dealDamage(e, damage, false);
     }
   }
   private dashHitAccumulator: Set<IEnemyLike> | null = null;
@@ -346,7 +457,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       const ang = Math.atan2(dy, dx);
       let diff = Math.abs(Phaser.Math.Angle.Wrap(ang - aimAngle));
       if (diff > Phaser.Math.DEG_TO_RAD * 75) continue;
-      this.dealDamage(e, baseDmg, isFinisher);
+      this.dealDamage(e, baseDmg, isFinisher, { finisher: isFinisher, first: this.comboIndex === 0, index: this.comboIndex });
       hitAny = true;
     }
     if (hitAny) {
@@ -356,22 +467,33 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   }
 
   /** applique dégâts + crit + rage + hooks + vol de vie + knockback + rafale. */
-  dealDamage(e: IEnemyLike, baseDmg: number, finisher: boolean): void {
+  dealDamage(e: IEnemyLike, baseDmg: number, finisher: boolean, info?: HitInfo): void {
+    this.markCombat();
+    const anyE = e as unknown as { hp?: number; maxHp?: number; applySlow?: (f: number, ms: number) => void };
     // Poing de Saitama : élimination instantanée (hors boss)
-    if (!e.isBoss && this.stats.instakillChance > 0 && Math.random() < this.stats.instakillChance) {
+    // Page du Carnet : exécution sous un seuil de PV
+    const execFrac = anyE.hp != null && anyE.maxHp ? anyE.hp / anyE.maxHp : 1;
+    if (!e.isBoss && ((this.stats.instakillChance > 0 && Math.random() < this.stats.instakillChance)
+        || (this.stats.execThreshold > 0 && execFrac < this.stats.execThreshold))) {
       this.gs.juice.popText(e.x, e.y - 34, 'ÉLIMINÉ !', '#ff5a5a', 20);
       this.gs.juice.burst(e.x, e.y, 0xff5a5a, 20, 260, 1.6);
       e.takeDamage(999999, this.x, this.y);
       return;
     }
     const isCrit = Math.random() < this.stats.critChance;
-    const rage = (this.hp / this.stats.maxHp) < this.stats.rageBelow ? this.stats.rageDamageMult : 1;
-    let dmg = baseDmg * (isCrit ? this.stats.critMult : 1) * rage;
+    const rage = this.hpFrac() < this.stats.rageBelow ? this.stats.rageDamageMult : 1;
+    let dmg = baseDmg * (isCrit ? this.stats.critMult : 1) * rage * this.extraDamageMult();
     if (finisher) dmg *= 1.15;
+    if (info?.first) dmg *= this.stats.firstComboMult; // Vitesse Extrême
     dmg = Math.round(dmg);
     e.takeDamage(dmg, this.x, this.y);
     if (finisher) this.applyKnockback(e, this.stats.knockback);
-    for (const fn of this.onHitFns) fn(e, dmg, isCrit);
+    // crocs élémentaires (chance on-hit) + ralentissement (Toile Légère)
+    if (this.stats.fangBurn && Math.random() < this.stats.fangBurn) e.applyStatus('burn', 1500);
+    if (this.stats.fangFreeze && Math.random() < this.stats.fangFreeze) e.applyStatus('freeze', 700);
+    if (this.stats.fangShock && Math.random() < this.stats.fangShock) e.applyStatus('shock', 1200);
+    if (this.stats.hitSlow && anyE.applySlow) anyE.applySlow(1 - this.stats.hitSlow, 800);
+    for (const fn of this.onHitFns) fn(e, dmg, isCrit, info);
     if (this.stats.lifesteal > 0) this.heal(dmg * this.stats.lifesteal);
     if (isCrit) this.gs.juice.popText(e.x, e.y - 30, `${dmg}!`, '#ffe066', 18);
     // ORA ORA : coups instantanés supplémentaires (dégâts bruts)
@@ -405,13 +527,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
    */
   castSpecial(): void {
     if (this.dead) return;
+    this.markCombat();
+    const aimDir = this.nearestTargetDir(360) ?? this.aim.clone().normalize();
+    // Kamehameha Ultime : REMPLACE l'explosion par un rayon balayable
+    if (this.specialFlags.has('kamehameha')) {
+      this.gs.beamSweep(this.x, this.y, aimDir.x, aimDir.y, 35, 1200, 0x8fd0ff);
+      this.gs.sfx('rayon');
+      return;
+    }
     const bigExplosion = this.specialFlags.has('explosion');
     const radius = this.stats.specialRadius * (bigExplosion ? 1.3 : 1);
-    // explosion de chaleur rouge autour du chaton
     this.gs.juice.heatBlast(this.x, this.y, radius);
     this.gs.juice.shake(bigExplosion ? 260 : 190, bigExplosion ? 0.014 : 0.009);
     this.gs.sfx(bigExplosion ? 'explosionbig' : 'special');
-    // dégâts de zone du tourbillon
     for (const e of this.gs.getTargets()) {
       if (!e.isAlive()) continue;
       if (Math.hypot(e.x - this.x, e.y - this.y) <= radius) {
@@ -419,12 +547,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
         this.applyKnockback(e, 220);
       }
     }
-    // boons de spécial
     if (this.specialFlags.has('wave')) {
-      const a = this.nearestTargetDir(360) ?? this.aim.clone().normalize();
-      this.gs.slashWave(this.x, this.y, a.x, a.y, Math.round(this.stats.specialDamage * 0.9));
-      this.gs.slashWave(this.x, this.y, a.x, a.y, Math.round(this.stats.specialDamage * 0.9)); // double lame
+      this.gs.slashWave(this.x, this.y, aimDir.x, aimDir.y, Math.round(this.stats.specialDamage * 0.9));
+      this.gs.slashWave(this.x, this.y, aimDir.x, aimDir.y, Math.round(this.stats.specialDamage * 0.9));
       this.gs.sfx('getsuga');
+    }
+    // Fulgurance de Pika : 4 éclairs en croix
+    if (this.specialFlags.has('pika')) {
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) this.lineDamage(this.x, this.y, this.x + dx * 200, this.y + dy * 200, 26, 25, 0xfff27a);
+      this.gs.sfx('zap');
+    }
+    // Rasenshuriken : shuriken de vent qui explose en dôme sur l'ennemi le plus proche
+    if (this.specialFlags.has('rasenshuriken')) {
+      const t = this.gs.getTargets().find((e) => e.isAlive());
+      const tx = t ? t.x : this.x + aimDir.x * 160, ty = t ? t.y : this.y + aimDir.y * 160;
+      this.gs.juice.spiral(tx, ty, 0xbff7f6, 110);
+      this.gs.explosionAt(tx, ty, 110, 60);
+      this.gs.sfx('rasengan');
     }
     if (this.specialFlags.has('timestop')) this.gs.timeSlow(2200, 0.12);
   }
@@ -441,14 +580,41 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   // ---------- dégâts subis ----------
   takeDamage(amount: number, fromX = this.x, fromY = this.y): void {
     if (this.dead || this.isInvulnerable() || amount <= 0) return;
+    this.markCombat();
+    const now = performance.now();
+    // Nettoyage Parfait : être touché remet le bonus de salle à zéro.
+    if (this.mods.nettoyage) this.roomDamageBonus = 0;
+    this.mods.hitThisRoom = 1;
+    // Statik : chance d'électriser l'ennemi le plus proche au contact.
+    if (this.stats.contactShockChance > 0 && Math.random() < this.stats.contactShockChance) {
+      const near = this.gs.enemiesNear(this.x, this.y, 70);
+      if (near.length) near[0].applyStatus('shock', 1000);
+    }
     // Sharingan / Ultra Instinct : esquive automatique
     if (this.stats.dodgeChance > 0 && Math.random() < this.stats.dodgeChance) {
-      this.invulnUntil = performance.now() + 120;
+      this.invulnUntil = now + 120;
       this.gs.juice.popText(this.x, this.y - 40, 'Esquive !', '#9fe6ff', 15);
       return;
     }
-    const now = performance.now();
+    // Susanoo : absorbe les 3 prochains coups et riposte (se reconstitue en 20 s)
+    if (this.mods.susanoo > 0) {
+      this.mods.susanoo--;
+      this.gs.juice.ring(this.x, this.y, 100, 0xb26bff, 320);
+      this.gs.explosionAt(this.x, this.y, 100, 30);
+      if (this.mods.susanoo <= 0) this.gs.time.delayedCall(20000, () => { this.mods.susanoo = 3; });
+      return;
+    }
+    // Rempart du Cœur : bloque 1 coup toutes les 2 s
+    if (this.mods.rempart && now >= this.blockReadyAt) {
+      this.blockReadyAt = now + 2000;
+      this.gs.juice.burst(this.x, this.y, 0x8fd0ff, 8, 120, 0.9);
+      return;
+    }
     let dmg = amount * (1 - this.stats.armor);
+    if (this.mods.rugissement) dmg *= Math.max(0.5, 1 - 0.10 * this.mods.rugissement); // Rugissement
+    if (this.mods.transformActive) dmg *= 0.5; // Titan / Gear Fifth : -50% de dégâts subis
+    // Peau de Vibranium : premier coup de la salle réduit
+    if (this.mods.firstHitRoom && this.mods.vibranium) { dmg *= 0.5; this.mods.firstHitRoom = 0; }
 
     if (this.stats.thorns > 0) this.gs.thornsHit(fromX, fromY, amount * this.stats.thorns);
 

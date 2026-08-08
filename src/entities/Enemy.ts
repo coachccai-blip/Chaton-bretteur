@@ -94,7 +94,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     const dist = Math.hypot(dx, dy) || 1;
     const dir = new Phaser.Math.Vector2(dx / dist, dy / dist);
     const body = this.body as Phaser.Physics.Arcade.Body;
-    const spd = this.def.speed * (frozen ? 0.12 : 1) * timeScale;
+    const slow = now < this.slowUntil ? this.slowMul : 1;
+    const spd = this.def.speed * (frozen ? 0.12 : 1) * slow * timeScale;
 
     // attaque signature (interrompt le comportement)
     if (this.aiState === 'idle' && this.def.signature && !frozen && now >= this.sigNextAt
@@ -147,23 +148,33 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       }
     }
   }
-  private tickInterval(e: Element): number { return e === 'burn' ? 400 : 500; }
+  private tickInterval(e: Element): number { return e === 'burn' || e === 'blackburn' ? 400 : 500; }
   private dotDamage(e: Element): number {
     if (e === 'burn') return Math.max(2, Math.round(this.maxHp * 0.035));
+    if (e === 'blackburn') return Math.max(4, Math.round(this.maxHp * 0.07)); // Amaterasu : DoT ×2
     if (e === 'poison') return Math.max(2, Math.round(this.maxHp * 0.03));
     if (e === 'bleed') return Math.max(1, Math.round(this.maxHp * 0.03));
     return 0;
   }
   private dotColor(e: Element): number {
+    if (e === 'blackburn') return 0x14060a;
     return e === 'burn' ? 0xff6a1f : e === 'poison' ? 0x8fd94a : e === 'bleed' ? 0xc0392b : 0x9fe6ff;
   }
+
+  /** Ralentissement temporaire (Toile, Vapeur, immobilisations). */
+  applySlow(factor: number, ms: number): void {
+    this.slowMul = factor;
+    this.slowUntil = performance.now() + ms;
+  }
+  private slowMul = 1;
+  private slowUntil = 0;
 
   applyStatus(status: Element, duration: number): void {
     const now = performance.now();
     // réaction si un autre élément réactif est présent
-    if (status !== 'mark' && status !== 'bleed') {
+    if (status !== 'mark' && status !== 'bleed' && status !== 'blackburn') {
       for (const other of Object.keys(this.statuses) as Element[]) {
-        if (other === status || other === 'mark' || other === 'bleed') continue;
+        if (other === status || other === 'mark' || other === 'bleed' || other === 'blackburn') continue;
         const react = REACTIONS[reactKey(status, other)];
         if (react) {
           delete this.statuses[other];
@@ -196,6 +207,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     if (this.aiState === 'telegraph' || this.aiState === 'signature') return;
     if (frozen) this.setTint(0x8fdfff);
     else if (performance.now() < this.shieldedUntil) this.setTint(0x8fd0ff);
+    else if (this.statuses.blackburn) this.setTint(0x6a2030);
     else if (this.statuses.burn) this.setTint(0xff9a5a);
     else if (this.statuses.poison) this.setTint(0xbfe86a);
     else if (this.statuses.shock) this.setTint(0xcfe0ff);
@@ -490,6 +502,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   private beginTelegraph(now: number, ms: number, color: number, cb: () => void): void {
+    ms = Math.round(ms * (this.gs.player?.stats.telegraphMult ?? 1)); // Sens du Chaton
     this.aiState = 'telegraph';
     this.setTintFill(color);
     const s = this.def.scale;
@@ -522,6 +535,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
   kill(byPlayer: boolean): void {
     if (!this.alive) return;
+    // Flammes d'Amaterasu : la Brûlure Noire se propage à un ennemi proche.
+    if (this.statuses.blackburn) {
+      for (const e of this.gs.enemiesNear(this.x, this.y, 120)) {
+        if (e !== this && e.isAlive()) { e.applyStatus('blackburn', 4000); break; }
+      }
+    }
     this.alive = false;
     (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     this.gs.juice.burst(this.x, this.y - 10, 0xffe0b0, 12, 180, 1.2);
@@ -535,7 +554,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   private updateHpBar(): void {
-    if (this.hp >= this.maxHp) {
+    const scouter = !!this.gs.player?.mods.scouter; // Scouter : barre de PV toujours visible
+    if (this.hp >= this.maxHp && !scouter) {
       this.hpBg?.setVisible(false);
       this.hpFill?.setVisible(false);
       return;

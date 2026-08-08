@@ -73,6 +73,19 @@ export const PLAYER_BASE = {
   dodgeChance: 0, // chance d'esquive auto (Sharingan)
   rageBelow: 0, // seuil de PV (fraction) déclenchant la rage (Bankai)
   rageDamageMult: 1, // multiplicateur de dégâts en rage
+  // --- extensions catalogue 100 pouvoirs ---
+  healReceivedMult: 1, // Ration de Sasha, Éclat de Pierre Rouge (soins reçus)
+  knockbackResist: 0, // 0..1 : réduction des projections subies (Corps de Gomme)
+  soulHealBonus: 0, // PV rendus par âme récupérée (Senzu, Cueilleur)
+  soulMagnet: 0, // rayon d'aspiration des âmes (Cueilleur)
+  execThreshold: 0, // fraction de PV sous laquelle un non-boss meurt (Page du Carnet)
+  firstComboMult: 1, // bonus de dégâts du 1er coup du combo (Vitesse Extrême)
+  contactShockChance: 0, // chance d'appliquer CHOC à l'ennemi qui touche le chaton (Statik)
+  fangBurn: 0, fangFreeze: 0, fangShock: 0, // Crocs de Feu/Givre/Éclair (chance on-hit)
+  hitSlow: 0, // ralentissement appliqué à l'ennemi touché (Toile Légère)
+  telegraphMult: 1, // durée des télégraphes ennemis (Sens du Chaton)
+  projSlowRadius: 0, // ralentit les projectiles ennemis proches (Moustaches Radar)
+  contactShockOn: 0, // (réservé)
 };
 
 export type PlayerStats = typeof PLAYER_BASE;
