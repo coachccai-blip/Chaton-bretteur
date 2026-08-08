@@ -115,7 +115,8 @@ export class HubScene extends Phaser.Scene {
     MATERIALS.forEach((md, i) => {
       const x = startX + i * spacing;
       const cnt = SaveSystem.materialCount(md.id);
-      const img = this.add.image(x - 9, y, md.icon).setScale(1.0).setAlpha(cnt > 0 ? 1 : 0.35);
+      const img = this.add.image(x - 9, y, md.icon).setAlpha(cnt > 0 ? 1 : 0.35);
+      img.setScale(24 / Math.max(img.width, img.height)); // taille uniforme
       const t = label(this, x + 8, y, `×${cnt}`, 12, cnt > 0 ? '#f4e9c1' : '#6a6478', 0, 0.5);
       this.invLayer.add([img, t]);
     });
@@ -163,8 +164,10 @@ export class HubScene extends Phaser.Scene {
           const md = materialById(mid);
           const has = SaveSystem.materialCount(mid) >= qty;
           const ix = x + cw / 2 - 62 - k * 30;
-          const mimg = this.add.image(ix, y + ch / 2 - 13, md?.icon ?? 'mat_wood').setScale(0.8);
-          const mtxt = label(this, ix + 9, y + ch / 2 - 13, `${qty}`, 11, has ? '#f4c430' : '#ff6a6a', 0, 0.5);
+          const mimg = this.add.image(ix, y + ch / 2 - 13, md?.icon ?? 'mat_wood');
+          // taille uniforme (~22 px, comme les médailles), aspect préservé : ne déborde plus.
+          mimg.setScale(22 / Math.max(mimg.width, mimg.height));
+          const mtxt = label(this, ix + 10, y + ch / 2 - 13, `${qty}`, 11, has ? '#f4c430' : '#ff6a6a', 0, 0.5);
           this.cardsLayer.add([mimg, mtxt]);
         });
       }
