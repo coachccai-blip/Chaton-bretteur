@@ -11,6 +11,7 @@ import { GameOverScene } from './scenes/GameOverScene';
 import { VictoryScene } from './scenes/VictoryScene';
 import { FinalChoiceScene } from './scenes/FinalChoiceScene';
 import { RunState } from './systems/RunState';
+import { SaveSystem } from './systems/SaveSystem';
 import { POWERS } from './config/powers';
 
 const config: Phaser.Types.Core.GameConfig = {
@@ -50,6 +51,7 @@ const game = new Phaser.Game(config);
 (window as any).__debug = {
   run(diff = 'normal') {
     RunState.reset(diff);
+    RunState.setConsumables(SaveSystem.loadout);
     game.scene.stop('Menu'); game.scene.stop('Hub');
     game.scene.start('Game');
   },

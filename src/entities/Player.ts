@@ -109,6 +109,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     this.hp = Math.min(this.stats.maxHp, this.hp + amount * this.stats.healReceivedMult);
     this.gs.events.emit('hp', this.hp, this.stats.maxHp, this.shield, this.maxShield);
   }
+  /** Invincibilité temporaire (consommable Éclat Glacé). */
+  grantInvuln(ms: number): void { this.invulnUntil = Math.max(this.invulnUntil, performance.now() + ms); }
+  /** Effet visuel/sonore d'activation d'un consommable. */
+  consumableFx(color: number): void {
+    this.gs.juice.ring(this.x, this.y, 90, color, 450);
+    this.gs.juice.burst(this.x, this.y, color, 16, 200, 1.4);
+    this.gs.sfx('special');
+  }
+
   /** Soin plafonné à une fraction des PV max (Soif d'Alucard) : ne remonte jamais
    *  au-dessus de ce seuil, mais soigne bien si le chaton est en dessous. */
   healUpTo(amount: number, frac: number): void {
@@ -642,17 +651,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const finisher = comboIndex === maxCombo - 1;
     const dir = comboIndex % 2 === 0 ? 1 : -1; // alterne le côté du swing
     const cx = this.x, cy = this.y - 8;
-    const R = this.meleeRange() * (finisher ? 0.95 : 0.82);
-    const span = finisher ? 1.5 : 1.0;
-    // Décale le centre de l'arc selon le coup : les croissants successifs
-    // apparaissent de part et d'autre (fend à droite, revers à gauche…).
+    // TOUS les coups ont la MÊME taille que le dernier coup du combo (portée +
+    // amplitude d'arc du finisher) ; seuls la couleur et le sens de balayage
+    // changent pour garder la lisibilité du combo.
+    const R = this.meleeRange() * 0.95;
+    const span = 1.5;
     const center = aimAngle + (finisher ? 0 : dir * 0.36);
     const col = finisher ? 0xff9a2a : Player.SLASH_COLORS[comboIndex % Player.SLASH_COLORS.length];
     const g = this.gs.add.graphics().setDepth(23);
     // halo coloré large + fil de lame blanc net (rendu en coordonnées absolues).
-    g.lineStyle(finisher ? 20 : 14, col, 0.6);
+    g.lineStyle(20, col, 0.6);
     g.beginPath(); g.arc(cx, cy, R, center - span, center + span, false); g.strokePath();
-    g.lineStyle(finisher ? 9 : 5, 0xffffff, 0.92);
+    g.lineStyle(9, 0xffffff, 0.92);
     g.beginPath(); g.arc(cx, cy, R, center - span * 0.8, center + span * 0.8, false); g.strokePath();
     // easeIn : le croissant reste BRILLANT puis s'efface d'un coup (lisible même
     // en plein enchaînement rapide), au lieu de pâlir tout de suite.

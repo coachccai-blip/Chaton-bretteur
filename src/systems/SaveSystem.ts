@@ -11,6 +11,7 @@ export interface SaveData {
   clears: number;
   bestTimes: Record<string, number>; // difficultyId -> meilleur temps de clear (secondes)
   materials: Record<string, number>; // id de matériau -> quantité possédée
+  loadout: string[]; // consommables équipés pour la prochaine run (max 2)
   settings: { volume: number; muted: boolean };
 }
 
@@ -23,6 +24,7 @@ function defaults(): SaveData {
     clears: 0,
     bestTimes: {},
     materials: {},
+    loadout: [],
     settings: { volume: 0.7, muted: false },
   };
 }
@@ -116,6 +118,24 @@ class Save {
   hasFlag(flag: string): boolean {
     return META_UPGRADES.some((m) => m.flag === flag && this.tierOf(m.id) > 0);
   }
+
+  // ---- Consommables (boutique du camp) ----
+  get loadout(): string[] { return this.data.loadout; }
+  /** Achète un consommable et le place dans un slot libre (max 2). */
+  buyConsumable(id: string, cost: number, matCost: Record<string, number>): boolean {
+    if (this.data.loadout.length >= 2) return false;
+    if (this.data.currency < cost) return false;
+    if (!Object.entries(matCost).every(([k, v]) => this.materialCount(k) >= v)) return false;
+    this.data.currency -= cost;
+    for (const [k, v] of Object.entries(matCost)) this.data.materials[k] = this.materialCount(k) - v;
+    this.data.loadout.push(id);
+    this.save();
+    return true;
+  }
+  unequipConsumable(index: number): void {
+    if (index >= 0 && index < this.data.loadout.length) { this.data.loadout.splice(index, 1); this.save(); }
+  }
+  clearLoadout(): void { this.data.loadout = []; this.save(); }
 
   /** Nombre de renaissances disponibles par run (= paliers de Retombée Féline). */
   reviveCharges(): number {

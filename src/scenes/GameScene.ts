@@ -5,6 +5,7 @@ import { ENEMIES } from '../config/enemies';
 import { BOSSES } from '../config/bosses';
 import { BOSS_TAUNTS } from '../config/bossTaunts';
 import { materialByBoss, materialById } from '../config/materials';
+import { consumableById } from '../config/consumables';
 import { getDifficulty } from '../config/difficulty';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
@@ -221,6 +222,7 @@ export class GameScene extends Phaser.Scene {
     this.events.emit('powers', RunState.powers);
     this.events.emit('boons', this.pendingBoons); // compteur de compétences (0 au départ)
     this.events.emit('revives', this.reviveLeft()); // compteur de Retombées Félines
+    this.emitConsumables(); // slots de consommables portés
 
     this.startZone(RunState.zoneIndex);
 
@@ -490,6 +492,12 @@ export class GameScene extends Phaser.Scene {
         this.juice.ring(fx, fy, 120, 0x6ad46a, 500);
         this.juice.popText(fx, fy - 60, `+${healed} PV`, '#6ad46a', 20);
         AudioManager.play('fountain');
+        // La fontaine restaure aussi les consommables du départ (s'ils ont servi).
+        if (RunState.consumablesStart.some((id) => id)) {
+          RunState.restoreConsumables();
+          this.emitConsumables();
+          this.juice.popText(fx, fy - 84, 'Consommables restaurés !', '#eaf4ff', 15);
+        }
       }
     }});
     this.roomObjects.push({ destroy: () => check.remove() } as unknown as Phaser.GameObjects.GameObject);
@@ -948,6 +956,24 @@ export class GameScene extends Phaser.Scene {
 
   /** Nombre de compétences en attente (lu par l'ATH). */
   boonsPending(): number { return this.pendingBoons; }
+
+  /** Envoie l'état des consommables à l'ATH (slots de départ + restants). */
+  emitConsumables(): void {
+    this.events.emit('consumables', { slots: RunState.consumablesStart, active: RunState.consumables });
+  }
+  /** Active le consommable du slot donné (bouton/tap de l'ATH). */
+  useConsumable(index: number): void {
+    if (this.scene.isPaused() || !this.player || this.player.dead) return;
+    const id = RunState.consumables[index];
+    if (!id) return;
+    const def = consumableById(id);
+    if (!def) return;
+    def.use(this.player);
+    this.juice.popText(this.player.x, this.player.y - 46, `${def.name} !`, '#eaf4ff', 15);
+    this.sfx('special');
+    RunState.consumables[index] = '';
+    this.emitConsumables();
+  }
 
   /**
    * Récupère UNE compétence (déclenché par le bouton de l'ATH). Ouvre l'écran de
@@ -1488,6 +1514,7 @@ export class GameScene extends Phaser.Scene {
   private finishRun(victory: boolean): void {
     this.clearPylons();
     this.clearRageBosses();
+    SaveSystem.clearLoadout(); // les consommables portés sont consommés à la fin du run
     SaveSystem.addCurrency(RunState.currencyEarned);
     if (victory) SaveSystem.recordClear();
     AudioManager.stopMusic();

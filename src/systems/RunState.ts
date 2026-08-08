@@ -10,6 +10,9 @@ class Run {
   kills = 0;
   revivesUsed = 0;
   victory = false;
+  // Consommables portés (max 2) : actifs = restants, start = pour la fontaine.
+  consumables: string[] = [];
+  consumablesStart: string[] = [];
 
   // Expérience / niveau : on gagne un boon à chaque montée de niveau. Réglé pour
   // atteindre ~niveau 6/12/18… au boss 1/2/3… si l'on fait tous les combats.
@@ -33,10 +36,20 @@ class Run {
     this.level = 0;
     this.revivesUsed = 0;
     this.victory = false;
+    this.consumables = [];
+    this.consumablesStart = [];
     this.accumulatedMs = 0;
     this.segmentStart = performance.now();
     this.running = true;
   }
+
+  /** Charge les consommables portés pour la run (depuis la loadout du camp). */
+  setConsumables(ids: string[]): void {
+    this.consumables = [...ids];
+    this.consumablesStart = [...ids];
+  }
+  /** Restaure les consommables du départ (fontaine). */
+  restoreConsumables(): void { this.consumables = [...this.consumablesStart]; }
 
   addPower(p: PowerDef): void {
     this.powers.push(p);

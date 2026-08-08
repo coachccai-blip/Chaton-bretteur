@@ -7,6 +7,7 @@ import type { PowerDef } from '../config/powers';
 import { RARITY_COLORS, RARITY_NAMES } from '../config/powers';
 import { RunState } from '../systems/RunState';
 import { formatTime } from '../systems/SaveSystem';
+import { consumableById } from '../config/consumables';
 
 export class UIScene extends Phaser.Scene {
   private gs!: GameScene;
@@ -19,6 +20,7 @@ export class UIScene extends Phaser.Scene {
   private currencyText!: Phaser.GameObjects.Text;
   private reviveIcon!: Phaser.GameObjects.Sprite;
   private reviveText!: Phaser.GameObjects.Text;
+  private consumableLayer!: Phaser.GameObjects.Container;
   private skillBtn!: Phaser.GameObjects.Container;
   private skillBtnBg!: Phaser.GameObjects.Graphics;
   private skillBtnText!: Phaser.GameObjects.Text;
@@ -87,6 +89,12 @@ export class UIScene extends Phaser.Scene {
     this.reviveIcon = this.add.sprite(GAME_WIDTH - 232, 24, 'cat').setScale(0.62).setDepth(2).setVisible(false);
     this.reviveText = label(this, GAME_WIDTH - 218, 26, '', 16, '#eaf4ff', 0).setDepth(3).setVisible(false);
     this.onRevives(this.gs.reviveLeft());
+
+    // Consommables portés (2 slots cliquables, sous le bouton compétence).
+    this.consumableLayer = this.add.container(0, 0).setDepth(6);
+    this.input.keyboard?.on('keydown-ONE', () => this.gs.useConsumable(0));
+    this.input.keyboard?.on('keydown-TWO', () => this.gs.useConsumable(1));
+    this.onConsumables({ slots: RunState.consumablesStart, active: RunState.consumables });
 
     // Bouton COMPÉTENCE (sous les pièces) : clignote quand un choix est dispo ;
     // le joueur clique pour choisir (évite les sélections auto par erreur).
@@ -166,6 +174,30 @@ export class UIScene extends Phaser.Scene {
   }
 
   private onCurrency(n: number): void { this.currencyText.setText(`${n}`); }
+  private onConsumables(data: { slots: string[]; active: string[] }): void {
+    this.consumableLayer.removeAll(true);
+    const slots = data?.slots ?? [];
+    const active = data?.active ?? [];
+    for (let i = 0; i < 2; i++) {
+      const startId = slots[i];
+      if (!startId) continue;
+      const activeId = active[i];
+      const def = consumableById(startId);
+      const x = GAME_WIDTH - 152 + i * 42, y = 104;
+      const box = this.add.graphics();
+      box.fillStyle(0x1a1420, 0.85).fillRoundedRect(x - 17, y - 17, 34, 34, 6);
+      box.lineStyle(2, activeId ? 0x6ad46a : 0x4a4358, 1).strokeRoundedRect(x - 17, y - 17, 34, 34, 6);
+      const img = this.add.image(x, y, def?.icon ?? 'mat_wood');
+      img.setScale(22 / Math.max(img.width, img.height)).setAlpha(activeId ? 1 : 0.28);
+      const key = label(this, x - 13, y - 13, `${i + 1}`, 9, '#8fd0ff', 0, 0.5);
+      this.consumableLayer.add([box, img, key]);
+      if (activeId) {
+        const z = this.add.zone(x, y, 36, 36).setInteractive({ useHandCursor: true });
+        z.on('pointerdown', () => this.gs.useConsumable(i));
+        this.consumableLayer.add(z);
+      }
+    }
+  }
   private onRevives(n: number): void {
     const show = n > 0;
     this.reviveIcon.setVisible(show);
@@ -206,6 +238,7 @@ export class UIScene extends Phaser.Scene {
     e.on('boons', this.onBoons, this);
     e.on('revives', this.onRevives, this);
     e.on('hideTimer', this.onHideTimer, this);
+    e.on('consumables', this.onConsumables, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       e.off('hp', this.onHp, this);
@@ -221,6 +254,7 @@ export class UIScene extends Phaser.Scene {
       e.off('boons', this.onBoons, this);
       e.off('revives', this.onRevives, this);
       e.off('hideTimer', this.onHideTimer, this);
+      e.off('consumables', this.onConsumables, this);
     });
   }
 
