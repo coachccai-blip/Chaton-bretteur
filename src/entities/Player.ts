@@ -283,10 +283,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const moving = move.lengthSq() > 0.02;
     this.bobT += dt / 1000 * (moving ? 12 : 4);
     const bob = Math.sin(this.bobT) * (moving ? 0.06 : 0.03);
+    // Grossissement des transformations (Titan / Gear Fifth) : appliqué ici pour
+    // ne pas être écrasé par le squash/stretch de chaque frame.
+    const t = this.mods.transformActive ? (this.mods.transformScale || 1.5) : 1;
     if (this.dashing) {
-      this.setScale(1.15, 0.85);
+      this.setScale(1.15 * t, 0.85 * t);
     } else {
-      this.setScale(1 - bob * 0.5, 1 + bob);
+      this.setScale((1 - bob * 0.5) * t, (1 + bob) * t);
     }
     if (this.isInvulnerable() && !this.dead) {
       this.setAlpha(0.5 + 0.5 * Math.abs(Math.sin(this.bobT * 3)));
