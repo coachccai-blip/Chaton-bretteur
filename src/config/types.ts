@@ -59,8 +59,12 @@ export interface IPlayerContext {
   addBuff(key: string, ms: number, mods: BuffMods): void;
   addSpecialFlag(flag: SpecialFlag): void;
   addDashFlag(flag: DashFlag): void;
-  /** Relance l'effet du Spécial (avec tous ses bonus), sans cooldown. */
-  castSpecial(): void;
+  /**
+   * Relance l'effet du Spécial (avec ses bonus), sans cooldown. `auto` = true
+   * pour les relances automatiques (Sanctuaire de Sukuna) : celles-ci N'ACTIVENT
+   * PAS l'arrêt du temps (The World), qui doit rester une action volontaire.
+   */
+  castSpecial(auto?: boolean): void;
   px(): number;
   py(): number;
   hpFrac(): number;

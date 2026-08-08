@@ -67,6 +67,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   private kunaiPos: { x: number; y: number; at: number } | null = null;
   private transformUsedRoom = false;
   private transformToken = 0;
+  // Armes orbitales : katana noir (Troisième Lame) et Mjölnir (marteau).
+  private orbitBlades: Phaser.GameObjects.Sprite[] = [];
+  private orbitHammers: Phaser.GameObjects.Sprite[] = [];
+  private orbitAngle = 0;
+  private orbitHit = new WeakMap<object, number>();
+  private nextOrbitSpark = 0;
 
   constructor(scene: GameScene, x: number, y: number, stats: PlayerStats) {
     super(scene, x, y, 'cat');
@@ -163,6 +169,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
 
   // ---------- boucle ----------
   isInvulnerable(): boolean { return performance.now() < this.invulnUntil; }
+  /** Vrai pendant un dash : sert à traverser les obstacles (pas les murs d'arène). */
+  isDashing(): boolean { return this.dashing; }
 
   dashCharges(): number {
     const now = performance.now();
@@ -235,6 +243,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     for (const pe of this.periodics) {
       if (now >= pe.nextAt) { pe.nextAt = now + pe.interval; pe.fn(); }
     }
+    this.updateOrbitBlades(now, dt);
 
     // actions
     if (input.consumeDash()) this.tryDash(move);
@@ -298,8 +307,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     } else {
       this.setScale((1 - bob * 0.5) * t, (1 + bob) * t);
     }
+    // Clignotement franc pendant l'invincibilité (période ~140 ms).
     if (this.isInvulnerable() && !this.dead) {
-      this.setAlpha(0.5 + 0.5 * Math.abs(Math.sin(this.bobT * 3)));
+      this.setAlpha(Math.sin(performance.now() * 0.045) > 0 ? 1 : 0.3);
     } else {
       this.setAlpha(1);
     }
@@ -374,6 +384,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const waterDash = this.dashFlags.has('water');
     this.gs.juice.dashTrail(this.x, this.y, shockDash ? 0xfff27a : waterDash ? 0x59c8ff : 0x9fe6ff);
     this.gs.sfx(shockDash ? 'chidori' : 'dash');
+    if (waterDash) this.waterDashVfx(dir);
     for (const fn of this.onDashFns) fn();
     if (this.stats.dashDamage > 0) this.dashHitAccumulator = new Set();
 
@@ -405,6 +416,65 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     }
   }
   private dashHitAccumulator: Set<IEnemyLike> | null = null;
+
+  /**
+   * Armes qui tournoient autour du chaton : katana noir (Troisième Lame) et
+   * marteau Mjölnir (traînée électrique). Chaque arme tranche/écrase les ennemis
+   * qu'elle croise (cooldown par ennemi).
+   */
+  private updateOrbitBlades(now: number, dt: number): void {
+    this.orbitAngle += (dt / 1000) * (Math.PI * 2); // référence : 1 tour / s
+    // Katana : 1 tour / 1,2 s, pointe vers l'extérieur.
+    this.syncOrbitWeapon(this.orbitBlades, this.mods.orbitBlade || 0, 'katana_black', 66,
+      this.orbitAngle / 1.2, 8 + this.stats.swordDamage[0] * 0.3, 24, now, (a) => a + Math.PI / 2, false);
+    // Mjölnir : 1 tour / 1,6 s, culbute sur lui-même + traînée électrique.
+    this.syncOrbitWeapon(this.orbitHammers, this.mods.orbitHammer || 0, 'hammer_thor', 58,
+      this.orbitAngle / 1.6, 10, 27, now, () => this.orbitAngle * 2.4, true);
+  }
+
+  private syncOrbitWeapon(
+    arr: Phaser.GameObjects.Sprite[], count: number, tex: string, R: number, angle: number,
+    dmg: number, hitR: number, now: number, rot: (a: number) => number, electric: boolean,
+  ): void {
+    if (count <= 0) {
+      if (arr.length) { arr.forEach((b) => b.destroy()); arr.length = 0; }
+      return;
+    }
+    while (arr.length < count) arr.push(this.gs.add.sprite(this.x, this.y, tex).setDepth(22).setOrigin(0.5, 0.5));
+    for (let i = 0; i < arr.length; i++) {
+      const a = angle + (i / arr.length) * Math.PI * 2;
+      const bx = this.x + Math.cos(a) * R, by = this.y - 8 + Math.sin(a) * R;
+      arr[i].setPosition(bx, by).setRotation(rot(a)).setVisible(!this.dead);
+      if (this.dead) continue;
+      for (const e of this.gs.getTargets()) {
+        if (!e.isAlive()) continue;
+        if (Math.hypot(e.x - bx, e.y - by) <= hitR) {
+          const wk = e as unknown as object;
+          if (now - (this.orbitHit.get(wk) ?? 0) > 350) { this.orbitHit.set(wk, now); this.dealDamage(e, dmg, false); }
+        }
+      }
+    }
+    // Traînée électrique du marteau (étincelles cyan qui suivent la tête).
+    if (electric && arr.length && now >= this.nextOrbitSpark) {
+      this.nextOrbitSpark = now + 55;
+      const h = arr[0];
+      this.gs.juice.burst(h.x, h.y, 0xbff7f6, 3, 100, 0.7);
+    }
+  }
+
+  /** Première Danse de l'Eau : une vague écumeuse jaillit le long du dash. */
+  private waterDashVfx(dir: Phaser.Math.Vector2): void {
+    const ang = Math.atan2(dir.y, dir.x);
+    const wx = this.x + dir.x * 34, wy = this.y - 8 + dir.y * 34;
+    const wave = this.gs.add.sprite(wx, wy, 'water_wave').setDepth(23).setOrigin(0.5, 0.5)
+      .setRotation(ang + Math.PI / 2).setScale(1.3).setAlpha(0.95);
+    this.gs.tweens.add({ targets: wave, scaleX: 2.8, scaleY: 2.2, alpha: 0, duration: 300, ease: 'Cubic.easeOut', onComplete: () => wave.destroy() });
+    for (let k = 0; k < 5; k++) {
+      const px = this.x + dir.x * (10 + k * 22), py = this.y - 8 + dir.y * (10 + k * 22);
+      this.gs.juice.burst(px, py, 0x59b8ff, 4, 120, 0.7);
+    }
+    this.gs.sfx('splash');
+  }
 
   private tryAttack(): void {
     const now = performance.now();
@@ -570,13 +640,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
    * Megumin, The World…). Sans cooldown : réutilisé par les pouvoirs qui
    * relancent le Spécial en continu (Sanctuaire de Sukuna).
    */
-  castSpecial(): void {
+  castSpecial(auto = false): void {
     if (this.dead) return;
     this.markCombat();
     const aimDir = this.nearestTargetDir(360) ?? this.aim.clone().normalize();
-    // Kamehameha Ultime : REMPLACE l'explosion par un rayon balayable
+    // Kamehameha Ultime : REMPLACE l'explosion par un rayon balayable. Ses dégâts
+    // et sa portée dérivent de specialDamage/specialRadius, donc TOUS les boons
+    // qui augmentent le Spécial (Gant Réacteur, Marteau, Tourbillon Ample, Ultra
+    // Instinct…) se cumulent bien sur le rayon.
     if (this.specialFlags.has('kamehameha')) {
-      this.gs.beamSweep(this.x, this.y, aimDir.x, aimDir.y, 35, 1200, 0x8fd0ff);
+      const tick = Math.max(35, Math.round(this.stats.specialDamage * (35 / 30)));
+      const ms = 1200 + Math.round((this.stats.specialRadius - 150) * 2); // + de portée = + long
+      this.gs.beamSweep(this.x, this.y, aimDir.x, aimDir.y, tick, ms, 0x8fd0ff);
       this.gs.sfx('rayon');
       return;
     }
@@ -610,7 +685,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       this.gs.explosionAt(tx, ty, 110, 60);
       this.gs.sfx('rasengan');
     }
-    if (this.specialFlags.has('timestop')) this.gs.timeSlow(2200, 0.12);
+    // The World : l'arrêt du temps ne se déclenche QUE sur un spécial volontaire,
+    // jamais via une relance automatique (Sanctuaire de Sukuna) — sinon il se
+    // lançait « tout seul » en boucle.
+    if (!auto && this.specialFlags.has('timestop')) this.gs.timeSlow(2200, 0.12);
   }
 
   /** appelé par la scène quand le dash traverse un ennemi. */
@@ -675,10 +753,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (dmg > 0) this.hp -= dmg;
 
     this.invulnUntil = now + this.stats.hurtIFrames;
-    this.gs.juice.flash(this, 100);
-    this.gs.juice.shake(120, 0.006);
-    this.gs.juice.burst(this.x, this.y, 0xffffff, 6, 100, 0.8);
+    // Retour d'impact : le chaton vire ROUGE ~1 frame, l'écran tremble, un flash
+    // rouge pulse sur les bords (via UIScene) et un bruitage marque le dégât.
+    // Le clignotement d'invincibilité est géré dans animate() tant qu'i-frames.
+    this.gs.juice.flash(this, 70, 0xff2a2a);
+    const sev = Phaser.Math.Clamp(dmg / Math.max(1, this.stats.maxHp), 0, 1);
+    this.gs.juice.shake(150, 0.006 + sev * 0.006);
+    this.gs.juice.burst(this.x, this.y, 0xff4a4a, 7, 130, 0.9);
     this.gs.sfx('hurt');
+    this.gs.events.emit('hurt', sev);
     this.gs.events.emit('hp', Math.max(0, this.hp), this.stats.maxHp, this.shield, this.maxShield);
 
     if (this.hp <= 0) this.die();
@@ -692,6 +775,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (dmg > 0) this.hp -= dmg;
     this.setTintFill(0xff5a3a);
     this.gs.time.delayedCall(80, () => { if (this.active && !this.dead) this.clearTint(); });
+    if (dmg > 0) this.gs.events.emit('hurt', 0.14); // léger pulse rouge de bord
     this.gs.events.emit('hp', Math.max(0, this.hp), this.stats.maxHp, this.shield, this.maxShield);
     if (this.hp <= 0) this.die();
   }
@@ -718,6 +802,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
 
   destroy(fromScene?: boolean): void {
     this.swordR?.destroy(); this.swordL?.destroy();
+    this.orbitBlades.forEach((b) => b.destroy()); this.orbitBlades = [];
+    this.orbitHammers.forEach((b) => b.destroy()); this.orbitHammers = [];
     super.destroy(fromScene);
   }
 }

@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
 import { genSprite, genMask, genOrb, genPixel } from './PixelArtGenerator';
-import { CAT, SWORD } from './hero';
+import { CAT, SWORD, KATANA, MERCHANT_CAT, HAMMER, WATER_WAVE } from './hero';
 import { GLYPHS } from './icons';
 import { genCritter, MONSTER_RECIPES } from './critters';
 import { BOSS_CATS } from './bosscats';
-import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed } from './environment';
+import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, MINE } from './environment';
 import { ZONES } from '../config/worlds';
 
 let generated = false;
@@ -16,6 +16,11 @@ export function generateAll(scene: Phaser.Scene): void {
   // Héros
   genSprite(scene, CAT);
   genSprite(scene, SWORD);
+  genSprite(scene, KATANA); // katana noir orbital (Troisième Lame)
+  genSprite(scene, HAMMER); // Mjölnir orbital
+  genSprite(scene, WATER_WAVE); // vague de la Première Danse de l'Eau
+  genSprite(scene, MERCHANT_CAT); // chat marchand du désert
+  genSprite(scene, MINE);   // marqueur de danger au sol
 
   // Monstres (procéduraux)
   for (const [key, recipe] of Object.entries(MONSTER_RECIPES)) genCritter(scene, `mob_${key}`, recipe);

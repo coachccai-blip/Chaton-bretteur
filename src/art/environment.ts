@@ -202,6 +202,34 @@ export const PROPS: SpriteDef[] = [
     rows: ['..WWWW..', '.WwwwwW.', 'WweWWeWw', 'WwwWWwwW', '.Ww##wW.', '..WwwW..', '..#..#..'] },
 ];
 
+/**
+ * Mine anti-personnel (13x13) : sphère métallique hérissée de pointes avec un
+ * cœur rouge lumineux. Posée sur les zones dangereuses au sol pour signaler
+ * clairement le danger (le clignotement rouge est géré au rendu).
+ */
+export const MINE: SpriteDef = {
+  key: 'mine',
+  pal: {
+    '.': null, '#': '#0a0c10', 'k': '#2a3038', 'm': '#454e58', 'w': '#6a7480',
+    'r': '#ff2a2a', 'R': '#ff9a7a', 'y': '#ffe08a',
+  },
+  rows: [
+    '......#......',
+    '.....#k#.....',
+    '..#..kkk..#..',
+    '...#kmmmk#...',
+    '..kkmmwmmkk..',
+    '.#kmmwrwmmk#.',
+    '#kmmwrRrwmmk#',
+    '.#kmmwrwmmk#.',
+    '..kkmmwmmkk..',
+    '...#kmmmk#...',
+    '..#..kkk..#..',
+    '.....#k#.....',
+    '......#......',
+  ],
+};
+
 /** Décors d'ambiance placés délibérément (torches, bannières). */
 export const DECOR: SpriteDef[] = [
   { key: 'deco_torch', pal: { '.': null, '#': '#100e0d', 'm': '#3a3a42', 'M': '#5a5a64', 'o': '#2a1a10', 'O': '#5a3a1e' },

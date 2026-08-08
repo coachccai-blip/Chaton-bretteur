@@ -116,6 +116,7 @@ export class GameScene extends Phaser.Scene {
   private bossHazards: Hazard[] = [];
   private traps: Trap[] = [];
   private hazardGfx!: Phaser.GameObjects.Graphics;
+  private hazardMarkers: Phaser.GameObjects.Image[] = []; // mines de signalisation (pool)
   private reviveAvailable = false;
   private poisonUntil = 0;
   private nextPoisonTick = 0;
@@ -152,8 +153,9 @@ export class GameScene extends Phaser.Scene {
     this.reviveAvailable = SaveSystem.hasFlag('revive');
     this.player = new Player(this, WORLD_WIDTH / 2, ARENA.y + ARENA.h / 2, stats);
 
-    // collisions murs
-    this.physics.add.collider(this.player, this.walls);
+    // collisions murs. Le joueur traverse les OBSTACLES pendant un dash
+    // (les bords d'arène restent infranchissables via les world bounds).
+    this.physics.add.collider(this.player, this.walls, undefined, () => !this.player.isDashing());
     this.physics.add.collider(this.enemies, this.walls);
     this.physics.add.collider(this.enemies, this.enemies);
     this.physics.add.overlap(this.projectiles, this.walls, (pr) => (pr as Projectile).destroy());
@@ -462,10 +464,10 @@ export class GameScene extends Phaser.Scene {
       { label: 'Boon', currency: 'hp', cost: 25, buy: openBoon },
       { label: '+40 PV max', currency: 'coin', cost: 35, buy: () => { this.player.stats.maxHp += 40; this.player.heal(40); } },
     ];
-    // marchand : chat noir ténébreux (halo violet sombre, yeux luisants)
-    const aura = this.add.image(WORLD_WIDTH / 2, ARENA.y + 66, 'light').setTint(0x5a3a8a).setBlendMode(Phaser.BlendModes.ADD).setScale(1.1).setDepth(8).setAlpha(0.4);
-    this.tweens.add({ targets: aura, alpha: 0.2, duration: 1100, yoyo: true, repeat: -1 });
-    const npc = this.add.sprite(WORLD_WIDTH / 2, ARENA.y + 70, 'cat').setScale(2.4).setTint(0x241f30).setDepth(11);
+    // marchand : chat tigré du désert (turban, gourde) sous un halo doré chaud
+    const aura = this.add.image(WORLD_WIDTH / 2, ARENA.y + 66, 'light').setTint(0xf4a020).setBlendMode(Phaser.BlendModes.ADD).setScale(1.1).setDepth(8).setAlpha(0.35);
+    this.tweens.add({ targets: aura, alpha: 0.18, duration: 1100, yoyo: true, repeat: -1 });
+    const npc = this.add.sprite(WORLD_WIDTH / 2, ARENA.y + 70, 'merchant_cat').setScale(2.4).setDepth(11);
     this.tweens.add({ targets: npc, y: ARENA.y + 62, duration: 900, yoyo: true, repeat: -1 });
     this.roomObjects.push(aura, npc);
     items.forEach((it, i) => {
@@ -546,8 +548,8 @@ export class GameScene extends Phaser.Scene {
     this.hazardGfx.clear();
     const def = BOSSES[this.zone.bossId];
     const diff = getDifficulty(RunState.difficultyId);
-    // PV des boss ×2, ×3, ×4, ×5 selon la zone (combats bien plus costauds)
-    const bossHpMult = 2 + this.zone.index;
+    // PV des boss : (2 + index par zone) ×2 — combats deux fois plus costauds.
+    const bossHpMult = (2 + this.zone.index) * 2;
     AudioManager.startMusic('boss');
     this.events.emit('progress', this.zone.name, this.zone.rooms, this.zone.rooms, true);
     // petit dialogue chaton ↔ boss (change à chaque run), puis la bannière et le boss
@@ -917,7 +919,9 @@ export class GameScene extends Phaser.Scene {
     const px = this.player?.x ?? -999, py = this.player?.y ?? -999;
     const playerAlive = this.player && !this.player.dead;
 
-    for (const h of [...this.hazards, ...this.bossHazards]) {
+    const allHaz = [...this.hazards, ...this.bossHazards];
+    this.syncHazardMarkers(allHaz, now);
+    for (const h of allHaz) {
       const fx = HAZARD_FX[h.type];
       const telegraphing = now < h.activeAt;
       if (telegraphing) {
@@ -943,6 +947,25 @@ export class GameScene extends Phaser.Scene {
       }
     }
     if (this.player) this.player.slowFactor = slowMul;
+  }
+
+  /** Pose une MINE clignotante au centre de chaque zone dangereuse (pool réutilisé). */
+  private syncHazardMarkers(list: Hazard[], now: number): void {
+    while (this.hazardMarkers.length < list.length) {
+      this.hazardMarkers.push(this.add.image(0, 0, 'mine').setDepth(3));
+    }
+    for (let i = 0; i < this.hazardMarkers.length; i++) {
+      const m = this.hazardMarkers[i];
+      if (i >= list.length) { m.setVisible(false); continue; }
+      const h = list[i];
+      const telegraphing = now < h.activeAt;
+      // télégraphe = clignotement rapide (alerte) ; actif = pulsation lente rouge.
+      const blink = telegraphing ? (Math.sin(now * 0.02) > 0 ? 1 : 0.3) : 0.7 + 0.3 * Math.abs(Math.sin(now * 0.008));
+      const base = Phaser.Math.Clamp(h.r / 34, 0.7, 1.9);
+      m.setVisible(true).setPosition(h.x, h.y).setAlpha(blink)
+        .setScale(base * (1 + 0.06 * Math.sin(now * 0.012)))
+        .setTint(telegraphing ? 0xffd0d0 : 0xffffff);
+    }
   }
 
   // ---------------- VFX & télégraphes d'attaques (pixel art) ----------------

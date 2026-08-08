@@ -41,6 +41,116 @@ export const CAT: SpriteDef = {
   ],
 };
 
+/**
+ * Katana noir spectral (7x20), pointe en haut, tranchant lumineux à droite,
+ * tsuba dorée. Utilisé par le boon « Troisième Lame » qui le fait tournoyer.
+ */
+export const KATANA: SpriteDef = {
+  key: 'katana_black',
+  pal: {
+    '.': null,
+    '#': '#08080c', 'B': '#1a1a24', 'e': '#9fd0e8',
+    'g': '#c9a23a', 'G': '#8a6a20', 'h': '#241810',
+  },
+  rows: [
+    '...#...',
+    '..#B#..',
+    '..#Be..',
+    '..#Be..',
+    '..#Be..',
+    '..#Be..',
+    '..#Be..',
+    '..#Be..',
+    '..#Be..',
+    '..#Be..',
+    '..#Be..',
+    '..#Be..',
+    '..#B#..',
+    '.ggggg.',
+    '..GhG..',
+    '..#h#..',
+    '..#h#..',
+    '..GhG..',
+    '..#h#..',
+    '...#...',
+  ],
+};
+
+/**
+ * Chat marchand du désert (18x18) : turban à joyau, robe brune, chat tigré
+ * beige/marron, gourde d'eau accrochée au flanc.
+ */
+export const MERCHANT_CAT: SpriteDef = {
+  key: 'merchant_cat',
+  pal: {
+    '.': null, '#': '#241810',
+    'F': '#d8b483', 'f': '#a87a4a', 'W': '#f0e2c0',
+    'T': '#3a9a9a', 't': '#276a6a', 'y': '#f4c430',
+    'R': '#b5794a', 'r': '#8a5a2e',
+    'g': '#7aa83f', 'G': '#4a6a24',
+    'e': '#2a1c10', 'i': '#5a3a1a',
+  },
+  rows: [
+    '.....TTTTTTTT.....',
+    '....TtTTTTTTtT....',
+    '...TtTTTyyTTTtT...',
+    '..TtTTTTTTTTTTtT..',
+    '..#tTTTTTTTTTTt#..',
+    '...#FFFFFFFFFF#...',
+    '...#FfFFFFFFfF#...',
+    '...#FeFFFFFFeF#...',
+    '...#FFWWiiWWFF#...',
+    '...#fFWWWWWWFf#...',
+    '...#FFFFFFFFFF#...',
+    '..#RRRRRRRRRRR#...',
+    '..#RrRRRRRRRrR#...',
+    '..#RRRRRRRRRRR#gg.',
+    '..#RrRRRRRRRrR#GgG',
+    '..#RRRRRRRRRRR#GgG',
+    '..#rRRRRRRRRr#.Gg.',
+    '...##########.....',
+  ],
+};
+
+/** Mjölnir (10x14) : marteau de guerre à tête d'acier runique, manche cuir. */
+export const HAMMER: SpriteDef = {
+  key: 'hammer_thor',
+  pal: {
+    '.': null, '#': '#0e1016', 'k': '#3a424c', 'm': '#5a636e', 'w': '#8b96a2',
+    'e': '#bff7f6', 'y': '#cfe0ff', 'h': '#6a4a2a', 'H': '#4a3018',
+  },
+  rows: [
+    '.wwwwwwww.',
+    'wmmmmmmmmw',
+    'wmkkwwkkmw',
+    'wmkeewwkmw',
+    'wmkkwwkkmw',
+    'wmmmmmmmmw',
+    '.wwwwwwww.',
+    '...hHHh...',
+    '...hHHh...',
+    '...hHHh...',
+    '...hHHh...',
+    '..HHHHHH..',
+    '...####...',
+    '..........',
+  ],
+};
+
+/** Vague d'eau (12x6) : crête écumeuse, tracée par la Première Danse de l'Eau. */
+export const WATER_WAVE: SpriteDef = {
+  key: 'water_wave',
+  pal: { '.': null, '#': '#0a3048', 'b': '#2a7ab0', 'B': '#59b8ff', 'w': '#bfe8ff', 'W': '#eaffff' },
+  rows: [
+    '..W..WW..W..',
+    '.wBBBBBBBBw.',
+    'WBBbbbbbbBBW',
+    'wBb##..##bBw',
+    '.b#......#b.',
+    '..w......w..',
+  ],
+};
+
 /** Épée cramoisie dentelée (8x18), pointe en haut, gemme turquoise. */
 export const SWORD: SpriteDef = {
   key: 'sword',

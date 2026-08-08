@@ -80,7 +80,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   private get phase(): BossPhase { return this.def.phases[this.phaseIndex]; }
 
   private resetMoveCooldowns(): void {
-    this.moveCooldowns = this.phase.moves.map(() => performance.now() + 900 + Math.random() * 800);
+    this.moveCooldowns = this.phase.moves.map(() => performance.now() + 450 + Math.random() * 450);
   }
 
   isAlive(): boolean { return this.alive; }
@@ -177,7 +177,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       this.setScale(this.def.scale);
       this.runMove(m, dir);
     });
-    this.moveCooldowns[i] = performance.now() + m.telegraph + m.cooldown;
+    // Cadence d'attaque ×2 : on réduit surtout le temps mort entre coups (le
+    // télégraphe reste lisible pour rester équitable).
+    this.moveCooldowns[i] = performance.now() + m.telegraph + m.cooldown * 0.5;
   }
 
   private runMove(m: BossMove, dir: Phaser.Math.Vector2): void {

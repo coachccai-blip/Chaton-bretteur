@@ -462,13 +462,8 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'third_blade', name: 'Troisième Lame', god: 'Chasseur de Pirates', category: 'divine', rarity: 'rare', icon: 'sword',
-    description: 'Une épée spectrale frappe l’ennemi le plus proche (8 dégâts / 1,2 s).',
-    apply(p) {
-      p.addPeriodic(1200, () => {
-        const t = nearest(p, p.px(), p.py(), 150);
-        if (t) p.combat.slashWave(p.px(), p.py(), t.x - p.px(), t.y - p.py(), 8);
-      });
-    },
+    description: 'Un katana noir tournoie autour du chaton et tranche les ennemis (8 dégâts).',
+    apply(p) { p.mods.orbitBlade = (p.mods.orbitBlade || 0) + 1; },
   },
   {
     id: 'heart_bulwark', name: 'Rempart du Cœur', god: 'Gardien des Glaces', category: 'defense', rarity: 'rare', icon: 'shield',
@@ -562,9 +557,9 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'mjolnir', name: 'Mjölnir', god: 'Dieu du Tonnerre', category: 'divine', rarity: 'epic', icon: 'lightning',
-    description: 'Un marteau orbite (contact 10) et s’abat en foudre toutes les 5 s (35, rayon 90).',
+    description: 'Un marteau électrique tournoie autour du chaton (contact 10) et s’abat en foudre toutes les 5 s (35, rayon 90).',
     apply(p) {
-      p.addPeriodic(1000, () => { for (const e of p.combat.enemiesNear(p.px(), p.py(), 70)) e.takeDamage(10, p.px(), p.py()); });
+      p.mods.orbitHammer = (p.mods.orbitHammer || 0) + 1; // marteau tournant visible + traînée électrique
       p.addPeriodic(5000, () => {
         const t = nearest(p, p.px(), p.py(), 300);
         if (!t) return;
@@ -648,7 +643,7 @@ export const POWERS: PowerDef[] = [
     apply(p) {
       p.addPeriodic(2200, () => {
         const near = p.combat.enemiesNear(p.px(), p.py(), p.stats.specialRadius * 1.4);
-        if (near.length > 0) p.castSpecial();
+        if (near.length > 0) p.castSpecial(true); // relance auto : pas d'arrêt du temps
       });
     },
   },

@@ -4,7 +4,7 @@ import { label, iconBadge } from '../ui/theme';
 import { glyphTexture } from '../art/icons';
 import type { GameScene } from './GameScene';
 import type { PowerDef } from '../config/powers';
-import { RARITY_COLORS } from '../config/powers';
+import { RARITY_COLORS, RARITY_NAMES } from '../config/powers';
 import { RunState } from '../systems/RunState';
 import { formatTime } from '../systems/SaveSystem';
 
@@ -23,6 +23,7 @@ export class UIScene extends Phaser.Scene {
   private specialBadge!: Phaser.GameObjects.Container;
   private specialOverlay!: Phaser.GameObjects.Arc;
 
+  private hurtFx!: Phaser.GameObjects.Graphics;
   private bossLayer!: Phaser.GameObjects.Container;
   private bossBar!: Phaser.GameObjects.Graphics;
   private bossName!: Phaser.GameObjects.Text;
@@ -30,6 +31,10 @@ export class UIScene extends Phaser.Scene {
   private bossMaxHp = 1;
 
   private touch = false;
+  // Revue d'un pouvoir déjà collecté (met le jeu en pause).
+  private reviewing = false;
+  private reviewOverlay?: Phaser.GameObjects.Container;
+  private powerHits: { x: number; def: PowerDef; n: number }[] = [];
   private domRoot?: HTMLDivElement;
   private domCleanup: (() => void)[] = [];
   private gameplayActive = true;
@@ -74,6 +79,10 @@ export class UIScene extends Phaser.Scene {
     this.bossBar = this.add.graphics();
     this.bossLayer.add([bbg, this.bossBar, this.bossName, this.bossPhase]);
 
+    // Flash rouge sur les bords de l'écran quand le chaton est touché.
+    this.hurtFx = this.add.graphics().setDepth(20).setAlpha(0).setScrollFactor(0);
+    this.drawHurtBorder();
+
     this.setupEvents();
     this.setupTouch();
 
@@ -92,6 +101,25 @@ export class UIScene extends Phaser.Scene {
     this.timerText.setText(`⏱ ${formatTime(RunState.durationSec())}`);
   }
 
+  /** Dessine un cadre rouge à dégradé doux (bords opaques → centre transparent). */
+  private drawHurtBorder(): void {
+    const g = this.hurtFx; g.clear();
+    const layers = 16, band = 70; // épaisseur totale du halo
+    for (let i = 0; i < layers; i++) {
+      const t = (i / layers) * band;
+      const a = 0.55 * (1 - i / layers) * (1 - i / layers);
+      g.lineStyle(band / layers + 2, 0xff1f2e, a);
+      g.strokeRect(t, t, GAME_WIDTH - t * 2, GAME_HEIGHT - t * 2);
+    }
+  }
+
+  /** Pulse rouge de bord à l'impact (sévérité 0..1 selon les dégâts). */
+  private onHurt(severity: number): void {
+    this.tweens.killTweensOf(this.hurtFx);
+    this.hurtFx.setAlpha(Phaser.Math.Clamp(0.35 + severity * 0.6, 0.3, 0.95));
+    this.tweens.add({ targets: this.hurtFx, alpha: 0, duration: 360, ease: 'Cubic.easeOut' });
+  }
+
   private setupEvents(): void {
     const e = this.gs.events;
     e.on('hp', this.onHp, this);
@@ -102,6 +130,7 @@ export class UIScene extends Phaser.Scene {
     e.on('bossName', (name: string) => { this.bossName.setText(name); this.bossLayer.setVisible(true); });
     e.on('bossHp', this.onBossHp, this);
     e.on('bossPhase', (cur: number, total: number) => this.bossPhase.setText(`Phase ${cur}/${total}`));
+    e.on('hurt', this.onHurt, this);
 
     this.events.on(Phaser.Scenes.Events.SHUTDOWN, () => {
       e.off('hp', this.onHp, this);
@@ -109,6 +138,7 @@ export class UIScene extends Phaser.Scene {
       e.off('powers', this.onPowers, this);
       e.off('progress', this.onProgress, this);
       e.off('bossHp', this.onBossHp, this);
+      e.off('hurt', this.onHurt, this);
     });
   }
 
@@ -138,6 +168,7 @@ export class UIScene extends Phaser.Scene {
 
   private onPowers(powers: PowerDef[]): void {
     this.powersLayer.removeAll(true);
+    this.powerHits = [];
     const counts = new Map<string, { def: PowerDef; n: number }>();
     for (const p of powers) {
       const c = counts.get(p.id);
@@ -150,8 +181,59 @@ export class UIScene extends Phaser.Scene {
       const b = iconBadge(this, x, 0, glyphTexture(def.icon), RARITY_COLORS[def.rarity], COLORS.panel, 13);
       this.powersLayer.add(b);
       if (n > 1) this.powersLayer.add(label(this, x + 10, 8, `${n}`, 11, '#f4c430'));
+      // Clic/tap sur l'icône → revue du pouvoir (pause). Zone invisible (souris + tactile-canvas).
+      const z = this.add.zone(x, 0, 30, 30).setInteractive({ useHandCursor: true });
+      z.on('pointerdown', () => this.openPowerReview(def, n));
+      this.powersLayer.add(z);
+      this.powerHits.push({ x, def, n }); // y ≈ 50 (offset de powersLayer)
       i++;
     }
+  }
+
+  /** Trouve le pouvoir sous un appui tactile (coords écran → coords jeu). */
+  private powerAtScreen(clientX: number, clientY: number): { def: PowerDef; n: number } | null {
+    const rect = this.game.canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return null;
+    const gx = (clientX - rect.left) / rect.width * GAME_WIDTH;
+    const gy = (clientY - rect.top) / rect.height * GAME_HEIGHT;
+    if (gy < 34 || gy > 68) return null; // bande des pouvoirs (y ≈ 50)
+    for (const h of this.powerHits) if (Math.abs(gx - h.x) < 16) return h;
+    return null;
+  }
+
+  /** Met le jeu en pause et affiche la carte du pouvoir collecté (effets appliqués). */
+  private openPowerReview(def: PowerDef, n: number): void {
+    if (this.reviewing || !this.gameplayActive) return;
+    this.reviewing = true;
+    this.gameplayActive = false;
+    this.gs.scene.pause();
+
+    const c = this.add.container(0, 0).setDepth(50);
+    const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x05030a, 0.72).setInteractive();
+    bg.on('pointerdown', () => this.closePowerReview());
+    const cw = 460, ch = 250, cx = GAME_WIDTH / 2, cy = GAME_HEIGHT / 2;
+    const col = RARITY_COLORS[def.rarity];
+    const panel = this.add.graphics();
+    panel.fillStyle(COLORS.panel, 1).fillRoundedRect(cx - cw / 2, cy - ch / 2, cw, ch, 14);
+    panel.lineStyle(3, col, 1).strokeRoundedRect(cx - cw / 2, cy - ch / 2, cw, ch, 14);
+    const icon = this.add.image(cx - cw / 2 + 52, cy - ch / 2 + 52, glyphTexture(def.icon)).setTint(col).setScale(2.2);
+    const title = label(this, cx - cw / 2 + 92, cy - ch / 2 + 34, def.name + (n > 1 ? `  ×${n}` : ''), 20, '#f4e9c1', 0);
+    const sub = label(this, cx - cw / 2 + 92, cy - ch / 2 + 62,
+      `${RARITY_NAMES[def.rarity]}${def.god ? ' · ' + def.god : ''}`, 13, '#' + col.toString(16).padStart(6, '0'), 0);
+    const desc = this.add.text(cx - cw / 2 + 28, cy - ch / 2 + 96, def.description, {
+      fontFamily: 'monospace', fontSize: '15px', color: '#d8cff0', align: 'left', wordWrap: { width: cw - 56 }, lineSpacing: 5,
+    }).setOrigin(0, 0);
+    const hint = label(this, cx, cy + ch / 2 - 22, this.touch ? 'Touche pour reprendre' : 'Clique pour reprendre', 12, '#9a8fb0');
+    c.add([bg, panel, icon, title, sub, desc, hint]);
+    this.reviewOverlay = c;
+  }
+
+  private closePowerReview(): void {
+    if (!this.reviewing) return;
+    this.reviewing = false;
+    this.reviewOverlay?.destroy(); this.reviewOverlay = undefined;
+    this.gs.scene.resume();
+    this.gameplayActive = true;
   }
 
   private onProgress(zoneName: string, room: number, total: number, isBoss: boolean, label?: string): void {
@@ -219,7 +301,17 @@ export class UIScene extends Phaser.Scene {
     const R = 66; // rayon max (px écran)
     const setJoy = (el: HTMLElement, x: number, y: number) => { el.style.left = `${x}px`; el.style.top = `${y}px`; };
     const onStart = (e: TouchEvent) => {
-      if (!this.gameplayActive || moveId !== null) return;
+      // Revue d'un pouvoir ouverte : n'importe quel appui la referme (reprend le jeu).
+      if (this.reviewing) { this.closePowerReview(); e.preventDefault(); return; }
+      if (moveId !== null) return;
+      // Appui sur la bande des pouvoirs (haut-gauche) → ouvre la revue (met en pause).
+      for (const t of Array.from(e.changedTouches)) {
+        const el0 = t.target as HTMLElement | null;
+        if (el0 && el0.dataset && el0.dataset.tcbtn === '1') continue;
+        const hit = this.powerAtScreen(t.clientX, t.clientY);
+        if (hit) { this.openPowerReview(hit.def, hit.n); e.preventDefault(); return; }
+      }
+      if (!this.gameplayActive) return;
       for (const t of Array.from(e.changedTouches)) {
         const el = t.target as HTMLElement | null;
         if (el && el.dataset && el.dataset.tcbtn === '1') continue;   // c'est un bouton

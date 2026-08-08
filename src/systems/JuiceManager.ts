@@ -42,9 +42,9 @@ export class JuiceManager {
     });
   }
 
-  /** Flash blanc sur une entité touchée. */
-  flash(obj: Phaser.GameObjects.Sprite, ms = 90): void {
-    obj.setTintFill(0xffffff);
+  /** Flash de teinte pleine sur une entité touchée (blanc par défaut). */
+  flash(obj: Phaser.GameObjects.Sprite, ms = 90, color = 0xffffff): void {
+    obj.setTintFill(color);
     this.scene.time.delayedCall(ms, () => {
       if (obj.active) obj.clearTint();
     });
