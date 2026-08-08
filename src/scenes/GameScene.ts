@@ -762,7 +762,7 @@ export class GameScene extends Phaser.Scene {
       RunState.kills++;
       this.player.notifyKill(e);
       this.addRunCurrency(REWARDS.perEnemyBonus);
-      this.awardXp(Math.round(2 + e.maxHp * 0.06)); // XP proportionnelle à la robustesse
+      this.awardXp(Math.round(3 + e.maxHp * 0.09)); // XP relevée : moins de salles, boss ×5 PV
     }
     // dépose une âme à récupérer (salles de combat uniquement)
     if (this.roomState === 'combat') this.spawnSoul(e.def.id, e.x, e.y);
