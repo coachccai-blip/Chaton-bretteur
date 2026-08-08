@@ -135,6 +135,7 @@ export class GameScene extends Phaser.Scene {
   private bossHazards: Hazard[] = [];
   private traps: Trap[] = [];
   private hazardGfx!: Phaser.GameObjects.Graphics;
+  private pylonBeamGfx!: Phaser.GameObjects.Graphics; // lasers bleus pilône → Glacior (invincibilité)
   private hazardMarkers: Phaser.GameObjects.Image[] = []; // mines de signalisation (pool)
   private reviveCharges = 0;
   // --- Boss final ---
@@ -195,6 +196,7 @@ export class GameScene extends Phaser.Scene {
     this.floor = this.add.tileSprite(WORLD_WIDTH / 2, ARENA.y + ARENA.h / 2, ARENA.w, ARENA.h, 'floor_foret');
     this.floor.setDepth(0);
     this.hazardGfx = this.add.graphics().setDepth(1);
+    this.pylonBeamGfx = this.add.graphics().setDepth(16); // au-dessus du sol, sous l'ATH
 
     this.enemies = this.physics.add.group({ runChildUpdate: true });
     this.projectiles = this.physics.add.group({ runChildUpdate: true });
@@ -858,6 +860,48 @@ export class GameScene extends Phaser.Scene {
   private clearPylons(): void {
     for (const p of this.bossPylons) p.destroy();
     this.bossPylons = [];
+    this.pylonBeamGfx?.clear();
+  }
+
+  /** Lasers bleus animés reliant chaque pilône vivant au(x) Glacior : montre
+   *  visuellement que ce sont les pilônes qui rendent le boss invincible. */
+  private updatePylonBeams(now: number): void {
+    const g = this.pylonBeamGfx; if (!g) return;
+    g.clear();
+    const pylons = this.bossPylons.filter((p) => p.isAlive());
+    if (!pylons.length) return;
+    // Cibles : le boss principal + les Glacior enragés encore invincibles.
+    const bosses: { x: number; y: number }[] = [];
+    if (this.boss?.isAlive()) bosses.push(this.boss);
+    for (const rb of this.rageBosses) if (rb !== this.boss && rb.isAlive()) bosses.push(rb);
+    if (!bosses.length) return;
+    const pulse = 0.55 + 0.35 * Math.sin(now * 0.012);
+    for (const p of pylons) {
+      // chaque pilône alimente le boss le plus proche (lisible même en trio).
+      let tgt = bosses[0], best = Infinity;
+      for (const b of bosses) { const d = (b.x - p.x) ** 2 + (b.y - p.y) ** 2; if (d < best) { best = d; tgt = b; } }
+      const px = p.x, py = p.y - 24, bx = tgt.x, by = tgt.y - 8;
+      // halo large translucide
+      g.lineStyle(9, 0x2a7add, 0.20 * pulse);
+      g.lineBetween(px, py, bx, by);
+      // faisceau moyen cyan
+      g.lineStyle(4, 0x59c8ff, 0.55 * pulse);
+      g.lineBetween(px, py, bx, by);
+      // cœur blanc-bleu fin
+      g.lineStyle(1.5, 0xdff2ff, 0.9 * pulse);
+      g.lineBetween(px, py, bx, by);
+      // « paquets » d'énergie qui glissent le long du faisceau vers le boss
+      const seg = Math.max(1, Math.round(Math.hypot(bx - px, by - py) / 26));
+      for (let k = 0; k < seg; k++) {
+        const t = ((k + (now * 0.0016) % 1) / seg) % 1;
+        const ex = px + (bx - px) * t, ey = py + (by - py) * t;
+        g.fillStyle(0xeaf6ff, 0.8 * pulse);
+        g.fillCircle(ex, ey, 2.2);
+      }
+      // petite lueur au point d'ancrage sur le boss
+      g.fillStyle(0x59c8ff, 0.22 * pulse);
+      g.fillCircle(bx, by, 12);
+    }
   }
 
   /** Pluie de stalactites : impacts partout SAUF quelques zones sûres marquées. */
@@ -2430,6 +2474,7 @@ export class GameScene extends Phaser.Scene {
     this.updateTraps(now);
     this.updateSouls();
     this.updateMaterialPickups();
+    this.updatePylonBeams(now);
     if (this.finalActive) { this.updateBossMines(now); this.clampFinalArena(); }
 
     // fin du ralentissement temporel (The World)
