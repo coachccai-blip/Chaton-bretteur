@@ -6,6 +6,17 @@ import { REACTIONS, reactKey } from './Enemy';
 
 interface StatusInfo { expire: number; nextTick: number; }
 
+/** Coups de corps-à-corps / approche (privilégiés en posture offensive « rush »). */
+const MELEE_MOVES = new Set(['charge', 'roll', 'diveBomb', 'shockwave', 'lineSweep']);
+
+/** Classement des coups pour l'ouverture : le boss lance sa MEILLEURE attaque au début. */
+const OPENER_RANK: Record<string, number> = {
+  icePylons: 100, mudFlood: 92, nova: 88, crossBeams: 86, geysers: 84, iceRain: 82,
+  fireBurst: 80, arrowRain: 74, spiral: 72, lineSweep: 66, diveBomb: 64, ringShot: 62,
+  shockwave: 60, roll: 58, summon: 54, glyphs: 52, charge: 48, fan: 44, aimedBurst: 38,
+  teleport: 8,
+};
+
 export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   gs: GameScene;
   def: BossDef;
@@ -21,6 +32,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   private bobT = 0;
   private nextDashAt = 0;   // prochaine ruée disponible
   private dashingUntil = 0; // fin de la ruée en cours
+  private stance: 'rush' | 'kite' = 'rush'; // posture : foncer / jouer la distance
+  private nextStanceAt = 0; // prochaine bascule de posture
+  private openingDone = false; // meilleure attaque lancée en début de combat
+  private openingAt = 0;
   private statuses: Partial<Record<Element, StatusInfo>> = {};
   private aura!: Phaser.GameObjects.Image;
   private auraEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -58,7 +73,11 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.auraRing = scene.add.graphics().setDepth(6);
 
     this.resetMoveCooldowns();
-    this.nextDashAt = performance.now() + 2200 + Math.random() * 1800;
+    const t0 = performance.now();
+    this.nextDashAt = t0 + 2200 + Math.random() * 1800;
+    this.openingAt = t0 + 650; // laisse l'anim d'apparition se jouer
+    this.nextStanceAt = t0 + 3500 + Math.random() * 3000;
+    this.stance = Math.random() < 0.5 ? 'rush' : 'kite';
     // entrée
     this.setScale(def.scale * 0.2).setAlpha(0);
     scene.tweens.add({ targets: this, scaleX: def.scale, scaleY: def.scale, alpha: 1, duration: 500, ease: 'Back.easeOut' });
@@ -118,27 +137,39 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     if (!this.busy && !frozen) {
       // Vitesse de déplacement des boss DOUBLÉE.
       const spd = this.phase.speed * this.gs.enemyTimeScale * 2;
-      if (now < this.dashingUntil) {
+      if (!this.openingDone && now >= this.openingAt) {
+        // Ouverture : le boss lance sa MEILLEURE attaque dès le début du combat.
+        this.openingDone = true;
+        this.execBestMove(dir);
+      } else if (now < this.dashingUntil) {
         // Ruée en cours : on laisse la vélocité de dash s'appliquer (pas d'écrasement).
-      } else if (now >= this.nextDashAt && dist > 80) {
-        // Tous les boss peuvent dasher : lunge rapide vers le joueur.
-        this.startBossDash(dir, now);
       } else {
-        if (this.phase.movement === 'slither') {
-          // serpente : avance vers le joueur en ondulant
-          const perp = new Phaser.Math.Vector2(-dir.y, dir.x);
-          const wobble = Math.sin(this.bobT * 3) * 0.9;
-          body.setVelocity((dir.x + perp.x * wobble) * spd, (dir.y + perp.y * wobble) * spd);
-        } else if (dist > 220) body.setVelocity(dir.x * spd, dir.y * spd);
-        else if (dist < 120) body.setVelocity(-dir.x * spd * 0.6, -dir.y * spd * 0.6);
-        else body.setVelocity(-dir.y * spd * 0.4, dir.x * spd * 0.4);
-
-        // choisir un move prêt
-        for (let i = 0; i < this.phase.moves.length; i++) {
-          if (now >= this.moveCooldowns[i]) {
-            this.execMove(i, dir);
-            break;
+        // Bascule de posture : parfois foncer (rush), parfois jouer la distance (kite).
+        if (now >= this.nextStanceAt) {
+          this.stance = this.stance === 'rush' ? 'kite' : 'rush';
+          this.nextStanceAt = now + 3500 + Math.random() * 3500;
+        }
+        // Dash surtout en posture offensive (fonce sur le joueur).
+        const wantDash = now >= this.nextDashAt && dist > 80 && (this.stance === 'rush' || Math.random() < 0.35);
+        if (wantDash) {
+          this.startBossDash(dir, now);
+        } else {
+          if (this.phase.movement === 'slither') {
+            // serpente : avance vers le joueur en ondulant
+            const perp = new Phaser.Math.Vector2(-dir.y, dir.x);
+            const wobble = Math.sin(this.bobT * 3) * 0.9;
+            const drift = this.stance === 'kite' && dist < 240 ? -0.6 : 1;
+            body.setVelocity((dir.x * drift + perp.x * wobble) * spd, (dir.y * drift + perp.y * wobble) * spd);
+          } else if (this.stance === 'rush') {
+            // fonce et reste au contact
+            if (dist > 70) body.setVelocity(dir.x * spd, dir.y * spd);
+            else body.setVelocity(dir.x * spd * 0.3, dir.y * spd * 0.3);
+          } else {
+            // kite : garde ses distances pour canarder / lancer sa signature
+            if (dist < 300) body.setVelocity(-dir.x * spd, -dir.y * spd);
+            else body.setVelocity(-dir.y * spd * 0.5, dir.x * spd * 0.5);
           }
+          this.pickMove(now, dir);
         }
       }
     } else if (frozen) {
@@ -154,6 +185,27 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     else if (this.gs.bossInvincible()) this.setTint(0x8fb8e8); // givre : invincible
     else if (!this.phase.tint) this.clearTint(); else this.setTint(this.phase.tint);
     this.updateAura();
+  }
+
+  /** Lance la meilleure attaque de la phase (ouverture de combat). */
+  private execBestMove(dir: Phaser.Math.Vector2): void {
+    let best = 0, bestRank = -1;
+    this.phase.moves.forEach((m, i) => {
+      const r = OPENER_RANK[m.type] ?? 30;
+      if (r > bestRank) { bestRank = r; best = i; }
+    });
+    this.execMove(best, dir);
+  }
+
+  /** Choisit un coup prêt, en privilégiant ceux qui collent à la posture courante. */
+  private pickMove(now: number, dir: Phaser.Math.Vector2): void {
+    const ready: number[] = [];
+    for (let i = 0; i < this.phase.moves.length; i++) if (now >= this.moveCooldowns[i]) ready.push(i);
+    if (!ready.length) return;
+    const wantMelee = this.stance === 'rush';
+    const preferred = ready.filter((i) => MELEE_MOVES.has(this.phase.moves[i].type) === wantMelee);
+    const pool = preferred.length ? preferred : ready;
+    this.execMove(pool[Math.floor(Math.random() * pool.length)], dir);
   }
 
   /** Ruée commune à tous les boss : lunge rapide vers le joueur avec traînée. */
