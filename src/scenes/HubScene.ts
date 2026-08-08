@@ -237,24 +237,25 @@ export class HubScene extends Phaser.Scene {
         this.cardsLayer.add(pip);
       }
 
-      // coût (bas-droite, séparé des pips)
+      // Coût : cluster ANCRÉ À DROITE construit de droite à gauche (coût pièces,
+      // puis chaque coût matériau), avec des largeurs mesurées → aucun chevauchement.
+      const yb = y + ch / 2 - 13;
       const costStr = maxed ? 'MAX' : `${cost} 🥇`;
-      const cLabel = label(this, x + cw / 2 - 12, y + ch / 2 - 13, costStr, 12, maxed ? '#6ad46a' : (canBuy ? '#f4c430' : '#8a8098'), 1, 0.5);
+      const cLabel = label(this, x + cw / 2 - 12, yb, costStr, 12, maxed ? '#6ad46a' : (canBuy ? '#f4c430' : '#8a8098'), 1, 0.5);
       this.cardsLayer.add(cLabel);
-
-      // coût EN MATÉRIAUX de boss (icône + quantité, à gauche du coût en pièces)
       if (!maxed) {
-        const mats = Object.entries(SaveSystem.matCostOf(m.id));
-        mats.forEach(([mid, qty], k) => {
+        let cx = x + cw / 2 - 14 - cLabel.width - 10; // bord droit du bloc matériaux
+        for (const [mid, qty] of Object.entries(SaveSystem.matCostOf(m.id))) {
           const md = materialById(mid);
           const has = SaveSystem.materialCount(mid) >= qty;
-          const ix = x + cw / 2 - 62 - k * 30;
-          const mimg = this.add.image(ix, y + ch / 2 - 13, md?.icon ?? 'mat_wood');
-          // taille uniforme (~22 px, comme les médailles), aspect préservé : ne déborde plus.
-          mimg.setScale(22 / Math.max(mimg.width, mimg.height));
-          const mtxt = label(this, ix + 10, y + ch / 2 - 13, `${qty}`, 11, has ? '#f4c430' : '#ff6a6a', 0, 0.5);
-          this.cardsLayer.add([mimg, mtxt]);
-        });
+          const mtxt = label(this, cx, yb, `${qty}`, 11, has ? '#f4c430' : '#ff6a6a', 1, 0.5); // aligné à droite
+          this.cardsLayer.add(mtxt);
+          cx -= mtxt.width + 3;
+          const mimg = this.add.image(cx, yb, md?.icon ?? 'mat_wood').setOrigin(1, 0.5);
+          mimg.setScale(18 / Math.max(mimg.width, mimg.height));
+          this.cardsLayer.add(mimg);
+          cx -= mimg.displayWidth + 10; // écart avant le matériau suivant
+        }
       }
 
       if (!maxed) {

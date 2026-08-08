@@ -66,7 +66,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   araignee: {
     id: 'araignee', name: 'Sylvaan', title: 'le Centaure Archer', sprite: 'centaure',
-    hp: 250, scale: 0.82, contactDamage: 14, auraColor: 0x59d9a0, level: 10,
+    hp: 300, scale: 0.82, contactDamage: 14, auraColor: 0x59d9a0, level: 10,
     phases: [
       { hpFrac: 1.0, speed: 150, moves: [
         { type: 'arrowRain', telegraph: 700, cooldown: 2800, count: 7, radius: 46, damage: 16, color: 0x59d9a0, say: 'Pluie de flèches !' },
@@ -193,7 +193,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   rapace: {
     id: 'rapace', name: 'Voltaïr', title: 'le Rapace du Jugement', sprite: 'rapace',
-    hp: 10000, scale: 0.82, contactDamage: 24, auraColor: 0xb0c8ff, level: 85,
+    hp: 8000, scale: 0.82, contactDamage: 24, auraColor: 0xb0c8ff, level: 85,
     phases: [
       { hpFrac: 1.0, speed: 175, moves: [
         { type: 'arrowRain', telegraph: 640, cooldown: 2600, count: 9, radius: 46, damage: 20, color: 0xb0c8ff },
@@ -222,7 +222,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   reflet: {
     id: 'reflet', name: 'Néantis', title: 'le Reflet Noir', sprite: 'reflet',
-    hp: 20000, scale: 0.82, contactDamage: 26, auraColor: 0xd05aff, level: 99,
+    hp: 15000, scale: 0.82, contactDamage: 26, auraColor: 0xd05aff, level: 99,
     phases: [
       { hpFrac: 1.0, speed: 150, moves: [
         // 1. Combo Miroir — charge d'estoc
