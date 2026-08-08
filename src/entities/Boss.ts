@@ -19,6 +19,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   private moveCooldowns: number[] = [];
   private busy = false;
   private bobT = 0;
+  private nextDashAt = 0;   // prochaine ruée disponible
+  private dashingUntil = 0; // fin de la ruée en cours
   private statuses: Partial<Record<Element, StatusInfo>> = {};
   private aura!: Phaser.GameObjects.Image;
   private auraEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -56,6 +58,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.auraRing = scene.add.graphics().setDepth(6);
 
     this.resetMoveCooldowns();
+    this.nextDashAt = performance.now() + 2200 + Math.random() * 1800;
     // entrée
     this.setScale(def.scale * 0.2).setAlpha(0);
     scene.tweens.add({ targets: this, scaleX: def.scale, scaleY: def.scale, alpha: 1, duration: 500, ease: 'Back.easeOut' });
@@ -113,21 +116,29 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     const body = this.body as Phaser.Physics.Arcade.Body;
 
     if (!this.busy && !frozen) {
-      const spd = this.phase.speed * this.gs.enemyTimeScale;
-      if (this.phase.movement === 'slither') {
-        // serpente : avance vers le joueur en ondulant
-        const perp = new Phaser.Math.Vector2(-dir.y, dir.x);
-        const wobble = Math.sin(this.bobT * 3) * 0.9;
-        body.setVelocity((dir.x + perp.x * wobble) * spd, (dir.y + perp.y * wobble) * spd);
-      } else if (dist > 220) body.setVelocity(dir.x * spd, dir.y * spd);
-      else if (dist < 120) body.setVelocity(-dir.x * spd * 0.6, -dir.y * spd * 0.6);
-      else body.setVelocity(-dir.y * spd * 0.4, dir.x * spd * 0.4);
+      // Vitesse de déplacement des boss DOUBLÉE.
+      const spd = this.phase.speed * this.gs.enemyTimeScale * 2;
+      if (now < this.dashingUntil) {
+        // Ruée en cours : on laisse la vélocité de dash s'appliquer (pas d'écrasement).
+      } else if (now >= this.nextDashAt && dist > 80) {
+        // Tous les boss peuvent dasher : lunge rapide vers le joueur.
+        this.startBossDash(dir, now);
+      } else {
+        if (this.phase.movement === 'slither') {
+          // serpente : avance vers le joueur en ondulant
+          const perp = new Phaser.Math.Vector2(-dir.y, dir.x);
+          const wobble = Math.sin(this.bobT * 3) * 0.9;
+          body.setVelocity((dir.x + perp.x * wobble) * spd, (dir.y + perp.y * wobble) * spd);
+        } else if (dist > 220) body.setVelocity(dir.x * spd, dir.y * spd);
+        else if (dist < 120) body.setVelocity(-dir.x * spd * 0.6, -dir.y * spd * 0.6);
+        else body.setVelocity(-dir.y * spd * 0.4, dir.x * spd * 0.4);
 
-      // choisir un move prêt
-      for (let i = 0; i < this.phase.moves.length; i++) {
-        if (now >= this.moveCooldowns[i]) {
-          this.execMove(i, dir);
-          break;
+        // choisir un move prêt
+        for (let i = 0; i < this.phase.moves.length; i++) {
+          if (now >= this.moveCooldowns[i]) {
+            this.execMove(i, dir);
+            break;
+          }
         }
       }
     } else if (frozen) {
@@ -139,8 +150,23 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     if (!this.busy) this.setScale(this.def.scale * (1 - bob * 0.4), this.def.scale * (1 + bob));
     // Orientation : face au joueur (intention), figée pendant une attaque.
     if (!this.busy && Math.abs(dx) > 6) this.setFlipX(dx < 0);
-    if (frozen) this.setTint(0x8fdfff); else if (!this.phase.tint) this.clearTint(); else this.setTint(this.phase.tint);
+    if (frozen) this.setTint(0x8fdfff);
+    else if (this.gs.bossInvincible()) this.setTint(0x8fb8e8); // givre : invincible
+    else if (!this.phase.tint) this.clearTint(); else this.setTint(this.phase.tint);
     this.updateAura();
+  }
+
+  /** Ruée commune à tous les boss : lunge rapide vers le joueur avec traînée. */
+  private startBossDash(dir: Phaser.Math.Vector2, now: number): void {
+    this.dashingUntil = now + 240;
+    this.nextDashAt = now + 2600 + Math.random() * 1600;
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    const dashSpeed = 620 * this.gs.enemyTimeScale;
+    body.setVelocity(dir.x * dashSpeed, dir.y * dashSpeed);
+    this.gs.juice.dashTrail(this.x, this.y, this.def.auraColor);
+    this.gs.juice.burst(this.x, this.y, this.def.auraColor, 8, 150, 1);
+    this.gs.sfx('bosscharge');
+    if (Math.abs(dir.x) > 0.1) this.setFlipX(dir.x < 0);
   }
 
   private enterPhase(): void {
@@ -168,7 +194,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     this.setTintFill(0xffffff);
     // moves à télégraphe interne : brève amorce seulement
-    const selfTel = m.type === 'arrowRain' || m.type === 'mudFlood' || m.type === 'glyphs' || m.type === 'geysers' || m.type === 'diveBomb' || m.type === 'teleport';
+    const selfTel = m.type === 'arrowRain' || m.type === 'mudFlood' || m.type === 'glyphs' || m.type === 'geysers' || m.type === 'diveBomb' || m.type === 'teleport' || m.type === 'iceRain' || m.type === 'icePylons';
     const windup = selfTel ? 320 : m.telegraph;
     this.gs.tweens.add({ targets: this, scaleX: this.def.scale * 1.12, scaleY: this.def.scale * 1.12, duration: windup, ease: 'Sine.easeInOut' });
     this.gs.time.delayedCall(windup, () => {
@@ -177,9 +203,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       this.setScale(this.def.scale);
       this.runMove(m, dir);
     });
-    // Cadence d'attaque ×2 : on réduit surtout le temps mort entre coups (le
-    // télégraphe reste lisible pour rester équitable).
-    this.moveCooldowns[i] = performance.now() + m.telegraph + m.cooldown * 0.5;
+    // Cadence d'attaque très soutenue : temps mort entre coups réduit de moitié
+    // supplémentaire (soit ×0,25 du CD de base) — les boss enchaînent les sorts.
+    this.moveCooldowns[i] = performance.now() + m.telegraph + m.cooldown * 0.25;
   }
 
   private runMove(m: BossMove, dir: Phaser.Math.Vector2): void {
@@ -408,6 +434,35 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         done(n * 120 + m.telegraph + 200);
         break;
       }
+      case 'fireBurst': {
+        // rafale de boules de feu crachées vers le joueur (à esquiver)
+        const n = m.count ?? 10;
+        for (let k = 0; k < n; k++) {
+          this.gs.time.delayedCall(k * 110, () => {
+            if (!this.alive || !this.gs.player) return;
+            const a = Math.atan2(this.gs.player.y - this.y, this.gs.player.x - this.x)
+              + Phaser.Math.FloatBetween(-0.09, 0.09);
+            this.gs.spawnEnemyProjectile(this.x, this.y - 12, Math.cos(a), Math.sin(a), m.speed ?? 250, m.damage ?? 14, undefined, undefined, { texture: 'fireball', scale: 1.6, orient: true, radius: 7 });
+            this.gs.juice.burst(this.x, this.y - 12, 0xff7a2a, 4, 90, 0.7);
+            this.gs.sfx('bossshot');
+          });
+        }
+        done(n * 110 + 160);
+        break;
+      }
+      case 'icePylons': {
+        // 4 pilônes d'invincibilité aux coins ; à briser pour blesser le boss
+        this.gs.spawnIcePylons(m.damage ?? 120);
+        this.gs.juice.ring(this.x, this.y, 120, 0x7fdcff, 420);
+        done(300);
+        break;
+      }
+      case 'iceRain': {
+        // pluie de stalactites du ciel, quelques zones sûres marquées en vert
+        this.gs.iceRain(m.safeCount ?? 3, m.count ?? 12, m.telegraph, m.damage ?? 22, m.radius ?? 46);
+        done((m.count ?? 12) * 130 + m.telegraph + 300);
+        break;
+      }
     }
   }
 
@@ -461,6 +516,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   // ---------- IEnemyLike ----------
   takeDamage(amount: number, _fx: number, _fy: number, opts?: { silent?: boolean }): void {
     if (!this.alive) return;
+    // Invincible tant que ses pilônes de glace tiennent (Glacior).
+    if (this.gs.bossInvincible()) {
+      if (!opts?.silent) {
+        this.gs.juice.flash(this, 50, 0x9fd0ff);
+        this.gs.juice.burst(this.x, this.y - 20, 0xbfeaff, 3, 70, 0.5);
+      }
+      return;
+    }
     if (this.statuses.mark) amount = Math.round(amount * 1.3);
     this.hp = Math.max(0, this.hp - amount);
     if (!opts?.silent) {

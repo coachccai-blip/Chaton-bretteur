@@ -3,6 +3,8 @@ import type { GameScene } from '../scenes/GameScene';
 import { ARENA_RECT } from '../scenes/GameScene';
 import type { EnemyDef, EnemySignature } from '../config/enemies';
 import type { Element, IEnemyLike } from '../config/types';
+import { getDifficulty } from '../config/difficulty';
+import { RunState } from '../systems/RunState';
 
 type State = 'idle' | 'telegraph' | 'charging' | 'recover' | 'signature';
 
@@ -32,6 +34,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   maxHp: number;
   hp: number;
   damage: number;
+  private dmgMul = 1;
   alive = true;
   isBoss = false;
 
@@ -56,6 +59,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.maxHp = Math.round(def.hp * hpMul);
     this.hp = this.maxHp;
     this.damage = def.damage * dmgMul;
+    this.dmgMul = dmgMul;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -77,6 +81,20 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   isAlive(): boolean { return this.alive; }
+
+  /**
+   * Dégât de projectile mis à l'échelle de la ZONE uniquement : spawnEnemyProjectile
+   * réapplique la difficulté, donc on la retire ici pour ne pas la compter deux fois.
+   */
+  private projDmg(base: number): number {
+    const diffDmg = getDifficulty(RunState.difficultyId).enemyDamage || 1;
+    return Math.round(base * (this.dmgMul / diffDmg));
+  }
+
+  /** Dégât direct (éruption, bombe) : pleine échelle zone × difficulté. */
+  private directDmg(base: number): number {
+    return Math.round(base * this.dmgMul);
+  }
 
   /** Son d'attaque throttlé globalement (évite la saturation en meute). */
   private atkSfx(key: string): void {
@@ -257,7 +275,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         const tx = p ? p.x : this.x, ty = p ? p.y : this.y;
         const r = sig.radius ?? 60;
         this.gs.telegraphCircle(tx, ty, r, color, sig.telegraph, () => {
-          if (this.alive) this.gs.eruptAt(tx, ty, r, color, sig.damage, sig.hazard, 2200);
+          if (this.alive) this.gs.eruptAt(tx, ty, r, color, this.directDmg(sig.damage), sig.hazard, 2200);
           endSig();
         });
         this.gs.tweens.add({ targets: this, x: tx, y: ty, duration: sig.telegraph, ease: 'Quad.easeIn' });
@@ -267,7 +285,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         const r = sig.radius ?? 80;
         this.gs.telegraphCircle(this.x, this.y, r, color, sig.telegraph, () => {
           if (!this.alive) { endSig(); return; }
-          this.gs.eruptAt(this.x, this.y, r, color, sig.damage);
+          this.gs.eruptAt(this.x, this.y, r, color, this.directDmg(sig.damage));
           endSig();
         });
         break;
@@ -300,7 +318,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
               Phaser.Math.Clamp(q.x + Math.cos(a) * 70, A.x + m, A.x + A.w - m),
               Phaser.Math.Clamp(q.y + Math.sin(a) * 70, A.y + m, A.y + A.h - m),
             );
-            this.gs.eruptAt(this.x, this.y, sig.radius ?? 40, color, sig.damage);
+            this.gs.eruptAt(this.x, this.y, sig.radius ?? 40, color, this.directDmg(sig.damage));
           }
           endSig();
         });
@@ -310,11 +328,43 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         const tx = p ? p.x : this.x, ty = p ? p.y : this.y;
         const r = sig.radius ?? 64;
         this.gs.telegraphCircle(tx, ty, r, color, sig.telegraph, () => {
-          if (this.alive) this.gs.eruptAt(tx, ty, r, color, sig.damage);
+          if (this.alive) this.gs.eruptAt(tx, ty, r, color, this.directDmg(sig.damage));
           endSig();
         });
         break;
       }
+      case 'coneSpray': {
+        // Souffle de glace en cône : plusieurs vagues de blocs + particules de givre.
+        this.gs.time.delayedCall(sig.telegraph, () => {
+          if (this.alive) this.fireCone(sig);
+          endSig();
+        });
+        break;
+      }
+    }
+  }
+
+  /** Souffle en cône : nappe de blocs de glace + éclats de givre projetés. */
+  private fireCone(sig: EnemySignature): void {
+    this.atkSfx('ecast');
+    const p = this.gs.player;
+    const base = p ? Math.atan2(p.y - this.y, p.x - this.x) : 0;
+    const n = sig.count ?? 9;
+    const spread = 0.85; // large cône
+    const speed = sig.speed ?? 220;
+    // 3 vagues successives pour un vrai « spray »
+    for (let wave = 0; wave < 3; wave++) {
+      this.gs.time.delayedCall(wave * 130, () => {
+        if (!this.alive) return;
+        for (let k = 0; k < n; k++) {
+          const t = n === 1 ? 0.5 : k / (n - 1);
+          const a = base + Phaser.Math.Linear(-spread, spread, t) + Phaser.Math.FloatBetween(-0.05, 0.05);
+          const sp = speed * (0.8 + Math.random() * 0.4);
+          this.gs.spawnEnemyProjectile(this.x, this.y - 12, Math.cos(a), Math.sin(a), sp, this.projDmg(sig.damage), 'freeze', undefined, { texture: 'ice_shard', scale: 1.3, radius: 6 });
+        }
+        // gerbe de particules de givre le long du cône
+        this.gs.frostSpray(this.x, this.y - 12, base, spread);
+      });
     }
   }
 
@@ -327,7 +377,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     for (let k = 0; k < n; k++) {
       const t = n === 1 ? 0.5 : k / (n - 1);
       const a = base + Phaser.Math.Linear(-spread, spread, t);
-      this.gs.spawnEnemyProjectile(this.x, this.y - 14, Math.cos(a), Math.sin(a), sig.speed ?? 200, sig.damage, undefined, sig.color);
+      this.gs.spawnEnemyProjectile(this.x, this.y - 14, Math.cos(a), Math.sin(a), sig.speed ?? 200, this.projDmg(sig.damage), undefined, sig.color);
     }
   }
 
@@ -394,7 +444,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     if (!this.alive) return;
     this.atkSfx('eshot');
     const a = this.def.attack!;
-    this.gs.spawnEnemyProjectile(this.x, this.y - 16, dir.x, dir.y, a.projectileSpeed ?? 180, a.projectileDamage ?? 8, a.status);
+    this.gs.spawnEnemyProjectile(this.x, this.y - 16, dir.x, dir.y, a.projectileSpeed ?? 180, this.projDmg(a.projectileDamage ?? 8), a.status);
   }
 
   private summon(): void {
@@ -477,7 +527,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       const p = this.gs.player;
       const tx = p ? p.x : this.x, ty = p ? p.y : this.y;
       const a = this.def.attack!;
-      this.gs.lobBomb(this.x, this.y - 14, tx, ty, a.explodeRadius ?? 64, a.projectileDamage ?? 16, a.status, a.telegraph ?? 700);
+      this.gs.lobBomb(this.x, this.y - 14, tx, ty, a.explodeRadius ?? 64, this.directDmg(a.projectileDamage ?? 16), a.status, a.telegraph ?? 700);
     }
   }
 

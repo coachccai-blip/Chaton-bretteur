@@ -6,31 +6,41 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   damage: number;
   status?: 'poison' | 'freeze';
   private dieAt: number;
+  private orient = false; // oriente le sprite selon la trajectoire (boules de feu)
 
-  constructor(scene: GameScene, x: number, y: number, vx: number, vy: number, damage: number, status?: 'poison' | 'freeze', tint?: number) {
-    super(scene, x, y, 'orb');
+  constructor(scene: GameScene, x: number, y: number, vx: number, vy: number, damage: number, status?: 'poison' | 'freeze', tint?: number, opts?: { texture?: string; scale?: number; orient?: boolean; radius?: number }) {
+    super(scene, x, y, opts?.texture ?? 'orb');
     this.gs = scene;
     this.damage = damage;
     this.status = status;
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setDepth(14);
-    this.setScale(1.2);
-    this.setTint(tint ?? (status === 'poison' ? 0x8fd94a : 0xff5a8a));
+    const sc = opts?.scale ?? 1.2;
+    this.setScale(sc);
+    // Sprite dédié (boule de feu, bloc de glace) : on garde ses couleurs d'origine.
+    if (opts?.texture) { if (tint) this.setTint(tint); }
+    else this.setTint(tint ?? (status === 'poison' ? 0x8fd94a : 0xff5a8a));
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setCircle(5, this.width / 2 - 5, this.height / 2 - 5);
+    const rad = opts?.radius ?? 5;
+    body.setCircle(rad, this.width / 2 - rad, this.height / 2 - rad);
     body.setVelocity(vx, vy);
     body.setAllowGravity(false);
     this.dieAt = performance.now() + 4000;
-    // petite traînée
-    scene.tweens.add({ targets: this, scale: 1.4, duration: 300, yoyo: true, repeat: -1 });
+    if (opts?.orient) {
+      this.orient = true;
+      this.setRotation(Math.atan2(vy, vx));
+    } else {
+      // petite traînée pulsée pour les orbes classiques
+      scene.tweens.add({ targets: this, scale: sc * 1.15, duration: 300, yoyo: true, repeat: -1 });
+    }
   }
 
   private slowed = false;
 
   preUpdate(t: number, dt: number): void {
     super.preUpdate(t, dt);
-    this.setRotation(this.rotation + dt * 0.01);
+    if (!this.orient) this.setRotation(this.rotation + dt * 0.01);
     // Moustaches Radar : ralentit une fois les projectiles qui entrent dans le rayon.
     const p = this.gs.player;
     if (!this.slowed && p && !p.dead && p.mods.projSlow) {

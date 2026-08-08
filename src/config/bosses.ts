@@ -5,7 +5,10 @@ export type BossMoveType =
   | 'mudFlood'    // inonde l'arène sauf quelques zones sûres (gobu)
   | 'roll'        // roule en boule très vite (gobu)
   | 'teleport'    // clignotement (mage)
-  | 'glyphs';     // glyphes explosifs au sol (mage)
+  | 'glyphs'      // glyphes explosifs au sol (mage)
+  | 'fireBurst'   // rafale de boules de feu vers le joueur (Ignis)
+  | 'icePylons'   // pilônes d'invincibilité aux 4 coins (Glacior)
+  | 'iceRain';    // pluie de stalactites, quelques zones sûres (Glacior)
 
 export interface BossMove {
   type: BossMoveType;
@@ -101,14 +104,16 @@ export const BOSSES: Record<string, BossDef> = {
     phases: [
       { hpFrac: 1.0, speed: 175, movement: 'slither', moves: [
         { type: 'fan', telegraph: 520, cooldown: 1900, count: 5, spread: 0.55, speed: 210, damage: 15, color: 0xff7a2a },
+        { type: 'fireBurst', telegraph: 620, cooldown: 3600, count: 10, speed: 250, damage: 14, color: 0xff7a2a },
         { type: 'summon', telegraph: 700, cooldown: 5200, summonId: 'bebeserpent', summonCount: 3 },
         { type: 'spiral', telegraph: 520, cooldown: 3000, count: 16, speed: 175, damage: 14, color: 0xff8a3a },
       ]},
       { hpFrac: 0.5, speed: 220, movement: 'slither', tint: 0xff5522, moves: [
-        { type: 'ringShot', telegraph: 560, cooldown: 2200, count: 16, speed: 195, damage: 15, color: 0xff5522 },
+        { type: 'fireBurst', telegraph: 520, cooldown: 3000, count: 10, speed: 280, damage: 16, color: 0xff5522 },
         { type: 'fan', telegraph: 400, cooldown: 1500, count: 7, spread: 0.7, speed: 240, damage: 16, color: 0xff7a2a },
         { type: 'summon', telegraph: 600, cooldown: 4800, summonId: 'bebeserpent', summonCount: 4 },
-        { type: 'geysers', telegraph: 600, cooldown: 3200, count: 6, radius: 52, damage: 24, hazard: 'fire', duration: 1300, color: 0xff6a1f },
+        // grosses flaques de lave persistantes (au lieu des petites bombes)
+        { type: 'geysers', telegraph: 600, cooldown: 3200, count: 5, radius: 78, damage: 24, hazard: 'lava', duration: 3200, color: 0xff6a1f },
       ]},
     ],
   },
@@ -149,19 +154,24 @@ export const BOSSES: Record<string, BossDef> = {
     hp: 1400, scale: 1.25, contactDamage: 22, auraColor: 0x7fdcff,
     phases: [
       { hpFrac: 1.0, speed: 160, moves: [
+        // 0. Pilônes de Glace — invoqués au spawn, rendent Glacior invincible (damage = PV/pilône)
+        { type: 'icePylons', telegraph: 700, cooldown: 999999, damage: 130 },
         // 1. Souffle du Zéro Absolu — rayon gelant balayé
         { type: 'lineSweep', telegraph: 900, cooldown: 3200, width: 70, length: 520, damage: 22, color: 0x7fdcff },
-        // 2. Pluie de Stalactites — 8 impacts télégraphiés
-        { type: 'arrowRain', telegraph: 720, cooldown: 3000, count: 8, radius: 46, damage: 20, color: 0x9fd0e8 },
+        // 2. Pluie de Stalactites — chute du ciel, quelques zones sûres
+        { type: 'iceRain', telegraph: 780, cooldown: 4200, count: 10, safeCount: 3, radius: 46, damage: 20, color: 0x9fd0e8 },
         // éclats de givre visés
         { type: 'aimedBurst', telegraph: 480, cooldown: 1900, count: 3, speed: 240, damage: 15, color: 0xcfe8ff },
       ]},
       { hpFrac: 0.6, speed: 200, tint: 0x9fe0f8, moves: [
+        // Re-invoque les pilônes à mi-vie (invincible de nouveau jusqu'à leur destruction)
+        { type: 'icePylons', telegraph: 650, cooldown: 999999, damage: 160 },
         // 3. Plongée Abyssale — plonge et jaillit
         { type: 'diveBomb', telegraph: 620, cooldown: 3400, radius: 70, damage: 26, color: 0x7fdcff },
         // 4. Miroirs de Glace — flipper de projectiles
         { type: 'ringShot', telegraph: 560, cooldown: 2400, count: 16, speed: 200, damage: 16, color: 0x9fe0f8 },
-        { type: 'arrowRain', telegraph: 600, cooldown: 2600, count: 12, radius: 48, damage: 22, color: 0x9fd0e8 },
+        // Pluie de stalactites renforcée
+        { type: 'iceRain', telegraph: 640, cooldown: 3600, count: 14, safeCount: 2, radius: 48, damage: 22, color: 0x9fd0e8 },
         // 6. Cœur de Gel — nova gelante
         { type: 'nova', telegraph: 900, cooldown: 5000, count: 20, speed: 200, damage: 24, color: 0x7fdcff },
       ]},

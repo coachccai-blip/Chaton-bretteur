@@ -230,6 +230,121 @@ export const MINE: SpriteDef = {
   ],
 };
 
+/** Boule de feu (12x12) crachée par Ignis : cœur blanc incandescent, couronne rouge. */
+export const FIREBALL: SpriteDef = {
+  key: 'fireball',
+  pal: {
+    '.': null, '#': '#5a1400', 'r': '#d43410', 'o': '#ff7a1f', 'y': '#ffc24a', 'w': '#fff2c0',
+  },
+  rows: [
+    '....####....',
+    '..#rrrrrr#..',
+    '.#rroooorr#.',
+    '#roooooooor#',
+    '#rooyyyyoor#',
+    '#royywwyyor#',
+    '#royywwyyor#',
+    '#rooyyyyoor#',
+    '#roooooooor#',
+    '.#rroooorr#.',
+    '..#rrrrrr#..',
+    '....####....',
+  ],
+};
+
+/** Bloc de glace (10x10) : projectile cristallin tiré par les monstres de givre. */
+export const ICE_SHARD: SpriteDef = {
+  key: 'ice_shard',
+  pal: {
+    '.': null, '#': '#0a2438', 'b': '#2a6a9a', 'B': '#59b8e8', 'c': '#bfeaff', 'w': '#ffffff',
+  },
+  rows: [
+    '...####...',
+    '..#BccB#..',
+    '.#BcwccB#.',
+    '#BccwccbB#',
+    '#Bcwccccb#',
+    '#Bccccwcb#',
+    '#BbccccbB#',
+    '.#Bbccbb#.',
+    '..#Bbbb#..',
+    '...####...',
+  ],
+};
+
+/** Éclat de givre (6x6) : particule de la nappe de glace en cône. */
+export const FROST: SpriteDef = {
+  key: 'frost',
+  pal: { '.': null, '#': '#1a4a6a', 'B': '#7fdcff', 'c': '#dff6ff' },
+  rows: [
+    '..##..',
+    '.#BB#.',
+    '#BccB#',
+    '#BccB#',
+    '.#BB#.',
+    '..##..',
+  ],
+};
+
+/** Stalactite de glace (10x16) qui tombe du ciel — pointe vers le bas. */
+export const ICE_STALACTITE: SpriteDef = {
+  key: 'ice_stalactite',
+  pal: {
+    '.': null, '#': '#0a2438', 'b': '#2a6a9a', 'B': '#59b8e8', 'c': '#bfeaff', 'w': '#ffffff',
+  },
+  rows: [
+    '#BBBBBBBB#',
+    '#BccccccB#',
+    '#BcwwcccB#',
+    '.#BccccB#.',
+    '.#BcwccB#.',
+    '.#BccccB#.',
+    '..#BccB#..',
+    '..#BcwB#..',
+    '..#BccB#..',
+    '...#BB#...',
+    '...#cB#...',
+    '....##....',
+    '....##....',
+    '....#c....',
+    '....#.....',
+    '..........',
+  ],
+};
+
+/** Pilône de glace (12x22) : totem invoqué par Glacior, cœur luisant à briser. */
+export const ICE_PYLON: SpriteDef = {
+  key: 'ice_pylon',
+  pal: {
+    '.': null, '#': '#0a2438', 'k': '#123a54', 'b': '#2a6a9a', 'B': '#59b8e8',
+    'c': '#bfeaff', 'w': '#ffffff', 'e': '#9fe8ff',
+  },
+  rows: [
+    '.....##.....',
+    '....#cc#....',
+    '....#cc#....',
+    '...#BccB#...',
+    '...#BccB#...',
+    '..#BcwwcB#..',
+    '..#BceecB#..',
+    '..#BceecB#..',
+    '..#BcwwcB#..',
+    '.#BbccccbB#.',
+    '.#BbceecbB#.',
+    '.#BbceecbB#.',
+    '.#BbccccbB#.',
+    '#BbccccccbB#',
+    '#BbcceeccbB#',
+    '#BbcceeccbB#',
+    '#BbccccccbB#',
+    '#BbbccccbbB#',
+    '#kBBbbbbBBk#',
+    '#kkBBBBBBkk#',
+    '.#kkkkkkkk#.',
+    '..########..',
+  ],
+};
+
 /** Décors d'ambiance placés délibérément (torches, bannières). */
 export const DECOR: SpriteDef[] = [
   { key: 'deco_torch', pal: { '.': null, '#': '#100e0d', 'm': '#3a3a42', 'M': '#5a5a64', 'o': '#2a1a10', 'O': '#5a3a1e' },

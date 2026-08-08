@@ -40,7 +40,7 @@ export class HubScene extends Phaser.Scene {
     this.refreshCurrency();
 
     // sélecteur de difficulté
-    label(this, GAME_WIDTH / 2, 100, 'Difficulté', 16, '#f4e9c1');
+    label(this, GAME_WIDTH / 2, 86, 'Difficulté', 16, '#f4e9c1');
     this.diffLayer = this.add.container(0, 0);
     this.buildDifficulty();
 
@@ -69,7 +69,7 @@ export class HubScene extends Phaser.Scene {
     const total = DIFFICULTIES.length;
     const w = 150, gap = 12;
     const startX = GAME_WIDTH / 2 - ((w + gap) * total - gap) / 2 + w / 2;
-    const y = 140;
+    const y = 116;
     DIFFICULTIES.forEach((d, i) => {
       const locked = d.id === 'extreme' && !SaveSystem.data.unlockedExtreme;
       const x = startX + i * (w + gap);
@@ -96,14 +96,14 @@ export class HubScene extends Phaser.Scene {
     const rec = SaveSystem.bestTime(this.selectedDiff);
     const dn = DIFFICULTIES.find((d) => d.id === this.selectedDiff)?.name ?? '';
     const recTxt = rec !== null ? `🏆 Record ${dn} : ${formatTime(rec)}` : `🏆 ${dn} : aucun record pour l'instant`;
-    this.diffLayer.add(label(this, GAME_WIDTH / 2, 168, recTxt, 12, '#f4c430'));
+    this.diffLayer.add(label(this, GAME_WIDTH / 2, 150, recTxt, 13, '#f4c430'));
   }
 
   private buildCards(): void {
     this.cardsLayer.removeAll(true);
-    const cols = 4, cw = 210, ch = 118, gapX = 16, gapY = 16;
+    const cols = 4, cw = 210, ch = 86, gapX = 16, gapY = 10;
     const startX = GAME_WIDTH / 2 - ((cw + gapX) * cols - gapX) / 2 + cw / 2;
-    const startY = 230;
+    const startY = 214;
     META_UPGRADES.forEach((m, i) => {
       const col = i % cols, row = Math.floor(i / cols);
       const x = startX + col * (cw + gapX);
@@ -114,23 +114,24 @@ export class HubScene extends Phaser.Scene {
       const canBuy = SaveSystem.canBuy(m.id);
 
       const p = panel(this, x, y, cw, ch, COLORS.panel, canBuy ? COLORS.gold : 0x4a4358, 0.95);
-      const badge = iconBadge(this, x - cw / 2 + 28, y - ch / 2 + 26, glyphTexture(m.icon), 0xf4e9c1, COLORS.panelLight, 16);
-      const name = label(this, x - cw / 2 + 50, y - ch / 2 + 26, m.name, 13, '#f4e9c1', 0, 0.5);
+      const badge = iconBadge(this, x - cw / 2 + 24, y - ch / 2 + 22, glyphTexture(m.icon), 0xf4e9c1, COLORS.panelLight, 14);
+      const name = label(this, x - cw / 2 + 46, y - ch / 2 + 22, m.name, 13, '#f4e9c1', 0, 0.5);
       // description ancrée sous le titre (grandit vers le bas -> jamais de chevauchement)
-      const desc = label(this, x, y - ch / 2 + 44, m.description, 10, '#c9c0d8', 0.5, 0);
+      const desc = label(this, x, y - ch / 2 + 40, m.description, 10, '#c9c0d8', 0.5, 0);
       desc.setWordWrapWidth(cw - 22);
       this.cardsLayer.add([p, badge, name, desc]);
 
-      // pips de palier
+      // pips de palier (bas-gauche)
       for (let t = 0; t < m.maxTier; t++) {
-        const px = x - cw / 2 + 20 + t * 16;
-        const pip = this.add.circle(px, y + ch / 2 - 34, 5, t < tier ? COLORS.gold : 0x3a3450)
+        const px = x - cw / 2 + 18 + t * 14;
+        const pip = this.add.circle(px, y + ch / 2 - 13, 4.5, t < tier ? COLORS.gold : 0x3a3450)
           .setStrokeStyle(1, 0x000000, 0.4);
         this.cardsLayer.add(pip);
       }
 
-      const costStr = maxed ? 'MAX' : `Coût : ${cost} 🥇`;
-      const cLabel = label(this, x, y + ch / 2 - 14, costStr, 12, maxed ? '#6ad46a' : (canBuy ? '#f4c430' : '#8a8098'));
+      // coût (bas-droite, séparé des pips)
+      const costStr = maxed ? 'MAX' : `${cost} 🥇`;
+      const cLabel = label(this, x + cw / 2 - 12, y + ch / 2 - 13, costStr, 12, maxed ? '#6ad46a' : (canBuy ? '#f4c430' : '#8a8098'), 1, 0.5);
       this.cardsLayer.add(cLabel);
 
       if (!maxed) {

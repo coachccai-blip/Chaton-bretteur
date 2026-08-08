@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { GameScene } from '../scenes/GameScene';
+import { ARENA_RECT } from '../scenes/GameScene';
 import type { PlayerStats } from '../config/game';
 import type { IPlayerContext, IEnemyLike, ICombatScene, OnHitFn, OnKillFn, VoidFn, SpecialFlag, DashFlag, BuffMods, HitInfo } from '../config/types';
 
@@ -64,7 +65,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   roomTimeBonus = 0;     // Orgueil du Lion (par seconde)
   private blockReadyAt = 0;
   private dashCount = 0;
-  private kunaiPos: { x: number; y: number; at: number } | null = null;
   private transformUsedRoom = false;
   private transformToken = 0;
   // Armes orbitales : katana noir (Troisième Lame) et Mjölnir (marteau).
@@ -76,6 +76,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   // Susanoo : aura violette + buste spectral tant que le boon est actif.
   private susanooAura?: Phaser.GameObjects.Image;
   private susanooSprite?: Phaser.GameObjects.Sprite;
+  // Kage Bunshin : clone d'ombre visible qui suit le chaton et frappe.
+  private kageClone?: Phaser.GameObjects.Sprite;
+  private kageNextAt = 0;
+  private kageAngle = 0;
 
   constructor(scene: GameScene, x: number, y: number, stats: PlayerStats) {
     super(scene, x, y, 'cat');
@@ -248,6 +252,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     }
     this.updateOrbitBlades(now, dt);
     this.updateSusanooVfx(now);
+    this.updateKageClone(now);
 
     // actions
     if (input.consumeDash()) this.tryDash(move);
@@ -372,22 +377,29 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     // Grappin d'Exploration : légère aimantation vers l'ennemi le plus proche
     if (this.mods.dashMagnet) { const to = this.nearestTargetDir(300); if (to) dir = dir.lerp(to, 0.4).normalize(); }
 
-    // Kunai Éclair : re-dasher dans les 3 s téléporte au kunai planté
-    if (this.dashFlags.has('kunai')) {
-      if (this.kunaiPos && now - this.kunaiPos.at < 3000) {
-        this.setPosition(this.kunaiPos.x, this.kunaiPos.y);
-        this.gs.juice.burst(this.x, this.y, 0xffe08a, 12, 170, 1.1); this.kunaiPos = null;
-      } else {
-        this.kunaiPos = { x: this.x, y: this.y, at: now };
-        this.gs.juice.burst(this.x, this.y, 0xffe08a, 4, 90, 0.7);
-      }
-    }
-
     const body = this.body as Phaser.Physics.Arcade.Body;
     const speed = (this.stats.dashDistance / this.stats.dashDuration) * 1000;
-    body.setVelocity(dir.x * speed, dir.y * speed);
+    // Kunai Éclair : le dash devient une TÉLÉPORTATION instantanée jusqu'au point
+    // d'arrivée (avec bruitage d'éclair). Tous les boons de dash s'appliquent
+    // quand même le long du trajet (dégâts, âmes ramassées, effets de fin).
+    const teleport = this.dashFlags.has('kunai');
+    if (teleport) {
+      const sx = this.x, sy = this.y;
+      const A = ARENA_RECT, m = 18;
+      const ex = Phaser.Math.Clamp(sx + dir.x * this.stats.dashDistance, A.x + m, A.x + A.w - m);
+      const ey = Phaser.Math.Clamp(sy + dir.y * this.stats.dashDistance, A.y + m, A.y + A.h - m);
+      this.setPosition(ex, ey);
+      body.setVelocity(0, 0);
+      this.gs.kunaiBlink(sx, sy, ex, ey); // éclair + son + ramassage des âmes traversées
+      // dégâts de dash infligés sur toute la ligne parcourue (début → fin)
+      if (this.stats.dashDamage > 0) this.lineDamage(sx, sy, ex, ey, 30, this.stats.dashDamage, 0xfff27a);
+    } else {
+      body.setVelocity(dir.x * speed, dir.y * speed);
+    }
     this.dashing = true;
-    this.dashEndAt = now + this.stats.dashDuration;
+    // Téléport = dash « instantané » : il se termine dès la frame suivante, ce qui
+    // déclenche quand même les effets de fin de dash (Rasengan, etc.) à l'arrivée.
+    this.dashEndAt = now + (teleport ? 1 : this.stats.dashDuration);
     this.invulnUntil = Math.max(this.invulnUntil, now + this.stats.dashIFrames);
     this.dashCount++;
 
@@ -487,6 +499,41 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     } else if (this.susanooAura) {
       this.susanooAura.destroy(); this.susanooAura = undefined;
       this.susanooSprite?.destroy(); this.susanooSprite = undefined;
+    }
+  }
+
+  /** Kage Bunshin : clone d'ombre qui flotte près du chaton et tranche. */
+  private updateKageClone(now: number): void {
+    const active = (this.mods.kageClone || 0) > 0 && !this.dead;
+    if (!active) {
+      if (this.kageClone) { this.kageClone.destroy(); this.kageClone = undefined; }
+      return;
+    }
+    if (!this.kageClone) {
+      this.kageClone = this.gs.add.sprite(this.x, this.y, 'kage_bunshin').setDepth(19).setAlpha(0.7);
+      this.kageNextAt = now + 500;
+    }
+    const c = this.kageClone;
+    // suit le chaton avec un léger décalage orbital (effet de double dans le dos)
+    this.kageAngle += 0.015;
+    const tx = this.x + Math.cos(this.kageAngle) * 48;
+    const ty = this.y - 6 + Math.sin(this.kageAngle) * 30;
+    c.setPosition(Phaser.Math.Linear(c.x, tx, 0.12), Phaser.Math.Linear(c.y, ty, 0.12));
+    c.setAlpha(0.58 + 0.12 * Math.sin(now * 0.006));
+    // frappe périodique : coup de sabre spectral vers un ennemi à portée
+    if (now >= this.kageNextAt) {
+      const near = this.gs.enemiesNear(c.x, c.y, 175);
+      if (near.length) {
+        this.kageNextAt = now + 620;
+        const t = near[Math.floor(Math.random() * near.length)];
+        const ang = Math.atan2(t.y - c.y, t.x - c.x);
+        c.setFlipX(Math.cos(ang) < 0);
+        this.gs.spectralSlash(c.x, c.y - 8, ang, 150, 10 + this.stats.swordDamage[0] * 0.5);
+        this.gs.sfx('slash1');
+        this.gs.tweens.add({ targets: c, scaleX: 1.2, scaleY: 1.2, duration: 90, yoyo: true });
+      } else {
+        this.kageNextAt = now + 220; // scrute à nouveau bientôt
+      }
     }
   }
 
@@ -710,13 +757,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) this.lineDamage(this.x, this.y, this.x + dx * 200, this.y + dy * 200, 26, 25, 0xfff27a);
       this.gs.sfx('zap');
     }
-    // Rasenshuriken : shuriken de vent qui explose en dôme sur l'ennemi le plus proche
+    // Rasenshuriken : shuriken de vent lancé sur l'ennemi le plus proche, qui
+    // tournoie puis explose en dôme. Dégâts/portée dérivés du Spécial (cumulables).
     if (this.specialFlags.has('rasenshuriken')) {
       const t = this.gs.getTargets().find((e) => e.isAlive());
-      const tx = t ? t.x : this.x + aimDir.x * 160, ty = t ? t.y : this.y + aimDir.y * 160;
-      this.gs.juice.spiral(tx, ty, 0xbff7f6, 110);
-      this.gs.explosionAt(tx, ty, 110, 60);
-      this.gs.sfx('rasengan');
+      const tx = t ? t.x : this.x + aimDir.x * 180, ty = t ? t.y : this.y + aimDir.y * 180;
+      const rasenR = Math.max(96, this.stats.specialRadius * 0.72);
+      this.gs.rasenshuriken(this.x, this.y, tx, ty, Math.round(this.stats.specialDamage * 0.9), rasenR);
     }
     // The World : l'arrêt du temps ne se déclenche QUE sur un spécial volontaire,
     // jamais via une relance automatique (Sanctuaire de Sukuna) — sinon il se

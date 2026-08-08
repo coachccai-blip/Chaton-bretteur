@@ -178,6 +178,75 @@ export const WATER_WAVE: SpriteDef = {
   ],
 };
 
+/**
+ * Kage Bunshin (18x18) : clone d'ombre du chaton. Même silhouette que le héros
+ * mais en tons violet-nuit translucides, yeux luisants — dessiné à part pour
+ * rester lisible comme « double spectral » qui frappe aux côtés du joueur.
+ */
+export const KAGE_BUNSHIN: SpriteDef = {
+  key: 'kage_bunshin',
+  pal: {
+    '.': null,
+    '#': '#080510', 'k': '#0c0818',
+    'W': '#2a1840', 'w': '#20122f', 'm': '#241436',
+    'B': '#180d24', 'b': '#100818',
+    'R': '#3a2058', 'r': '#241338', 'H': '#4a2c70',
+    'G': '#160c20', 'g': '#241436',
+    'e': '#c9a0ff', 'i': '#7a4ad0',
+  },
+  rows: [
+    '......k.kk.k......',
+    '.....kRkkkkRk.....',
+    '....kRRkkkkRRk....',
+    '...GgRRRRRRRRgG...',
+    '..GGgWWWWWWWWgGG..',
+    '..GgWmmmmmmmmWgG..',
+    '..GgWmeWWWWeemgG..',
+    '..GgWmmWiiWmmWgG..',
+    '.b.ggWmmmmmmWgg...',
+    'bBRH#WWWWWWWW#HR..',
+    '.bRr#RRRRRRRR#rRH.',
+    '.B#R#RWWWWWWR#Rr..',
+    '.B#b#RRWWWWRR#b#..',
+    '.bB#BB#WWWW#BB#...',
+    '..B#Bb#....#bB#...',
+    '...bBB#....#BBb...',
+    '...#bb......bb#...',
+    '..................',
+  ],
+};
+
+/**
+ * Rasenshuriken (18x18) : shuriken de vent-chakra à quatre lames, cœur blanc
+ * incandescent, corps bleu-cyan. Tournoie puis explose en dôme de vent.
+ */
+export const RASENSHURIKEN: SpriteDef = {
+  key: 'rasenshuriken',
+  pal: {
+    '.': null, '#': '#1a4a6a', 'b': '#2a8ac0', 'B': '#59c8ff', 'c': '#bff7f6', 'w': '#ffffff',
+  },
+  rows: [
+    '........##........',
+    '.......#cc#.......',
+    '.......#cc#.......',
+    '......#bccb#......',
+    '......#bccb#......',
+    '.....#bBccBb#.....',
+    '.....#bBccBb#.....',
+    '#####bBBccBBb#####',
+    'ccccBBBBwwBBBBcccc',
+    'ccccBBBBwwBBBBcccc',
+    '#####bBBccBBb#####',
+    '.....#bBccBb#.....',
+    '.....#bBccBb#.....',
+    '......#bccb#......',
+    '......#bccb#......',
+    '.......#cc#.......',
+    '.......#cc#.......',
+    '........##........',
+  ],
+};
+
 /** Épée cramoisie dentelée (8x18), pointe en haut, gemme turquoise. */
 export const SWORD: SpriteDef = {
   key: 'sword',

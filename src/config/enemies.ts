@@ -2,7 +2,7 @@ export type Behavior = 'chaser' | 'charger' | 'shooter' | 'exploder' | 'tank' | 
 
 /** Attaque signature d'un monstre (télégraphiée, esquive au skill). */
 export interface EnemySignature {
-  type: 'leap' | 'spinAoE' | 'spread' | 'lobPool' | 'blink' | 'castZone';
+  type: 'leap' | 'spinAoE' | 'spread' | 'lobPool' | 'blink' | 'castZone' | 'coneSpray';
   telegraph: number;
   cooldown: number;
   damage: number;
@@ -11,6 +11,7 @@ export interface EnemySignature {
   count?: number;   // projectiles
   speed?: number;   // vitesse projectile / bond
   hazard?: 'toxic' | 'lava'; // flaque laissée
+  status?: 'poison' | 'freeze'; // statut infligé par les projectiles
   color?: number;
 }
 
@@ -205,8 +206,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
     id: 'spectregivre', name: 'Spectre de Givre', sprite: 'spectregivre', behavior: 'shooter',
     hp: 56, speed: 74, damage: 14, scale: 1,
     attack: { telegraph: 600, cooldown: 1900, range: 250, projectileSpeed: 190, projectileDamage: 12, status: 'freeze' },
-    // Souffle polaire : cône gelant.
-    signature: { type: 'spread', telegraph: 600, cooldown: 3400, damage: 12, count: 3, speed: 200, range: 300, color: 0x7fdcff },
+    // Souffle polaire : nappe de blocs de glace crachée en cône.
+    signature: { type: 'coneSpray', telegraph: 640, cooldown: 3600, damage: 11, count: 9, speed: 220, range: 320, status: 'freeze', color: 0x7fdcff },
   },
   stalactite: {
     id: 'stalactite', name: 'Stalactite Vivante', sprite: 'stalactite', behavior: 'shooter',
@@ -231,8 +232,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
     id: 'sorciereblizzard', name: 'Sorcière du Blizzard', sprite: 'sorciereblizzard', behavior: 'shooter',
     hp: 52, speed: 70, damage: 12, scale: 1,
     attack: { telegraph: 560, cooldown: 2000, range: 300, projectileSpeed: 210, projectileDamage: 11, status: 'freeze' },
-    // Appel du blizzard : se téléporte puis frappe.
-    signature: { type: 'blink', telegraph: 560, cooldown: 4000, damage: 14, range: 420, radius: 42, color: 0xcfe8ff },
+    // Blizzard soufflé : large cône de blocs de glace gelants.
+    signature: { type: 'coneSpray', telegraph: 560, cooldown: 3800, damage: 12, count: 11, speed: 230, range: 360, status: 'freeze', color: 0xcfe8ff },
   },
   brochet: {
     id: 'brochet', name: 'Brochet des Glaces', sprite: 'brochet', behavior: 'charger',

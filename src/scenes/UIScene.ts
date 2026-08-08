@@ -11,6 +11,8 @@ import { formatTime } from '../systems/SaveSystem';
 export class UIScene extends Phaser.Scene {
   private gs!: GameScene;
   private hpBar!: Phaser.GameObjects.Graphics;
+  private shieldBar!: Phaser.GameObjects.Graphics;
+  private shieldBg!: Phaser.GameObjects.Graphics;
   private hpText!: Phaser.GameObjects.Text;
   private xpBar!: Phaser.GameObjects.Graphics;
   private levelText!: Phaser.GameObjects.Text;
@@ -46,6 +48,11 @@ export class UIScene extends Phaser.Scene {
   init(data: { gameScene: GameScene }): void { this.gs = data.gameScene; }
 
   create(): void {
+    // Armure (bouclier ramassé) : barre grise distincte AU-DESSUS de la vie.
+    this.shieldBg = this.add.graphics().setDepth(1).setVisible(false);
+    this.shieldBg.fillStyle(0x14161c, 1).fillRoundedRect(18, 6, 264, 8, 4);
+    this.shieldBar = this.add.graphics().setDepth(2);
+
     // HP
     this.add.graphics().fillStyle(COLORS.hpBack, 1).fillRoundedRect(18, 16, 264, 22, 6).setDepth(1);
     this.hpBar = this.add.graphics().setDepth(2);
@@ -157,9 +164,17 @@ export class UIScene extends Phaser.Scene {
     const w = 264;
     const frac = Phaser.Math.Clamp(hp / max, 0, 1);
     this.hpBar.fillStyle(COLORS.hp, 1).fillRoundedRect(18, 16, Math.max(2, w * frac), 22, 6);
-    if (maxShield > 0 && shield > 0) {
-      const sFrac = Phaser.Math.Clamp(shield / max, 0, 1);
-      this.hpBar.fillStyle(COLORS.shield, 0.85).fillRoundedRect(18, 16, Math.max(2, w * Math.min(1, frac + sFrac)), 6, 4);
+    // Barre d'armure grise au-dessus de la vie (visible seulement si on a du bouclier).
+    this.shieldBar.clear();
+    if (maxShield > 0) {
+      this.shieldBg.setVisible(true);
+      const sFrac = Phaser.Math.Clamp(shield / maxShield, 0, 1);
+      if (shield > 0) {
+        this.shieldBar.fillStyle(0x9aa4b4, 1).fillRoundedRect(18, 6, Math.max(2, w * sFrac), 8, 4);
+        this.shieldBar.fillStyle(0xd6dce6, 0.9).fillRoundedRect(18, 6, Math.max(2, w * sFrac), 3, 3);
+      }
+    } else {
+      this.shieldBg.setVisible(false);
     }
     this.hpText.setText(`${Math.ceil(hp)} / ${max}`);
   }

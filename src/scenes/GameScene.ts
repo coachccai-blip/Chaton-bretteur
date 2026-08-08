@@ -8,6 +8,7 @@ import { getDifficulty } from '../config/difficulty';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { Boss } from '../entities/Boss';
+import { Pylon } from '../entities/Pylon';
 import { Projectile } from '../entities/Projectile';
 import { JuiceManager } from '../systems/JuiceManager';
 import { InputManager } from '../systems/InputManager';
@@ -70,8 +71,12 @@ interface Soul {
   id: string;
   x: number; y: number;
   expireAt: number;
+  homing?: boolean;
 }
 const SOUL_TTL = 5000;
+// Rayon d'aspiration de base : dès que le joueur passe à cette distance, l'âme
+// glisse vers lui automatiquement (env. la taille du personnage).
+const SOUL_MAGNET = 110;
 
 /** dégâts / effets par type de zone au sol. */
 const HAZARD_FX: Record<HazardType, { dmg: number; tick: number; slow: number; poison: boolean; color: number }> = {
@@ -92,6 +97,7 @@ export class GameScene extends Phaser.Scene {
   projectiles!: Phaser.Physics.Arcade.Group;
   boss: Boss | null = null;
   private bossOverlap?: Phaser.Physics.Arcade.Collider;
+  private bossPylons: Pylon[] = []; // pilônes d'invincibilité de Glacior
 
   private activeBanner?: Phaser.GameObjects.Text;
   private activeEnemies = new Set<Enemy>();
@@ -267,6 +273,7 @@ export class GameScene extends Phaser.Scene {
     if (this.boss) { this.boss.destroy(); this.boss = null; }
     this.activeEnemies.forEach((e) => e.destroy());
     this.activeEnemies.clear();
+    this.clearPylons();
     this.friendlyShots.forEach((s) => s.sprite.destroy());
     this.friendlyShots = [];
     this.enemyTimeScale = 1;
@@ -292,6 +299,7 @@ export class GameScene extends Phaser.Scene {
     if (this.boss) { this.boss.destroy(); this.boss = null; }
     this.activeEnemies.forEach((e) => e.destroy());
     this.activeEnemies.clear();
+    this.clearPylons();
     this.roomType = type;
     this.buildRoom();
     // replace le joueur en bas de la salle
@@ -304,6 +312,16 @@ export class GameScene extends Phaser.Scene {
       case 'shop': this.startShop(); break;
       case 'treasure': this.startTreasure(); break;
     }
+  }
+
+  /** Débogage/QA : saute directement au boss d'une zone donnée. */
+  debugBossZone(index: number): void {
+    this.combatDone = this.zone.rooms;
+    RunState.zoneIndex = index;
+    this.zone = ZONES[index];
+    this.env.setZone(this.zone);
+    this.cameras.main.setBackgroundColor(this.zone.palette.fog);
+    this.enterRoom('boss');
   }
 
   private startCombat(): void {
@@ -476,8 +494,9 @@ export class GameScene extends Phaser.Scene {
       const glowCol = isCoin ? 0xf4c430 : 0xe8384f;
       const glow = this.add.image(px, y, 'light').setTint(glowCol).setBlendMode(Phaser.BlendModes.ADD).setScale(0.9).setDepth(9).setAlpha(0.4);
       const ped = this.add.graphics().setDepth(10);
-      ped.fillStyle(0x2a2436, 1).fillRoundedRect(px - 30, y - 6, 60, 26, 6);
-      const txt = this.add.text(px, y - 30, `${it.label}\n${it.cost} ${isCoin ? '🥇' : '❤'}`, { fontFamily: 'monospace', fontSize: '13px', color: isCoin ? '#f4c430' : '#ffd0d0', align: 'center', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(11);
+      ped.fillStyle(0x2a2436, 1).fillRoundedRect(px - 44, y - 8, 88, 34, 8);
+      ped.lineStyle(2, glowCol, 0.85).strokeRoundedRect(px - 44, y - 8, 88, 34, 8);
+      const txt = this.add.text(px, y - 40, `${it.label}\n${it.cost} ${isCoin ? '🥇' : '❤'}`, { fontFamily: 'monospace', fontSize: '20px', color: isCoin ? '#f4c430' : '#ffd0d0', align: 'center', stroke: '#000', strokeThickness: 4, fontStyle: 'bold' }).setOrigin(0.5).setDepth(11);
       this.roomObjects.push(glow, ped, txt);
       let bought = false;
       const check = this.time.addEvent({ delay: 120, loop: true, callback: () => {
@@ -493,7 +512,7 @@ export class GameScene extends Phaser.Scene {
             AudioManager.play('coin');
             txt.setText('Acheté !');
           } else {
-            this.juice.popText(px, y - 44, isCoin ? 'Pas assez d’or' : 'Pas assez de PV', '#ff9db0', 12);
+            this.juice.popText(px, y - 54, isCoin ? 'Pas assez d’or' : 'Pas assez de PV', '#ff9db0', 18);
           }
         }
       }});
@@ -504,9 +523,11 @@ export class GameScene extends Phaser.Scene {
 
   spawnEnemy(id: string, x: number, y: number, diff = getDifficulty(RunState.difficultyId)): Enemy {
     const def = ENEMIES[id];
-    // difficulté croissante : par zone ET par salle dans la zone
-    const zoneHp = (1 + this.zone.index * 0.5) * (1 + this.combatDone * 0.05);
-    const zoneDmg = (1 + this.zone.index * 0.3) * (1 + this.combatDone * 0.03);
+    // Difficulté croissante : le joueur monte TRÈS vite en puissance (jusqu'à ~36
+    // boons au dernier boss), donc les monstres montent en flèche zone après zone
+    // (croissance exponentielle) en plus du palier de salle.
+    const zoneHp = Math.pow(1.62, this.zone.index) * (1 + this.combatDone * 0.07);
+    const zoneDmg = Math.pow(1.34, this.zone.index) * (1 + this.combatDone * 0.05);
     const e = new Enemy(this, x, y, def, diff.enemyHp * zoneHp, diff.enemyDamage * zoneDmg);
     this.enemies.add(e);
     this.activeEnemies.add(e);
@@ -527,10 +548,28 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  spawnEnemyProjectile(x: number, y: number, dx: number, dy: number, speed: number, damage: number, status?: 'poison' | 'freeze', tint?: number): void {
+  spawnEnemyProjectile(x: number, y: number, dx: number, dy: number, speed: number, damage: number, status?: 'poison' | 'freeze', tint?: number, opts?: { texture?: string; scale?: number; orient?: boolean; radius?: number }): void {
     const diff = getDifficulty(RunState.difficultyId);
-    const p = new Projectile(this, x, y, dx * speed, dy * speed, damage * diff.enemyDamage, status, tint);
+    // Les projectiles de gel prennent d'office l'apparence d'un bloc de glace.
+    if (status === 'freeze' && !opts?.texture) opts = { ...opts, texture: 'ice_shard', scale: 1.4, radius: 6 };
+    const p = new Projectile(this, x, y, dx * speed, dy * speed, damage * diff.enemyDamage, status, tint, opts);
     this.projectiles.add(p);
+  }
+
+  /** Gerbe de particules de givre projetées en cône (souffle de glace). */
+  frostSpray(x: number, y: number, angle: number, spread: number): void {
+    const deg = Phaser.Math.RadToDeg(angle);
+    const half = Phaser.Math.RadToDeg(spread);
+    const em = this.add.particles(x, y, 'frost', {
+      speed: { min: 120, max: 300 },
+      angle: { min: deg - half, max: deg + half },
+      scale: { start: 1.1, end: 0 },
+      alpha: { start: 0.95, end: 0 },
+      lifespan: 460, quantity: 14, frequency: -1, rotate: { min: 0, max: 360 },
+      blendMode: 'ADD',
+    }).setDepth(17);
+    em.explode(14);
+    this.time.delayedCall(560, () => em.destroy());
   }
 
   /** Point aléatoire dans l'arène (pour geysers, etc.). */
@@ -548,14 +587,17 @@ export class GameScene extends Phaser.Scene {
     this.hazardGfx.clear();
     const def = BOSSES[this.zone.bossId];
     const diff = getDifficulty(RunState.difficultyId);
-    // PV des boss : (2 + index par zone) ×2 — combats deux fois plus costauds.
-    const bossHpMult = (2 + this.zone.index) * 2;
+    // PV des boss : base ×2 amplifiée par une montée exponentielle de zone (le
+    // joueur devient très fort), le tout ENCORE ×5 (boss très costauds), et
+    // dégâts de contact/attaques mis à l'échelle de zone.
+    const bossHpMult = (2 + this.zone.index) * 2 * Math.pow(1.28, this.zone.index) * 5;
+    const bossDmgMult = Math.pow(1.3, this.zone.index);
     AudioManager.startMusic('boss');
     this.events.emit('progress', this.zone.name, this.zone.rooms, this.zone.rooms, true);
     // petit dialogue chaton ↔ boss (change à chaque run), puis la bannière et le boss
     this.bossIntro(def, () => {
       this.banner(`BOSS : ${def.name}, ${def.title}`, () => {
-        this.boss = new Boss(this, WORLD_WIDTH / 2, ARENA.y + 120, def, diff.enemyHp * bossHpMult, diff.enemyDamage);
+        this.boss = new Boss(this, WORLD_WIDTH / 2, ARENA.y + 120, def, diff.enemyHp * bossHpMult, diff.enemyDamage * bossDmgMult);
         this.bossOverlap?.destroy();
         this.bossOverlap = this.physics.add.overlap(this.player, this.boss, (_p, b) => {
           const bs = b as Boss;
@@ -628,8 +670,82 @@ export class GameScene extends Phaser.Scene {
   getTargets(): IEnemyLike[] {
     const list: IEnemyLike[] = [];
     for (const e of this.activeEnemies) if (e.isAlive()) list.push(e);
+    for (const p of this.bossPylons) if (p.isAlive()) list.push(p);
     if (this.boss?.isAlive()) list.push(this.boss);
     return list;
+  }
+
+  /** Glacior est invincible tant qu'au moins un pilône de glace tient. */
+  bossInvincible(): boolean {
+    return this.bossPylons.some((p) => p.isAlive());
+  }
+
+  /** Invoque 4 pilônes de glace aux coins de l'arène (rend le boss invincible). */
+  spawnIcePylons(hpEach: number): void {
+    this.clearPylons();
+    const A = ARENA, m = 92;
+    const corners = [
+      { x: A.x + m, y: A.y + m + 30 },
+      { x: A.x + A.w - m, y: A.y + m + 30 },
+      { x: A.x + m, y: A.y + A.h - m },
+      { x: A.x + A.w - m, y: A.y + A.h - m },
+    ];
+    for (const c of corners) this.bossPylons.push(new Pylon(this, c.x, c.y, hpEach));
+    this.juice.popText(WORLD_WIDTH / 2, ARENA.y + 90, 'INVINCIBLE : BRISE LES PILÔNES !', '#7fdcff', 22);
+    this.sfx('bosscast');
+  }
+
+  private clearPylons(): void {
+    for (const p of this.bossPylons) p.destroy();
+    this.bossPylons = [];
+  }
+
+  /** Pluie de stalactites : impacts partout SAUF quelques zones sûres marquées. */
+  iceRain(safeCount: number, count: number, telegraph: number, damage: number, radius: number): void {
+    const safe: { x: number; y: number }[] = [];
+    for (let i = 0; i < safeCount; i++) safe.push(this.arenaPoint(90));
+    const safeR = 74;
+    // marque les zones sûres en vert le temps de l'attaque
+    const g = this.add.graphics().setDepth(3);
+    const drawSafe = () => {
+      g.clear();
+      const pulse = 0.4 + 0.3 * Math.abs(Math.sin(performance.now() * 0.008));
+      for (const s of safe) {
+        g.fillStyle(0x59ff9a, 0.14 * pulse); g.fillCircle(s.x, s.y, safeR);
+        g.lineStyle(3, 0x59ff9a, 0.7 * pulse); g.strokeCircle(s.x, s.y, safeR);
+      }
+    };
+    const timer = this.time.addEvent({ delay: 40, loop: true, callback: drawSafe });
+    for (let k = 0; k < count; k++) {
+      this.time.delayedCall(k * 130, () => {
+        if (this.roomState === 'over') return;
+        let pt = this.arenaPoint(50);
+        // évite les zones sûres (quelques essais)
+        for (let tries = 0; tries < 6; tries++) {
+          if (safe.every((s) => Phaser.Math.Distance.Between(pt.x, pt.y, s.x, s.y) > safeR + radius)) break;
+          pt = this.arenaPoint(50);
+        }
+        this.dropStalactite(pt.x, pt.y, radius, damage, telegraph);
+      });
+    }
+    this.time.delayedCall(count * 130 + telegraph + 700, () => { timer.remove(); g.destroy(); });
+  }
+
+  /** Une stalactite : ombre télégraphe, chute du ciel, impact gelant. */
+  dropStalactite(x: number, y: number, r: number, damage: number, telegraph: number): void {
+    const shadow = this.add.ellipse(x, y, r * 1.6, r * 0.7, 0x2a6a9a, 0.35).setDepth(3);
+    this.tweens.add({ targets: shadow, scaleX: 1.3, scaleY: 1.3, duration: telegraph, yoyo: false });
+    this.time.delayedCall(telegraph, () => {
+      if (this.roomState === 'over') { shadow.destroy(); return; }
+      const ice = this.add.image(x, y - 240, 'ice_stalactite').setDepth(28).setScale(2.2);
+      this.tweens.add({ targets: ice, y, duration: 240, ease: 'Quad.easeIn', onComplete: () => {
+        this.sfx('freeze');
+        this.eruptAt(x, y, r, 0x7fdcff, damage);
+        this.juice.burst(x, y, 0xbfeaff, 12, 200, 1.2);
+        this.tweens.add({ targets: ice, alpha: 0, scaleY: 0.4, duration: 260, onComplete: () => ice.destroy() });
+        shadow.destroy();
+      } });
+    });
   }
 
   onEnemyKilled(e: Enemy, byPlayer: boolean): void {
@@ -742,9 +858,25 @@ export class GameScene extends Phaser.Scene {
       s.ring.arc(s.x, s.orb.y, 15, -Math.PI / 2, -Math.PI / 2 + left * Math.PI * 2, false);
       s.ring.strokePath();
       s.orb.setTint(urgent ? 0xff8a8a : 0xbff7f6);
-      const grab = 36 + (this.player?.stats.soulMagnet ?? 0); // Cueilleur d'Âmes : aspiration
-      if (this.player && !this.player.dead && Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y) < grab) {
-        this.collectSoul(i); continue;
+      if (this.player && !this.player.dead) {
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, s.x, s.y);
+        // Attraction Gravitationnelle : aspiration sur toute l'arène + homing rapide.
+        const grav = !!this.player.mods.gravSoul;
+        const magnet = grav ? 99999 : SOUL_MAGNET + (this.player.stats.soulMagnet ?? 0);
+        if (dist < magnet) {
+          s.homing = true;
+          this.tweens.killTweensOf(s.orb); // stoppe le flottement pour un homing net
+          s.orb.setAlpha(0.95);
+        }
+        if (s.homing) {
+          // Glisse vers le joueur ; vitesse croissante à mesure qu'il approche.
+          const sp = grav ? 0.42 : Phaser.Math.Clamp(1 - dist / (magnet + 1), 0.18, 0.9) * 0.5 + 0.1;
+          s.x = Phaser.Math.Linear(s.x, this.player.x, sp);
+          s.y = Phaser.Math.Linear(s.y, this.player.y, sp);
+          s.orb.setPosition(s.x, s.y - 8);
+        }
+        const grab = 36 + (this.player.stats.soulMagnet ?? 0); // ramassage
+        if (dist < grab) { this.collectSoul(i); continue; }
       }
       if (t >= s.expireAt) this.respawnFromSoul(i);
     }
@@ -756,8 +888,9 @@ export class GameScene extends Phaser.Scene {
     this.juice.popText(s.x, s.orb.y - 18, 'Âme', '#bff7f6', 14);
     AudioManager.play('soul');
     this.addRunCurrency(1);
-    // Chaque âme récupérée rend 1 PV (+ bonus Senzu / Cueilleur).
-    this.player.heal(1 + this.player.stats.soulHealBonus);
+    // Le soin n'est plus offert par défaut : seuls les pouvoirs dédiés (Senzu /
+    // Cueilleur) rendent des PV à la récupération d'une âme.
+    if (this.player.stats.soulHealBonus > 0) this.player.heal(this.player.stats.soulHealBonus);
     s.orb.destroy(); s.ring.destroy();
     this.souls.splice(i, 1);
     this.checkWaveCleared();
@@ -776,6 +909,32 @@ export class GameScene extends Phaser.Scene {
   private clearSouls(): void {
     for (const s of this.souls) { s.orb.destroy(); s.ring.destroy(); }
     this.souls = [];
+  }
+
+  /** Ramasse toutes les âmes situées près du segment parcouru (téléport Kunai). */
+  collectSoulsAlong(x1: number, y1: number, x2: number, y2: number, radius: number): void {
+    const dx = x2 - x1, dy = y2 - y1, len2 = dx * dx + dy * dy || 1;
+    for (let i = this.souls.length - 1; i >= 0; i--) {
+      const s = this.souls[i];
+      const t = Phaser.Math.Clamp(((s.x - x1) * dx + (s.y - y1) * dy) / len2, 0, 1);
+      const px = x1 + dx * t, py = y1 + dy * t;
+      if (Phaser.Math.Distance.Between(s.x, s.y, px, py) <= radius) this.collectSoul(i);
+    }
+  }
+
+  /**
+   * Éclair du Kunai : trait de foudre entre le départ et l'arrivée du téléport,
+   * bruitage d'éclair et ramassage des âmes traversées.
+   */
+  kunaiBlink(x1: number, y1: number, x2: number, y2: number): void {
+    const g = this.add.graphics().setDepth(24);
+    this.drawBolt(g, x1, y1, x2, y2);
+    this.juice.burst(x1, y1, 0xffe08a, 8, 150, 0.9);
+    this.juice.burst(x2, y2, 0xfff27a, 12, 190, 1.2);
+    this.juice.ring(x2, y2, 44, 0xffe08a, 260);
+    this.sfx('zap');
+    this.collectSoulsAlong(x1, y1, x2, y2, 40);
+    this.time.delayedCall(130, () => g.destroy());
   }
 
   /** appelé par RewardScene après le choix. */
@@ -803,6 +962,7 @@ export class GameScene extends Phaser.Scene {
     this.bossOverlap = undefined;
     this.activeEnemies.forEach((e) => e.destroy());
     this.activeEnemies.clear();
+    this.clearPylons();
     this.clearSouls();
     AudioManager.play('bossdie');
     // slow-mo + shake + particules
@@ -846,6 +1006,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private finishRun(victory: boolean): void {
+    this.clearPylons();
     SaveSystem.addCurrency(RunState.currencyEarned);
     if (victory) SaveSystem.recordClear();
     AudioManager.stopMusic();
@@ -988,7 +1149,11 @@ export class GameScene extends Phaser.Scene {
     if (this.player) this.player.slowFactor = slowMul;
   }
 
-  /** Pose une MINE clignotante au centre de chaque zone dangereuse (pool réutilisé). */
+  /**
+   * Marqueur au centre de chaque zone dangereuse. Pendant le télégraphe : une
+   * MINE clignotante (alerte). Une fois la zone active : une vraie FLAQUE (lave
+   * pour feu/lave, mare toxique pour poison) qui couvre le rayon.
+   */
   private syncHazardMarkers(list: Hazard[], now: number): void {
     while (this.hazardMarkers.length < list.length) {
       this.hazardMarkers.push(this.add.image(0, 0, 'mine').setDepth(3));
@@ -998,12 +1163,24 @@ export class GameScene extends Phaser.Scene {
       if (i >= list.length) { m.setVisible(false); continue; }
       const h = list[i];
       const telegraphing = now < h.activeAt;
-      // télégraphe = clignotement rapide (alerte) ; actif = pulsation lente rouge.
-      const blink = telegraphing ? (Math.sin(now * 0.02) > 0 ? 1 : 0.3) : 0.7 + 0.3 * Math.abs(Math.sin(now * 0.008));
-      const base = Phaser.Math.Clamp(h.r / 34, 0.7, 1.9);
-      m.setVisible(true).setPosition(h.x, h.y).setAlpha(blink)
-        .setScale(base * (1 + 0.06 * Math.sin(now * 0.012)))
-        .setTint(telegraphing ? 0xffd0d0 : 0xffffff);
+      const molten = h.type === 'lava' || h.type === 'fire';
+      const toxic = h.type === 'toxic';
+      const texKey = telegraphing ? 'mine' : (molten ? 'pool_lava' : toxic ? 'pool_toxic' : 'mine');
+      if (m.texture.key !== texKey) m.setTexture(texKey);
+      m.setVisible(true).setPosition(h.x, h.y);
+      if (telegraphing) {
+        const blink = Math.sin(now * 0.02) > 0 ? 1 : 0.3;
+        const base = Phaser.Math.Clamp(h.r / 34, 0.7, 1.9);
+        m.setAlpha(blink).setScale(base * (1 + 0.06 * Math.sin(now * 0.012))).setTint(0xffd0d0);
+      } else if (molten || toxic) {
+        // les textures de flaque font 112 px : on les met à l'échelle du rayon.
+        const s = (h.r * 2.1) / 112;
+        m.setAlpha(0.9).clearTint().setScale(s * (1 + 0.03 * Math.sin(now * 0.006)));
+      } else {
+        const base = Phaser.Math.Clamp(h.r / 34, 0.7, 1.9);
+        m.setAlpha(0.7 + 0.3 * Math.abs(Math.sin(now * 0.008))).setTint(0xffffff)
+          .setScale(base * (1 + 0.06 * Math.sin(now * 0.012)));
+      }
     }
   }
 
@@ -1130,6 +1307,62 @@ export class GameScene extends Phaser.Scene {
       g.lineTo(nx, ny);
     }
     g.strokePath();
+  }
+
+  /**
+   * Coup de sabre spectral porté par le clone d'ombre : croissant visible à la
+   * position du clone + dégâts d'arc aux ennemis proches dans la direction visée.
+   */
+  spectralSlash(cx: number, cy: number, aimAngle: number, range: number, damage: number): void {
+    const span = 1.1, col = 0x9a5cff;
+    const g = this.add.graphics().setDepth(22);
+    g.lineStyle(14, col, 0.55);
+    g.beginPath(); g.arc(cx, cy, range * 0.85, aimAngle - span, aimAngle + span, false); g.strokePath();
+    g.lineStyle(5, 0xe0c8ff, 0.9);
+    g.beginPath(); g.arc(cx, cy, range * 0.85, aimAngle - span * 0.8, aimAngle + span * 0.8, false); g.strokePath();
+    this.tweens.add({ targets: g, alpha: 0, duration: 240, ease: 'Cubic.easeIn', onComplete: () => g.destroy() });
+    for (const e of this.getTargets()) {
+      if (!e.isAlive()) continue;
+      const dx = e.x - cx, dy = e.y - cy;
+      if (Math.hypot(dx, dy) > range) continue;
+      const da = Phaser.Math.Angle.Wrap(Math.atan2(dy, dx) - aimAngle);
+      if (Math.abs(da) > span) continue;
+      e.takeDamage(damage, cx, cy);
+      this.juice.burst(e.x, e.y, col, 5, 120, 0.7);
+    }
+  }
+
+  /**
+   * Rasenshuriken : le shuriken de vent file du chaton vers la cible en
+   * tournoyant, puis explose en dôme de vent (dégâts de zone).
+   */
+  rasenshuriken(sx: number, sy: number, tx: number, ty: number, damage: number, radius: number): void {
+    // Le shuriken garde ses couleurs (blend normal) pour que ses lames restent
+    // lisibles ; le halo ADD placé derrière fournit la lueur de chakra.
+    const shu = this.add.sprite(sx, sy - 8, 'rasenshuriken').setDepth(25).setScale(1.3);
+    const halo = this.add.image(sx, sy - 8, 'light').setTint(0x59c8ff).setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(24).setScale(0.9).setAlpha(0.55);
+    this.tweens.add({ targets: shu, angle: 360, duration: 140, repeat: -1, ease: 'Linear' });
+    const fly = 260;
+    this.tweens.add({ targets: [shu, halo], x: tx, y: ty - 8, duration: fly, ease: 'Quad.easeIn' });
+    this.tweens.add({ targets: shu, scale: 2.1, duration: fly, ease: 'Quad.easeIn' });
+    this.sfx('rasengan');
+    // petites traînées de vent pendant le vol
+    for (let k = 1; k <= 4; k++) {
+      this.time.delayedCall((fly / 5) * k, () => this.juice.burst(shu.x, shu.y, 0xbff7f6, 4, 90, 0.6));
+    }
+    this.time.delayedCall(fly, () => {
+      if (this.roomState === 'over') { shu.destroy(); halo.destroy(); return; }
+      // dôme de vent : anneaux concentriques + explosion
+      this.juice.spiral(tx, ty, 0xbff7f6, radius);
+      this.juice.ring(tx, ty, radius, 0xdfffff, 320);
+      this.juice.ring(tx, ty, radius * 0.6, 0x8fe8ff, 260);
+      this.explosionAt(tx, ty, radius, damage);
+      this.sfx('rasengan');
+      this.juice.shake(220, 0.01);
+      this.tweens.add({ targets: shu, scale: 3.4, alpha: 0, angle: shu.angle + 180, duration: 260, onComplete: () => shu.destroy() });
+      this.tweens.add({ targets: halo, scale: 2.4, alpha: 0, duration: 260, onComplete: () => halo.destroy() });
+    });
   }
 
   /** Onde tranchante (Getsuga / clone) : projectile allié qui transperce. */

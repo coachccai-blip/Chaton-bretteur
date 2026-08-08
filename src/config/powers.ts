@@ -480,7 +480,7 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'flash_kunai', name: 'Kunai Éclair', god: 'Éclair Jaune', category: 'dash', rarity: 'rare', icon: 'dash',
-    description: 'Le dash plante un kunai ; re-dasher dans les 3 s téléporte au kunai.',
+    description: 'Le dash devient une téléportation-éclair instantanée (tous les effets de dash s’appliquent sur le trajet).',
     apply(p) { p.addDashFlag('kunai'); },
   },
 
@@ -619,15 +619,16 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'kage_bunshin', name: 'Kage Bunshin', god: 'Ninja de l’Ombre', category: 'divine', rarity: 'legendary', icon: 'clone',
-    description: 'Un clone d’ombre tranche sans cesse les ennemis proches.',
-    apply(p) {
-      p.addPeriodic(650, () => {
-        const near = p.combat.enemiesNear(p.px(), p.py(), 150);
-        if (near.length === 0) return;
-        const t = near[Math.floor(Math.random() * near.length)];
-        p.combat.slashWave(p.px(), p.py(), t.x - p.px(), t.y - p.py(), 10 + p.stats.swordDamage[0] * 0.5);
-      });
-    },
+    description: 'Un clone d’ombre te suit et tranche sans cesse les ennemis proches.',
+    // Le clone visible est géré par le Player (mods.kageClone) : il flotte près du
+    // chaton et porte un coup de sabre spectral aux ennemis à portée.
+    apply(p) { p.mods.kageClone = 1; },
+  },
+  {
+    id: 'gravity_pull', name: 'Attraction Gravitationnelle', god: 'Seigneur des Astres', category: 'divine', rarity: 'legendary', icon: 'spiral',
+    description: 'Les âmes fusent instantanément vers toi, où qu’elles soient (F = G·m₁·m₂ / r²).',
+    // F = G · m₁ · m₂ / r²  — force d'attraction gravitationnelle entre le chaton et chaque âme.
+    apply(p) { p.mods.gravSoul = 1; },
   },
   {
     id: 'sukuna_domain', name: 'Sanctuaire Malfaisant', god: 'Roi des Fléaux', category: 'divine', rarity: 'legendary', icon: 'domain',

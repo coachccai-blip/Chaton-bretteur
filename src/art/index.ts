@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
 import { genSprite, genMask, genOrb, genPixel } from './PixelArtGenerator';
-import { CAT, SWORD, KATANA, MERCHANT_CAT, HAMMER, WATER_WAVE, SUSANOO } from './hero';
+import { CAT, SWORD, KATANA, MERCHANT_CAT, HAMMER, WATER_WAVE, SUSANOO, KAGE_BUNSHIN, RASENSHURIKEN } from './hero';
 import { GLYPHS } from './icons';
 import { genCritter, MONSTER_RECIPES } from './critters';
 import { BOSS_CATS } from './bosscats';
-import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, MINE } from './environment';
+import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, MINE, FIREBALL, ICE_SHARD, FROST, ICE_STALACTITE, ICE_PYLON } from './environment';
 import { ZONES } from '../config/worlds';
 
 let generated = false;
@@ -21,7 +21,14 @@ export function generateAll(scene: Phaser.Scene): void {
   genSprite(scene, SUSANOO); // aura spectrale du boon Susanoo
   genSprite(scene, WATER_WAVE); // vague de la Première Danse de l'Eau
   genSprite(scene, MERCHANT_CAT); // chat marchand du désert
+  genSprite(scene, KAGE_BUNSHIN); // clone d'ombre (boon Kage Bunshin)
+  genSprite(scene, RASENSHURIKEN); // shuriken de vent (Spécial Rasenshuriken)
   genSprite(scene, MINE);   // marqueur de danger au sol
+  genSprite(scene, FIREBALL); // boule de feu d'Ignis
+  genSprite(scene, ICE_SHARD); // bloc de glace (projectile givre)
+  genSprite(scene, FROST);  // particule de givre (spray en cône)
+  genSprite(scene, ICE_STALACTITE); // stalactite tombante (Glacior)
+  genSprite(scene, ICE_PYLON); // pilône d'invincibilité (Glacior)
 
   // Monstres (procéduraux)
   for (const [key, recipe] of Object.entries(MONSTER_RECIPES)) genCritter(scene, `mob_${key}`, recipe);
