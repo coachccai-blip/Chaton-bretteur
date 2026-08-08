@@ -846,6 +846,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
         this.applyKnockback(e, 220);
       }
     }
+    // EXPLOSION de Vegeta : la fierté du Saïyen se paie — l'explosion coûte 1 PV
+    // à chaque usage (jamais mortelle, plancher à 1 PV via setHp).
+    if (bigExplosion && this.mods.vegetaCost && this.hp > 1) {
+      this.setHp(this.hp - 1);
+      this.gs.juice.popText(this.x, this.y - 40, '-1 PV', '#ff5a5a', 13);
+    }
     if (this.specialFlags.has('wave')) {
       this.gs.slashWave(this.x, this.y, aimDir.x, aimDir.y, Math.round(this.stats.specialDamage * 0.9));
       this.gs.slashWave(this.x, this.y, aimDir.x, aimDir.y, Math.round(this.stats.specialDamage * 0.9));

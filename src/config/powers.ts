@@ -594,10 +594,11 @@ export const POWERS: PowerDef[] = [
   //  LÉGENDAIRES (10)
   // ============================================================
   {
-    id: 'megumin', name: 'EXPLOSION de Megumin', god: 'Archimage', category: 'divine', rarity: 'legendary', icon: 'boom',
-    description: 'Le Spécial devient une EXPLOSION dévastatrice : dégâts ×2,3, zone +60%.',
+    id: 'megumin', name: 'EXPLOSION de Vegeta', god: 'Prince des Saïyens', category: 'divine', rarity: 'legendary', icon: 'boom',
+    description: 'Le Spécial devient une EXPLOSION dévastatrice : dégâts ×2,3, zone +60%. Coûte 1 PV à chaque usage.',
     apply(p) {
       p.addSpecialFlag('explosion');
+      p.mods.vegetaCost = 1;
       p.stats.specialDamage = Math.round(p.stats.specialDamage * 2.3);
       p.stats.specialRadius *= 1.6;
       p.stats.specialCooldown *= 1.4;
