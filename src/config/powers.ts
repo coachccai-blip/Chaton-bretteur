@@ -468,7 +468,7 @@ export const POWERS: PowerDef[] = [
     apply(p) { p.stats.soulMagnet += 164; p.stats.soulHealBonus += 1; },
   },
   {
-    id: 'last_breath', name: 'Dernier Souffle', god: 'Vagabond', category: 'attack', rarity: 'rare', icon: 'wave',
+    id: 'last_breath', name: 'Tornade de Yasuo', god: 'Vagabond', category: 'attack', rarity: 'rare', icon: 'wave',
     description: 'Le 3e coup lance une tornade qui avance puis explose à l’arrivée (20 dégâts, +zone).',
     apply(p) {
       p.addOnHit((e, _d, _c, info) => {
@@ -506,9 +506,9 @@ export const POWERS: PowerDef[] = [
     },
   },
   {
-    id: 'getsuga', name: 'Getsuga Tenshō', god: 'Faucheur d’Âmes', category: 'divine', rarity: 'epic', icon: 'wave',
-    description: 'Le Spécial projette 2 ondes tranchantes perçantes.',
-    apply(p) { p.addSpecialFlag('wave'); },
+    id: 'getsuga', name: 'Multi-Clonage', god: 'Maître des Clones', category: 'divine', rarity: 'epic', icon: 'clone',
+    description: 'Deux mini-chats t’entourent et copient tes attaques à 10 %. Cumulable avec Kage Bunshin : chaque mini-chat gagne alors sa propre ombre qui frappe aussi.',
+    apply(p) { p.mods.multiClone = 1; },
   },
   {
     id: 'chidori', name: 'Chidori', god: 'Éclair Perforant', category: 'divine', rarity: 'epic', icon: 'lightning',

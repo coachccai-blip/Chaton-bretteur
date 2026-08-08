@@ -59,13 +59,7 @@ export const META_UPGRADES: MetaUpgradeDef[] = [
     description: '+12% de Croquettes Dorées gagnées par palier.',
     apply(base, tier) { base.greed += 0.12 * tier; },
   },
-  {
-    id: 'arsenal', name: 'Arsenal', icon: 'combo', maxTier: 1, costPerTier: [400],
-    description: 'Ajoute des pouvoirs Légendaires au pool.',
-    apply() { /* lu via flag */ },
-    flag: 'arsenal',
-    matCost: { boss_bandana: 1 },
-  },
+  // (« Arsenal » retiré : tous les pouvoirs sont désormais accessibles dès le départ.)
 ];
 
 export function getMetaById(id: string): MetaUpgradeDef | undefined {

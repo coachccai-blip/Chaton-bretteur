@@ -85,6 +85,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   private kageClone?: Phaser.GameObjects.Sprite;
   private kageNextAt = 0;
   private kageAngle = 0;
+  // Multi-Clonage : 2 mini-chats qui orbitent et copient les attaques à 10%.
+  // Si Kage Bunshin est aussi actif, chaque mini-chat gagne sa propre ombre.
+  private miniClones: Phaser.GameObjects.Sprite[] = [];
+  private miniShadows: Phaser.GameObjects.Sprite[] = [];
+  private miniAngle = 0;
 
   constructor(scene: GameScene, x: number, y: number, stats: PlayerStats) {
     super(scene, x, y, 'cat');
@@ -280,6 +285,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     this.updateOrbitBlades(now, dt);
     this.updateSusanooVfx(now);
     this.updateKageClone(now);
+    this.updateMiniClones(now);
     this.updateLifeGate(now);
 
     // actions
@@ -579,6 +585,44 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     // (voir cloneMirrorMelee), pour 10% des dégâts d'origine.
   }
 
+  /** Multi-Clonage : 2 mini-chats en orbite + (si Kage Bunshin) leurs ombres. */
+  private updateMiniClones(now: number): void {
+    const active = (this.mods.multiClone || 0) > 0 && !this.dead;
+    if (!active) {
+      if (this.miniClones.length) { this.miniClones.forEach((s) => s.destroy()); this.miniClones = []; }
+      if (this.miniShadows.length) { this.miniShadows.forEach((s) => s.destroy()); this.miniShadows = []; }
+      return;
+    }
+    while (this.miniClones.length < 2) {
+      const s = this.gs.add.sprite(this.x, this.y, 'cat').setDepth(19).setScale(0.55).setAlpha(0.9).setTint(0x9fe6ff);
+      this.miniClones.push(s);
+    }
+    this.miniAngle += 0.02;
+    for (let i = 0; i < 2; i++) {
+      const c = this.miniClones[i];
+      const a = this.miniAngle + i * Math.PI; // les deux mini-chats sur des côtés opposés
+      const tx = this.x + Math.cos(a) * 54;
+      const ty = this.y - 4 + Math.sin(a) * 34;
+      c.setPosition(Phaser.Math.Linear(c.x, tx, 0.14), Phaser.Math.Linear(c.y, ty, 0.14));
+      c.setFlipX(Math.cos(a) < 0);
+    }
+    // Ombres : uniquement si Kage Bunshin est aussi possédé (cumul des deux boons).
+    const wantShadow = (this.mods.kageClone || 0) > 0;
+    if (wantShadow) {
+      while (this.miniShadows.length < 2) {
+        const s = this.gs.add.sprite(this.x, this.y, 'kage_bunshin').setDepth(18).setScale(0.5).setAlpha(0.5);
+        this.miniShadows.push(s);
+      }
+      for (let i = 0; i < 2; i++) {
+        const m = this.miniClones[i], sh = this.miniShadows[i];
+        sh.setPosition(Phaser.Math.Linear(sh.x, m.x - 16, 0.14), Phaser.Math.Linear(sh.y, m.y + 8, 0.14));
+        sh.setAlpha(0.4 + 0.1 * Math.sin(now * 0.006));
+      }
+    } else if (this.miniShadows.length) {
+      this.miniShadows.forEach((s) => s.destroy()); this.miniShadows = [];
+    }
+  }
+
   /**
    * Porte de la Vie (Huit Portes) : aura rouge + traînée de particules, et
    * VERROUILLE les PV max à 10 (aucun boon/fontaine ne peut les augmenter).
@@ -662,9 +706,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     });
   }
 
-  /** Kage Bunshin : le clone DUPLIQUE la frappe du chaton pour 10% des dégâts. */
-  private cloneMirrorMelee(baseDmg: number): void {
-    const c = this.kageClone;
+  /** Un clone (ombre Kage ou mini-chat) DUPLIQUE la frappe du chaton à 10%. */
+  private mirrorSlashFrom(c: Phaser.GameObjects.Sprite | undefined, baseDmg: number): void {
     if (!c || this.dead) return;
     const near = this.gs.enemiesNear(c.x, c.y, this.meleeRange() + 40);
     const ang = near.length
@@ -672,8 +715,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       : Math.atan2(this.aim.y, this.aim.x);
     c.setFlipX(Math.cos(ang) < 0);
     this.gs.spectralSlash(c.x, c.y - 8, ang, this.meleeRange() * 0.9, Math.max(1, Math.round(baseDmg * 0.1)));
-    this.gs.sfx('slash1');
-    this.gs.tweens.add({ targets: c, scaleX: 1.2, scaleY: 1.2, duration: 90, yoyo: true });
+    this.gs.tweens.add({ targets: c, scaleX: c.scaleX * 1.15, scaleY: c.scaleY * 1.15, duration: 90, yoyo: true });
+  }
+
+  /** Duplique la frappe sur TOUS les clones : ombre Kage, mini-chats et leurs ombres. */
+  private cloneMirrorMelee(baseDmg: number): void {
+    if (this.dead) return;
+    let any = false;
+    const fire = (s?: Phaser.GameObjects.Sprite) => { if (s) { this.mirrorSlashFrom(s, baseDmg); any = true; } };
+    fire(this.kageClone);
+    for (const m of this.miniClones) fire(m);
+    for (const s of this.miniShadows) fire(s);
+    if (any) this.gs.sfx('slash1');
   }
 
   /** Couleur de croissant par coup du combo (pour LIRE la progression). */
@@ -996,6 +1049,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     this.susanooAura?.destroy(); this.susanooAura = undefined;
     this.susanooSprite?.destroy(); this.susanooSprite = undefined;
     this.kageClone?.destroy(); this.kageClone = undefined;
+    this.miniClones.forEach((s) => s.destroy()); this.miniClones = [];
+    this.miniShadows.forEach((s) => s.destroy()); this.miniShadows = [];
     this.lifeGateAura?.destroy(); this.lifeGateAura = undefined;
     this.lifeGateTrail?.destroy(); this.lifeGateTrail = undefined;
   }

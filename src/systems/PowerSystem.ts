@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { POWERS, RARITY_WEIGHTS, RARITY_RANK, type PowerDef, type Rarity } from '../config/powers';
 import { RunState } from './RunState';
-import { SaveSystem } from './SaveSystem';
 
 /**
  * Tire `count` pouvoirs distincts, pondérés par rareté (+ chance).
@@ -9,12 +8,11 @@ import { SaveSystem } from './SaveSystem';
  * `minRarity` impose une rareté minimale (boons du marchand = rare ou +).
  */
 export function rollChoices(count: number, luck: number, minRarity: Rarity = 'common'): PowerDef[] {
-  const arsenal = SaveSystem.hasFlag('arsenal');
   const takenIds = new Set(RunState.powers.map((p) => p.id));
   const minRank = RARITY_RANK[minRarity];
 
+  // Tous les pouvoirs sont accessibles dès le départ (plus de déblocage « Arsenal »).
   const eligible = POWERS.filter((p) => {
-    if (p.locked && !arsenal) return false;
     // boons CUMULABLES (repeatable) : peuvent réapparaître pour se stacker ;
     // boons UNIQUES : jamais deux fois.
     if (!p.repeatable && takenIds.has(p.id)) return false;

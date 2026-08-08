@@ -667,17 +667,16 @@ export class GameScene extends Phaser.Scene {
     this.hazardGfx.clear();
     const def = BOSSES[this.zone.bossId];
     const diff = getDifficulty(RunState.difficultyId);
-    // PV des boss : base ×2 amplifiée par une montée exponentielle de zone (le
-    // joueur devient très fort), le tout ENCORE ×5 (boss très costauds), et
-    // dégâts de contact/attaques mis à l'échelle de zone.
-    const bossHpMult = (2 + this.zone.index) * 2 * Math.pow(1.28, this.zone.index) * 2.5;
+    // PV des boss : def.hp EST la vie affichée en mode Normal ; la difficulté la
+    // module (facteur relatif au Normal). Les dégâts restent mis à l'échelle de zone.
+    const bossHpMult = diff.enemyHp / getDifficulty('normal').enemyHp;
     const bossDmgMult = Math.pow(1.3, this.zone.index);
     AudioManager.startMusic('boss');
     this.events.emit('progress', this.zone.name, this.zone.rooms, this.zone.rooms, true);
     // petit dialogue chaton ↔ boss (change à chaque run), puis la bannière et le boss
     this.bossIntro(def, () => {
       this.banner(`BOSS : ${def.name}, ${def.title}`, () => {
-        this.boss = new Boss(this, WORLD_WIDTH / 2, ARENA.y + 120, def, diff.enemyHp * bossHpMult, diff.enemyDamage * bossDmgMult);
+        this.boss = new Boss(this, WORLD_WIDTH / 2, ARENA.y + 120, def, bossHpMult, diff.enemyDamage * bossDmgMult);
         this.bossOverlap?.destroy();
         this.bossOverlap = this.physics.add.overlap(this.player, this.boss, (_p, b) => {
           const bs = b as Boss;
@@ -1225,7 +1224,7 @@ export class GameScene extends Phaser.Scene {
         this.rageOverlaps.forEach((o) => o.destroy());
         this.rageOverlaps = [];
         // PV par clone ≈ 0,5× le boss simple (trio ≈ 1,5×) ; dégâts ×1,3.
-        const hpMult = (2 + this.zone.index) * 2 * Math.pow(1.28, this.zone.index) * 2.5 * 0.5;
+        const hpMult = (diff.enemyHp / getDifficulty('normal').enemyHp) * 0.5;
         const dmgMult = Math.pow(1.3, this.zone.index) * 1.3;
         const spots = [
           { x: WORLD_WIDTH / 2, y: ARENA.y + 110 },
@@ -1234,7 +1233,7 @@ export class GameScene extends Phaser.Scene {
         ];
         this.rageMaxTotal = 0;
         for (const s of spots) {
-          const rb = new Boss(this, s.x, s.y, def, diff.enemyHp * hpMult, diff.enemyDamage * dmgMult);
+          const rb = new Boss(this, s.x, s.y, def, hpMult, diff.enemyDamage * dmgMult);
           rb.markEnraged();
           this.rageBosses.push(rb);
           this.rageMaxTotal += rb.maxHp;
@@ -1297,14 +1296,13 @@ export class GameScene extends Phaser.Scene {
     const def = BOSSES['militaire'];
     const diff = getDifficulty(RunState.difficultyId);
     const zi = ZONES.length - 1;
-    // 20× les PV de Néantis (même barème de boss appliqué à Néantis, ×20).
-    const neantisMul = (2 + zi) * 2 * Math.pow(1.28, zi) * 2.5;
-    const hpMul = neantisMul * 20 * (BOSSES['reflet'].hp / def.hp);
+    // 20× les PV de Néantis (en mode Normal), modulé par la difficulté.
+    const hpMul = (diff.enemyHp / getDifficulty('normal').enemyHp) * 20 * (BOSSES['reflet'].hp / def.hp);
     const dmgMul = Math.pow(1.3, zi) * 1.2;
     this.bossIntro(def, () => {
       this.banner(`BOSS FINAL : ${def.name}`, () => {
         this.roomState = 'boss';
-        this.boss = new Boss(this, FINAL_CX, FINAL_CY - FINAL_R * 0.4, def, diff.enemyHp * hpMul, diff.enemyDamage * dmgMul);
+        this.boss = new Boss(this, FINAL_CX, FINAL_CY - FINAL_R * 0.4, def, hpMul, diff.enemyDamage * dmgMul);
         this.bossOverlap?.destroy();
         this.bossOverlap = this.physics.add.overlap(this.player, this.boss, (_p, b) => {
           const bs = b as Boss; if (bs.isAlive()) this.player.takeDamage(bs.contactDamage, bs.x, bs.y);
