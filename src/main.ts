@@ -24,7 +24,10 @@ const config: Phaser.Types.Core.GameConfig = {
   roundPixels: true,
   scale: {
     mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
+    // Le conteneur #game (flex) centre déjà le canvas ; laisser Phaser AUSSI
+    // centrer (CENTER_BOTH) ajoutait une marge → double décalage (plus de noir
+    // d'un côté). NO_CENTER = centrage uniquement par le flex → bordures égales.
+    autoCenter: Phaser.Scale.NO_CENTER,
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
     // Plein écran sur le conteneur #game (stable) plutôt que sur le seul <canvas> :
