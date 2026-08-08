@@ -409,7 +409,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     this.gs.sfx(shockDash ? 'chidori' : 'dash');
     if (waterDash) this.waterDashVfx(dir);
     for (const fn of this.onDashFns) fn();
-    if (this.stats.dashDamage > 0) this.dashHitAccumulator = new Set();
+    // En téléport (Kunai), les dégâts du trajet sont déjà appliqués par lineDamage :
+    // pas d'accumulateur d'overlap, sinon l'ennemi à l'arrivée est frappé 2 fois.
+    if (!teleport && this.stats.dashDamage > 0) this.dashHitAccumulator = new Set();
 
     // Queue Équilibrière : un coup d'épée tranche pendant le dash.
     if (this.mods.dashAttack) {
@@ -784,37 +786,38 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (this.dead || this.isInvulnerable() || amount <= 0) return;
     this.markCombat();
     const now = performance.now();
-    // Nettoyage Parfait : être touché remet le bonus de salle à zéro.
-    if (this.mods.nettoyage) this.roomDamageBonus = 0;
-    this.mods.hitThisRoom = 1;
     // Statik : chance d'électriser l'ennemi le plus proche au contact.
     if (this.stats.contactShockChance > 0 && Math.random() < this.stats.contactShockChance) {
       const near = this.gs.enemiesNear(this.x, this.y, 70);
       if (near.length) near[0].applyStatus('shock', 1000);
     }
-    // Sharingan / Ultra Instinct : esquive automatique
+    // Sharingan / Ultra Instinct : esquive automatique (aucun dégât subi)
     if (this.stats.dodgeChance > 0 && Math.random() < this.stats.dodgeChance) {
       this.invulnUntil = now + 120;
       this.gs.juice.popText(this.x, this.y - 40, 'Esquive !', '#9fe6ff', 15);
       return;
     }
     // Susanoo : absorbe les 3 prochains coups DISTINCTS et riposte (reconstitué
-    // en 20 s). On pose des i-frames sinon un contact continu vide les 3 charges
-    // en 3 frames au lieu d'absorber 3 coups séparés.
-    if (this.mods.susanoo > 0) {
-      this.mods.susanoo--;
+    // en 20 s). Compteur SÉPARÉ de l'indicateur d'activation (mods.susanoo), sinon
+    // épuiser les charges couperait l'aura et le bonus de portée pendant 20 s.
+    if (this.mods.susanoo > 0 && this.mods.susanooCharges > 0) {
+      this.mods.susanooCharges--;
       this.invulnUntil = now + this.stats.hurtIFrames;
       this.gs.juice.ring(this.x, this.y, 100, 0xb26bff, 320);
       this.gs.explosionAt(this.x, this.y, 100, 30);
-      if (this.mods.susanoo <= 0) this.gs.time.delayedCall(20000, () => { this.mods.susanoo = 3; });
+      if (this.mods.susanooCharges <= 0) this.gs.time.delayedCall(20000, () => { if (!this.dead) this.mods.susanooCharges = 3; });
       return;
     }
-    // Rempart du Cœur : bloque 1 coup toutes les 2 s
+    // Rempart du Cœur : bloque 1 coup toutes les 2 s (aucun dégât subi)
     if (this.mods.rempart && now >= this.blockReadyAt) {
       this.blockReadyAt = now + 2000;
       this.gs.juice.burst(this.x, this.y, 0x8fd0ff, 8, 120, 0.9);
       return;
     }
+    // À partir d'ici, un coup est RÉELLEMENT encaissé.
+    // Nettoyage Parfait : être touché remet le bonus de salle à zéro.
+    if (this.mods.nettoyage) this.roomDamageBonus = 0;
+    this.mods.hitThisRoom = 1;
     let dmg = amount * (1 - this.stats.armor);
     if (this.mods.rugissement) dmg *= Math.max(0.5, 1 - 0.10 * this.mods.rugissement); // Rugissement
     if (this.mods.transformActive) dmg *= 0.5; // Titan / Gear Fifth : -50% de dégâts subis
@@ -875,15 +878,25 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     this.setTint(0x888888);
     this.gs.sfx('dead');
+    // La boucle update() s'arrête à la mort : on nettoie ici les VFX persistants
+    // (armes orbitales, Susanoo, clone d'ombre) pour qu'ils ne restent pas figés.
+    this.clearPersistentVfx();
     this.gs.tweens.add({ targets: [this, this.swordR, this.swordL], alpha: 0, angle: 90, duration: 800 });
     this.gs.onPlayerDead();
   }
 
-  destroy(fromScene?: boolean): void {
-    this.swordR?.destroy(); this.swordL?.destroy();
+  /** Détruit toutes les décorations persistantes (mort / fin de scène). */
+  private clearPersistentVfx(): void {
     this.orbitBlades.forEach((b) => b.destroy()); this.orbitBlades = [];
     this.orbitHammers.forEach((b) => b.destroy()); this.orbitHammers = [];
-    this.susanooAura?.destroy(); this.susanooSprite?.destroy();
+    this.susanooAura?.destroy(); this.susanooAura = undefined;
+    this.susanooSprite?.destroy(); this.susanooSprite = undefined;
+    this.kageClone?.destroy(); this.kageClone = undefined;
+  }
+
+  destroy(fromScene?: boolean): void {
+    this.swordR?.destroy(); this.swordL?.destroy();
+    this.clearPersistentVfx();
     super.destroy(fromScene);
   }
 }

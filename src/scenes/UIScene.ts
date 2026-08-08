@@ -135,25 +135,35 @@ export class UIScene extends Phaser.Scene {
     this.tweens.add({ targets: this.hurtFx, alpha: 0, duration: 420, ease: 'Cubic.easeOut' });
   }
 
+  private onCurrency(n: number): void { this.currencyText.setText(`${n}`); }
+  private onBossName(name: string): void { this.bossName.setText(name); this.bossLayer.setVisible(true); }
+  private onBossPhase(cur: number, total: number): void { this.bossPhase.setText(`Phase ${cur}/${total}`); }
+
   private setupEvents(): void {
+    // GameScene est un singleton réutilisé : son émetteur PERSISTE d'un run à
+    // l'autre. On enregistre des handlers NOMMÉS (jamais d'anonymes) et on les
+    // retire tous au SHUTDOWN, sinon ils s'accumulent à chaque partie.
     const e = this.gs.events;
     e.on('hp', this.onHp, this);
     e.on('cooldowns', this.onCooldowns, this);
-    e.on('currency', (n: number) => this.currencyText.setText(`${n}`));
+    e.on('currency', this.onCurrency, this);
     e.on('powers', this.onPowers, this);
     e.on('progress', this.onProgress, this);
-    e.on('bossName', (name: string) => { this.bossName.setText(name); this.bossLayer.setVisible(true); });
+    e.on('bossName', this.onBossName, this);
     e.on('bossHp', this.onBossHp, this);
-    e.on('bossPhase', (cur: number, total: number) => this.bossPhase.setText(`Phase ${cur}/${total}`));
+    e.on('bossPhase', this.onBossPhase, this);
     e.on('hurt', this.onHurt, this);
     e.on('xp', this.onXp, this);
 
-    this.events.on(Phaser.Scenes.Events.SHUTDOWN, () => {
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       e.off('hp', this.onHp, this);
       e.off('cooldowns', this.onCooldowns, this);
+      e.off('currency', this.onCurrency, this);
       e.off('powers', this.onPowers, this);
       e.off('progress', this.onProgress, this);
+      e.off('bossName', this.onBossName, this);
       e.off('bossHp', this.onBossHp, this);
+      e.off('bossPhase', this.onBossPhase, this);
       e.off('hurt', this.onHurt, this);
       e.off('xp', this.onXp, this);
     });

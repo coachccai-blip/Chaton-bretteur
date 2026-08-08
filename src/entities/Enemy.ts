@@ -190,9 +190,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     }
     this.setFlipX(this.facingSign < 0);
 
-    // attaque signature (interrompt le comportement)
-    if (this.aiState === 'idle' && this.def.signature && !frozen && now >= this.sigNextAt
-        && dist <= (this.def.signature.range ?? 260)) {
+    // attaque signature (interrompt le comportement). Les exploders portent une
+    // signature 'spread' réservée à leur explosion (nuée de spores) : ils ne la
+    // lancent PAS comme attaque à distance.
+    if (this.aiState === 'idle' && this.def.signature && this.def.behavior !== 'exploder'
+        && !frozen && now >= this.sigNextAt && dist <= (this.def.signature.range ?? 260)) {
       this.startSignature(this.def.signature, dir, dist);
       return;
     }
@@ -333,6 +335,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.setTintFill(0xffffff);
     this.gs.tweens.add({ targets: this, scaleX: this.def.scale * 1.15, scaleY: this.def.scale * 1.15, duration: sig.telegraph, ease: 'Sine.easeInOut' });
     const endSig = () => {
+      if (!this.alive) return; // le monstre a pu mourir pendant le télégraphe
       this.aiState = 'idle';
       this.sigNextAt = performance.now() + sig.cooldown;
       this.clearTint();

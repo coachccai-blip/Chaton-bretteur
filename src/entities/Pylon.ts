@@ -72,6 +72,7 @@ export class Pylon extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.gs.sfx('freeze');
     this.hpBg.destroy();
     this.hpFill.destroy();
+    this.gs.tweens.killTweensOf(this.aura); // stoppe la pulsation infinie
     this.gs.tweens.add({ targets: this.aura, alpha: 0, duration: 300, onComplete: () => this.aura.destroy() });
     this.gs.tweens.add({ targets: this, scaleY: 0, alpha: 0, duration: 240, onComplete: () => this.destroy() });
   }
@@ -79,7 +80,9 @@ export class Pylon extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   destroy(fromScene?: boolean): void {
     this.hpBg?.destroy();
     this.hpFill?.destroy();
+    if (this.aura) this.gs.tweens.killTweensOf(this.aura);
     this.aura?.destroy();
+    this.gs.tweens.killTweensOf(this);
     super.destroy(fromScene);
   }
 }

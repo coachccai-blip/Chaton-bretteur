@@ -547,7 +547,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       if (now >= st.nextTick) {
         st.nextTick = now + (key === 'burn' || key === 'blackburn' ? 400 : 500);
         const dmg = key === 'blackburn' ? 28 : key === 'burn' ? 14 : key === 'poison' ? 12 : key === 'bleed' ? 10 : 0;
-        if (dmg > 0) {
+        // Les DoT ne franchissent PAS l'invincibilité des pilônes (sinon on tuerait
+        // Glacior par les brûlures sans jamais briser un pilône).
+        if (dmg > 0 && !this.gs.bossInvincible()) {
           this.hp = Math.max(0, this.hp - dmg);
           this.gs.juice.burst(this.x, this.y - 20, key === 'blackburn' ? 0x14060a : key === 'burn' ? 0xff6a1f : key === 'poison' ? 0x8fd94a : 0xc0392b, 3, 60, 0.6);
           this.gs.events.emit('bossHp', this.hp, this.maxHp);
@@ -574,6 +576,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   private triggerReaction(react: { name: string; base: number; hpFrac: number; color: number; aoe: number }): void {
     const bonus = Math.round(react.base + this.maxHp * react.hpFrac * 0.25); // atténué sur les boss
     this.gs.reactionVfx(this.x, this.y, react.name, react.color);
+    if (this.gs.bossInvincible()) return; // pas de dégâts tant que les pilônes tiennent
     this.hp = Math.max(0, this.hp - bonus);
     this.gs.events.emit('bossHp', this.hp, this.maxHp);
     if (this.hp <= 0) this.die();
@@ -608,12 +611,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.auraEmitter?.destroy();
     this.auraRing?.destroy();
     this.blackFlame?.destroy(); this.blackFlame = undefined;
+    this.gs.tweens.killTweensOf(this.aura); // stoppe la pulsation infinie avant le fondu
     this.gs.tweens.add({ targets: this.aura, alpha: 0, duration: 600, onComplete: () => this.aura?.destroy() });
     this.gs.onBossKilled(this);
   }
 
   destroy(fromScene?: boolean): void {
     this.alive = false; // court-circuite les callbacks de télégraphe en attente
+    if (this.aura) this.gs.tweens.killTweensOf(this.aura);
     this.aura?.destroy();
     this.auraEmitter?.destroy();
     this.auraRing?.destroy();

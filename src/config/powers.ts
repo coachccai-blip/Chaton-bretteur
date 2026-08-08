@@ -667,7 +667,7 @@ export const POWERS: PowerDef[] = [
   {
     id: 'susanoo', name: 'Susanoo', god: 'Œil Éternel', category: 'divine', rarity: 'legendary', icon: 'domain',
     description: 'Une armure spectrale absorbe les 3 prochains coups et riposte (se reconstitue en 20 s).',
-    apply(p) { p.mods.susanoo = 3; },
+    apply(p) { p.mods.susanoo = 1; p.mods.susanooCharges = 3; },
   },
   {
     id: 'gear_fifth', name: 'Gear Fifth — Éveil du Soleil', god: 'Guerrier Libéré', category: 'divine', rarity: 'legendary', icon: 'rage',

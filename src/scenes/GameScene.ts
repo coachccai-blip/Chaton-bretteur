@@ -136,6 +136,26 @@ export class GameScene extends Phaser.Scene {
   constructor() { super('Game'); }
 
   create(): void {
+    // GameScene est un singleton RÉUTILISÉ (scene.start relance la même instance) :
+    // les champs de classe ne sont initialisés qu'à la construction. On remet donc
+    // à zéro tout l'état transitoire ici, sinon des références d'objets détruits au
+    // run précédent traînent (ex. hazardMarkers → crash au 2e run) ou un boon en
+    // file est offert gratuitement au run suivant.
+    this.hazardMarkers = [];
+    this.hazards = []; this.bossHazards = []; this.traps = [];
+    this.friendlyShots = [];
+    this.souls = [];
+    this.activeEnemies.clear();
+    this.bossPylons = [];
+    this.pendingBoons = 0; this.rewardActive = false; this.boonOnEmpty = null;
+    this.bossOverlap = undefined;
+    this.boss = null;
+    this.enemyTimeScale = 1;
+    this.roomState = 'transition';
+    this.roomToken = 0;
+    this.poisonUntil = 0;
+    this.combatDone = 0;
+
     this.cameras.main.setBackgroundColor(COLORS.bg);
     // dézoom : affiche le monde 1200×675 dans le canvas 960×540 (personnage
     // plus petit, plus d'espace). L'ATH (UIScene) reste en 960×540.
@@ -180,14 +200,18 @@ export class GameScene extends Phaser.Scene {
 
     this.startZone(RunState.zoneIndex);
 
-    // chronomètre : en pause quand le jeu est en pause (choix de boon, menu pause)
-    this.events.on(Phaser.Scenes.Events.PAUSE, () => RunState.pauseTimer());
-    this.events.on(Phaser.Scenes.Events.RESUME, () => RunState.resumeTimer());
+    // chronomètre : en pause quand le jeu est en pause (choix de boon, menu pause).
+    // Handlers nommés retirés au SHUTDOWN (émetteur de scène réutilisé entre runs).
+    this.events.on(Phaser.Scenes.Events.PAUSE, this.onScenePause, this);
+    this.events.on(Phaser.Scenes.Events.RESUME, this.onSceneResume, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(Phaser.Scenes.Events.PAUSE, this.onScenePause, this);
+      this.events.off(Phaser.Scenes.Events.RESUME, this.onSceneResume, this);
       this.activeEnemies.clear();
       this.boss = null;
       this.clearSouls();
+      this.clearPylons();
       this.env?.destroy();
     });
   }
@@ -543,14 +567,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   summonMinions(x: number, y: number, id: string, count: number): void {
-    if (this.roomState === 'over') return;
+    if (!this.combatActive) return;
     if (this.activeEnemies.size > 24) return; // évite l'accumulation d'adds
     for (let i = 0; i < count; i++) {
       const ang = (i / count) * Math.PI * 2;
       const px = Phaser.Math.Clamp(x + Math.cos(ang) * 50, ARENA.x + 20, ARENA.x + ARENA.w - 20);
       const py = Phaser.Math.Clamp(y + Math.sin(ang) * 50, ARENA.y + 20, ARENA.y + ARENA.h - 20);
       this.time.delayedCall(200, () => {
-        if (this.roomState === 'over') return;
+        if (!this.combatActive) return;
         this.spawnEnemy(id, px, py);
       });
     }
@@ -675,6 +699,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   // ---------------- callbacks entités ----------------
+  private onScenePause(): void { RunState.pauseTimer(); }
+  private onSceneResume(): void { RunState.resumeTimer(); }
+
+  /** Le combat est-il actif ? (Les dégâts d'attaques télégraphiées ne s'appliquent
+   * qu'en combat/boss — jamais pendant une transition, ex. après la mort du boss.) */
+  private get combatActive(): boolean {
+    return this.roomState === 'combat' || this.roomState === 'boss';
+  }
+
   getTargets(): IEnemyLike[] {
     const list: IEnemyLike[] = [];
     for (const e of this.activeEnemies) if (e.isAlive()) list.push(e);
@@ -726,7 +759,7 @@ export class GameScene extends Phaser.Scene {
     const timer = this.time.addEvent({ delay: 40, loop: true, callback: drawSafe });
     for (let k = 0; k < count; k++) {
       this.time.delayedCall(k * 130, () => {
-        if (this.roomState === 'over') return;
+        if (!this.combatActive) return;
         let pt = this.arenaPoint(50);
         // évite les zones sûres (quelques essais)
         for (let tries = 0; tries < 6; tries++) {
@@ -744,7 +777,7 @@ export class GameScene extends Phaser.Scene {
     const shadow = this.add.ellipse(x, y, r * 1.6, r * 0.7, 0x2a6a9a, 0.35).setDepth(3);
     this.tweens.add({ targets: shadow, scaleX: 1.3, scaleY: 1.3, duration: telegraph, yoyo: false });
     this.time.delayedCall(telegraph, () => {
-      if (this.roomState === 'over') { shadow.destroy(); return; }
+      if (!this.combatActive) { shadow.destroy(); return; }
       const ice = this.add.image(x, y - 240, 'ice_stalactite').setDepth(28).setScale(2.2);
       this.tweens.add({ targets: ice, y, duration: 240, ease: 'Quad.easeIn', onComplete: () => {
         this.sfx('freeze');
@@ -1206,7 +1239,7 @@ export class GameScene extends Phaser.Scene {
         g.fillStyle(color, 0.22);
         g.fillCircle(x, y, r * v);
       },
-      onComplete: () => { g.destroy(); if (this.roomState !== 'over') cb(); },
+      onComplete: () => { g.destroy(); if (this.combatActive) cb(); },
     });
   }
 
@@ -1222,7 +1255,7 @@ export class GameScene extends Phaser.Scene {
     }).setDepth(30);
     col.explode(14);
     this.time.delayedCall(500, () => col.destroy());
-    if (this.player && !this.player.dead && Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) <= r) {
+    if (this.combatActive && this.player && !this.player.dead && Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) <= r) {
       this.player.takeDamage(damage, x, y); // esquivable au dash (i-frames)
     }
     if (hazard) this.spawnHazardZone(x, y, r * 0.85, hazard, 0, hazardDur);
@@ -1237,7 +1270,7 @@ export class GameScene extends Phaser.Scene {
     rect.setStrokeStyle(2, 0xff3a3a, 0.8);
     this.tweens.add({ targets: rect, alpha: 0.38, duration: ms, ease: 'Sine.easeIn' });
     this.time.delayedCall(ms, () => {
-      if (this.roomState === 'over') { rect.destroy(); return; }
+      if (!this.combatActive) { rect.destroy(); return; }
       // flash actif
       rect.setFillStyle(color, 0.7);
       const cos = Math.cos(angle), sin = Math.sin(angle);
@@ -1547,7 +1580,7 @@ export class GameScene extends Phaser.Scene {
       },
       onComplete: () => {
         g.destroy();
-        if (this.roomState === 'over') return;
+        if (!this.combatActive) return;
         this.juice.shake(280, 0.012);
         this.sfx('special');
         const p = this.player;
@@ -1583,7 +1616,7 @@ export class GameScene extends Phaser.Scene {
           g.lineBetween(x + Math.cos(a) * r * 0.25, y + Math.sin(a) * r * 0.25, x + Math.cos(a) * r * 0.9, y + Math.sin(a) * r * 0.9);
         }
       },
-      onComplete: () => { g.destroy(); if (this.roomState !== 'over') this.eruptAt(x, y, r, color, damage); },
+      onComplete: () => { g.destroy(); if (this.combatActive) this.eruptAt(x, y, r, color, damage); },
     });
   }
 
