@@ -66,7 +66,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   araignee: {
     id: 'araignee', name: 'Sylvaan', title: 'le Centaure Archer', sprite: 'centaure',
-    hp: 460, scale: 0.82, contactDamage: 14, auraColor: 0x59d9a0, level: 10,
+    hp: 276, scale: 0.82, contactDamage: 14, auraColor: 0x59d9a0, level: 10,
     phases: [
       { hpFrac: 1.0, speed: 150, moves: [
         { type: 'arrowRain', telegraph: 700, cooldown: 2800, count: 7, radius: 46, damage: 16, color: 0x59d9a0, say: 'Pluie de flèches !' },
@@ -86,7 +86,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   crapaudroi: {
     id: 'crapaudroi', name: 'Gorbak', title: 'le Gobu Géant', sprite: 'gobugeant',
-    hp: 620, scale: 0.82, contactDamage: 16, auraColor: 0x9fe04a, level: 20,
+    hp: 496, scale: 0.82, contactDamage: 16, auraColor: 0x9fe04a, level: 20,
     phases: [
       { hpFrac: 1.0, speed: 120, moves: [
         { type: 'mudFlood', telegraph: 1100, cooldown: 5200, safeCount: 3, radius: 74, damage: 26, hazard: 'toxic', color: 0x8a6a3a, say: 'Bourbier !' },
