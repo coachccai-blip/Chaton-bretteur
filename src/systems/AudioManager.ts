@@ -98,7 +98,8 @@ class Audio {
       case 'shock': this.blip(1200, 0.05, 'square', 0.14, -700); this.noise(0.04, 0.08); break;
       case 'mark': this.blip(120, 0.16, 'square', 0.16, -30); break;
       // --- boons actifs ---
-      case 'chidori': this.blip(1600, 0.22, 'square', 0.16, -1300); this.noise(0.18, 0.12); break;
+      // Chidori : crépitement électrique (grésillement chant d'oiseau + arcs).
+      case 'chidori': this.blip(1600, 0.22, 'square', 0.16, -1300); this.noise(0.22, 0.16); this.blip(2600, 0.12, 'square', 0.12, -1800); this.blip(3400, 0.08, 'sawtooth', 0.1, -2400); break;
       case 'rasengan': this.blip(420, 0.34, 'sine', 0.16, 260); this.noise(0.3, 0.1); this.blip(620, 0.28, 'triangle', 0.1, 180); break;
       case 'getsuga': this.blip(700, 0.16, 'sawtooth', 0.18, -420); this.noise(0.1, 0.1); break;
       case 'explosionbig': this.blip(90, 0.6, 'sawtooth', 0.3, 160); this.noise(0.5, 0.24); this.blip(60, 0.7, 'sine', 0.24, 40); break;

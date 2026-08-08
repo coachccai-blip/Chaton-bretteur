@@ -272,10 +272,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
         this.gs.explosionAt(this.x, this.y, 90, Math.max(20, this.stats.dashDamage + this.stats.swordDamage[0]));
       }
     }
-    // Chidori : traînée électrique pendant le dash
+    // Chidori : arcs électriques BLEUS crépitants pendant le dash.
     if (this.dashing && this.dashFlags.has('shock') && now >= this.nextSparkAt) {
-      this.nextSparkAt = now + 26;
-      this.gs.juice.burst(this.x, this.y, 0xfff27a, 3, 90, 0.7);
+      this.nextSparkAt = now + 34;
+      this.gs.juice.burst(this.x, this.y, 0x59c8ff, 3, 120, 0.7);
+      this.chidoriBolt();
+      this.chidoriBolt();
     }
 
     // effets récurrents (clone, domaine…)
@@ -455,8 +457,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
 
     const shockDash = this.dashFlags.has('shock');
     const waterDash = this.dashFlags.has('water');
-    this.gs.juice.dashTrail(this.x, this.y, shockDash ? 0xfff27a : waterDash ? 0x59c8ff : 0x9fe6ff);
+    this.gs.juice.dashTrail(this.x, this.y, shockDash ? 0x59c8ff : waterDash ? 0x59c8ff : 0x9fe6ff);
     this.gs.sfx(shockDash ? 'chidori' : 'dash');
+    if (shockDash) this.chidoriBurst(dir);
     if (waterDash) this.waterDashVfx(dir);
     for (const fn of this.onDashFns) fn();
     // En téléport (Kunai), les dégâts du trajet sont déjà appliqués par lineDamage :
@@ -651,6 +654,34 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       });
       this.lifeGateTrail.setDepth(this.depth - 1);
     }
+  }
+
+  /** Chidori : un arc électrique bleu crépite autour du chaton pendant le dash. */
+  private chidoriBolt(): void {
+    const ang = Math.random() * Math.PI * 2;
+    const off = 8 + Math.random() * 16;
+    const bx = this.x + Math.cos(ang) * off, by = this.y - 6 + Math.sin(ang) * off;
+    const b = this.gs.add.sprite(bx, by, 'lightning_blue').setDepth(this.depth + 1)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setRotation(Math.random() * Math.PI * 2)
+      .setScale(0.7 + Math.random() * 0.7)
+      .setAlpha(1);
+    this.gs.tweens.add({
+      targets: b, alpha: 0, scaleX: b.scaleX * 1.35, scaleY: b.scaleY * 1.35,
+      duration: 130, ease: 'Quad.easeOut', onComplete: () => b.destroy(),
+    });
+  }
+
+  /** Décharge de Chidori au départ du dash : gros arc orienté + halo + crépitement. */
+  private chidoriBurst(dir: Phaser.Math.Vector2): void {
+    const ang = Math.atan2(dir.y, dir.x);
+    const x = this.x + dir.x * 20, y = this.y - 6 + dir.y * 20;
+    const bolt = this.gs.add.sprite(x, y, 'lightning_blue').setDepth(this.depth + 1)
+      .setBlendMode(Phaser.BlendModes.ADD).setOrigin(0.5, 0.5)
+      .setRotation(ang + Math.PI / 2).setScale(1.8).setAlpha(1);
+    this.gs.tweens.add({ targets: bolt, scaleX: 3.0, scaleY: 3.6, alpha: 0, duration: 220, ease: 'Cubic.easeOut', onComplete: () => bolt.destroy() });
+    this.gs.juice.ring(this.x, this.y, 56, 0x59c8ff, 260);
+    for (let k = 0; k < 3; k++) this.chidoriBolt();
   }
 
   /** Première Danse de l'Eau : une vague écumeuse jaillit le long du dash. */

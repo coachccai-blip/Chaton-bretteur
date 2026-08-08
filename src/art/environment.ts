@@ -628,6 +628,28 @@ export const CAT_PAW: SpriteDef = {
   ],
 };
 
+/** Éclair bleu (12x14) : arc électrique du boon Chidori (dash foudroyant). */
+export const LIGHTNING_BLUE: SpriteDef = {
+  key: 'lightning_blue',
+  pal: { '.': null, 'b': '#1e5ad8', 'c': '#5ad0ff', 'w': '#eaf6ff' },
+  rows: [
+    '......wcb...',
+    '.....wcb....',
+    '....wcb.....',
+    '...wcb......',
+    '..wcbbbbb...',
+    '...bbbbcw...',
+    '......wcb...',
+    '.....wcb....',
+    '....wcb.....',
+    '...wcb......',
+    '..wcb.......',
+    '.wcb........',
+    '.cb.........',
+    '.b..........',
+  ],
+};
+
 /** Glob de boue (10x10) : projectile craché par Gorbak et les mini-gorbaks. */
 export const MUD_BLOB: SpriteDef = {
   key: 'mud_blob',
