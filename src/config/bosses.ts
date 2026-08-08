@@ -58,7 +58,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   araignee: {
     id: 'araignee', name: 'Sylvaan', title: 'le Centaure Archer', sprite: 'centaure',
-    hp: 460, scale: 1.15, contactDamage: 14, auraColor: 0x59d9a0,
+    hp: 460, scale: 0.82, contactDamage: 14, auraColor: 0x59d9a0,
     phases: [
       { hpFrac: 1.0, speed: 150, moves: [
         { type: 'aimedBurst', telegraph: 480, cooldown: 1700, count: 3, speed: 260, damage: 13, color: 0x9ee06a },
@@ -80,7 +80,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   crapaudroi: {
     id: 'crapaudroi', name: 'Gorbak', title: 'le Gobu Géant', sprite: 'gobugeant',
-    hp: 620, scale: 1.25, contactDamage: 16, auraColor: 0x9fe04a,
+    hp: 620, scale: 0.82, contactDamage: 16, auraColor: 0x9fe04a,
     phases: [
       { hpFrac: 1.0, speed: 120, moves: [
         { type: 'mudFlood', telegraph: 1100, cooldown: 5200, safeCount: 3, radius: 74, damage: 26, hazard: 'toxic', color: 0x8a6a3a },
@@ -100,7 +100,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   golem: {
     id: 'golem', name: 'Ignis', title: 'le Serpent de Lave', sprite: 'serpentlave',
-    hp: 760, scale: 1.15, contactDamage: 18, auraColor: 0xff6a1f,
+    hp: 760, scale: 0.82, contactDamage: 18, auraColor: 0xff6a1f,
     phases: [
       { hpFrac: 1.0, speed: 175, movement: 'slither', moves: [
         { type: 'fan', telegraph: 520, cooldown: 1900, count: 5, spread: 0.55, speed: 210, damage: 15, color: 0xff7a2a },
@@ -123,7 +123,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   roi: {
     id: 'roi', name: 'Mortis', title: 'l’Archimage Mort-vivant', sprite: 'archimage',
-    hp: 1150, scale: 1.2, contactDamage: 20, auraColor: 0xb26bff,
+    hp: 1150, scale: 0.82, contactDamage: 20, auraColor: 0xb26bff,
     phases: [
       { hpFrac: 1.0, speed: 140, moves: [
         { type: 'summon', telegraph: 700, cooldown: 6000, summonId: 'zombie', summonCount: 2 },
@@ -151,7 +151,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   leviathan: {
     id: 'leviathan', name: 'Glacior', title: 'le Léviathan des Abysses', sprite: 'leviathan',
-    hp: 1400, scale: 1.25, contactDamage: 22, auraColor: 0x7fdcff,
+    hp: 1400, scale: 0.82, contactDamage: 22, auraColor: 0x7fdcff,
     phases: [
       { hpFrac: 1.0, speed: 160, moves: [
         // 0. Pilônes de Glace — invoqués au spawn, rendent Glacior invincible (damage = PV/pilône)
@@ -190,7 +190,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   rapace: {
     id: 'rapace', name: 'Voltaïr', title: 'le Rapace du Jugement', sprite: 'rapace',
-    hp: 1750, scale: 1.2, contactDamage: 24, auraColor: 0xb0c8ff,
+    hp: 1750, scale: 0.82, contactDamage: 24, auraColor: 0xb0c8ff,
     phases: [
       { hpFrac: 1.0, speed: 175, moves: [
         // Tempête de Plumes — éventails d'éclairs
@@ -222,7 +222,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   reflet: {
     id: 'reflet', name: 'Néantis', title: 'le Reflet Noir', sprite: 'reflet',
-    hp: 2100, scale: 1.15, contactDamage: 26, auraColor: 0xd05aff,
+    hp: 2100, scale: 0.82, contactDamage: 26, auraColor: 0xd05aff,
     phases: [
       { hpFrac: 1.0, speed: 150, moves: [
         // 1. Combo Miroir — charge d'estoc
