@@ -112,6 +112,33 @@ export const MERCHANT_CAT: SpriteDef = {
   ],
 };
 
+/**
+ * Susanoo (18x16) : buste de guerrier spectral cornu (armure éthérée). Affiché
+ * en violet translucide derrière le chaton tant que le boon Susanoo est actif.
+ */
+export const SUSANOO: SpriteDef = {
+  key: 'susanoo',
+  pal: { '.': null, '#': '#2a1440', 'p': '#7a4ad0', 'P': '#b98cff', 'e': '#e8d8ff', 'k': '#4a2c7a' },
+  rows: [
+    '..p..........p....',
+    '..pp........pp....',
+    '..ppp......ppp....',
+    '...pkkkkkkkkkp....',
+    '...pkPPPPPPPPkp...',
+    '...pkPeePPeePkp...',
+    '...pkPPPPPPPPkp...',
+    '...pkPPkkkkPPkp...',
+    '..ppkPPPPPPPPkpp..',
+    '.pp.kPPPPPPPPk.pp.',
+    'pp..kPPPPPPPPk..pp',
+    'p...kkPPPPPPkk...p',
+    '....kPPPPPPPPk....',
+    '....kkkkkkkkkk....',
+    '.....pppppppp.....',
+    '..................',
+  ],
+};
+
 /** Mjölnir (10x14) : marteau de guerre à tête d'acier runique, manche cuir. */
 export const HAMMER: SpriteDef = {
   key: 'hammer_thor',

@@ -41,7 +41,7 @@ export const COLORS = {
 
 export const PLAYER_BASE = {
   maxHp: 100,
-  speed: 265,
+  speed: 345, // +30% de vitesse de base
   swordDamage: [10, 10, 18], // coups 1-2-3
   comboWindow: 420, // ms pour enchaîner
   attackDuration: 220, // ms d'une frappe

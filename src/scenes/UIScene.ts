@@ -104,11 +104,11 @@ export class UIScene extends Phaser.Scene {
   /** Dessine un cadre rouge à dégradé doux (bords opaques → centre transparent). */
   private drawHurtBorder(): void {
     const g = this.hurtFx; g.clear();
-    const layers = 16, band = 70; // épaisseur totale du halo
+    const layers = 20, band = 96; // épaisseur totale du halo
     for (let i = 0; i < layers; i++) {
       const t = (i / layers) * band;
-      const a = 0.55 * (1 - i / layers) * (1 - i / layers);
-      g.lineStyle(band / layers + 2, 0xff1f2e, a);
+      const a = 0.85 * (1 - i / layers); // dégradé linéaire, bord bien opaque
+      g.lineStyle(band / layers + 3, 0xff1420, a);
       g.strokeRect(t, t, GAME_WIDTH - t * 2, GAME_HEIGHT - t * 2);
     }
   }
@@ -116,8 +116,8 @@ export class UIScene extends Phaser.Scene {
   /** Pulse rouge de bord à l'impact (sévérité 0..1 selon les dégâts). */
   private onHurt(severity: number): void {
     this.tweens.killTweensOf(this.hurtFx);
-    this.hurtFx.setAlpha(Phaser.Math.Clamp(0.35 + severity * 0.6, 0.3, 0.95));
-    this.tweens.add({ targets: this.hurtFx, alpha: 0, duration: 360, ease: 'Cubic.easeOut' });
+    this.hurtFx.setAlpha(Phaser.Math.Clamp(0.55 + severity * 0.45, 0.5, 1));
+    this.tweens.add({ targets: this.hurtFx, alpha: 0, duration: 420, ease: 'Cubic.easeOut' });
   }
 
   private setupEvents(): void {

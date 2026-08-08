@@ -5,8 +5,8 @@ import type { IPlayerContext, IEnemyLike, ICombatScene, OnHitFn, OnKillFn, VoidF
 
 /** Portée d'auto-visée : au-delà, l'attaque suit la visée manuelle/déplacement. */
 const AUTO_AIM_RANGE = 260;
-/** Portée de la mêlée (+150% par rapport à l'ancienne valeur de 78). */
-const MELEE_RANGE = 195;
+/** Portée de base de la mêlée (réduite de 20% ; rallongée par Bras Élastique / Susanoo). */
+const MELEE_RANGE = 156;
 
 export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerContext {
   gs: GameScene;
@@ -73,6 +73,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   private orbitAngle = 0;
   private orbitHit = new WeakMap<object, number>();
   private nextOrbitSpark = 0;
+  // Susanoo : aura violette + buste spectral tant que le boon est actif.
+  private susanooAura?: Phaser.GameObjects.Image;
+  private susanooSprite?: Phaser.GameObjects.Sprite;
 
   constructor(scene: GameScene, x: number, y: number, stats: PlayerStats) {
     super(scene, x, y, 'cat');
@@ -244,6 +247,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       if (now >= pe.nextAt) { pe.nextAt = now + pe.interval; pe.fn(); }
     }
     this.updateOrbitBlades(now, dt);
+    this.updateSusanooVfx(now);
 
     // actions
     if (input.consumeDash()) this.tryDash(move);
@@ -349,6 +353,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     return this.stats.attackDuration / (this.stats.attackSpeedMult * this.buffProduct('as'));
   }
 
+  /** Portée de mêlée effective : base + Bras Élastique (+12%/stack, max 3) + Susanoo (+15%). */
+  private meleeRange(): number {
+    const arm = 1 + 0.12 * Math.min(3, this.mods.armReach || 0);
+    const susanoo = this.mods.susanoo > 0 ? 1.15 : 1;
+    return MELEE_RANGE * arm * susanoo;
+  }
+
   // ---------- actions ----------
   private tryDash(move: Phaser.Math.Vector2): void {
     const now = performance.now();
@@ -392,7 +403,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (this.mods.dashAttack) {
       this.slashVfx(dir.angle(), 0, this.maxCombo);
       for (const e of this.gs.getTargets()) {
-        if (e.isAlive() && Math.hypot(e.x - this.x, e.y - this.y) <= MELEE_RANGE) this.dealDamage(e, this.stats.swordDamage[0], false);
+        if (e.isAlive() && Math.hypot(e.x - this.x, e.y - this.y) <= this.meleeRange()) this.dealDamage(e, this.stats.swordDamage[0], false);
       }
     }
     // Souffle du Tonnerre : tous les 6 dashes, éclair qui traverse la ligne
@@ -462,6 +473,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     }
   }
 
+  /** Aura violette + buste spectral de Susanoo tant que le boon est chargé. */
+  private updateSusanooVfx(now: number): void {
+    const active = (this.mods.susanoo || 0) > 0 && !this.dead;
+    if (active) {
+      if (!this.susanooAura) {
+        this.susanooAura = this.gs.add.image(this.x, this.y, 'light').setTint(0x9a5cff)
+          .setBlendMode(Phaser.BlendModes.ADD).setDepth(18).setScale(2.2).setAlpha(0.4);
+        this.susanooSprite = this.gs.add.sprite(this.x, this.y - 20, 'susanoo').setDepth(19).setAlpha(0.5).setScale(2.4);
+      }
+      this.susanooAura.setPosition(this.x, this.y - 6).setAlpha(0.32 + 0.12 * Math.sin(now * 0.006)).setScale(2.2 + 0.12 * Math.sin(now * 0.005));
+      this.susanooSprite!.setPosition(this.x, this.y - 22).setAlpha(0.42 + 0.1 * Math.sin(now * 0.006)).setFlipX(this.facing < 0);
+    } else if (this.susanooAura) {
+      this.susanooAura.destroy(); this.susanooAura = undefined;
+      this.susanooSprite?.destroy(); this.susanooSprite = undefined;
+    }
+  }
+
   /** Première Danse de l'Eau : une vague écumeuse jaillit le long du dash. */
   private waterDashVfx(dir: Phaser.Math.Vector2): void {
     const ang = Math.atan2(dir.y, dir.x);
@@ -515,7 +543,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const finisher = comboIndex === maxCombo - 1;
     const dir = comboIndex % 2 === 0 ? 1 : -1; // alterne le côté du swing
     const cx = this.x, cy = this.y - 8;
-    const R = MELEE_RANGE * (finisher ? 0.95 : 0.82);
+    const R = this.meleeRange() * (finisher ? 0.95 : 0.82);
     const span = finisher ? 1.5 : 1.0;
     // Décale le centre de l'arc selon le coup : les croissants successifs
     // apparaissent de part et d'autre (fend à droite, revers à gauche…).
@@ -560,7 +588,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const idxForDamage = Math.min(this.comboIndex, dmgTable.length - 1);
     const isFinisher = this.comboIndex === this.maxCombo - 1 || this.comboIndex >= dmgTable.length - 1;
     const baseDmg = dmgTable[idxForDamage] ?? dmgTable[dmgTable.length - 1];
-    const range = MELEE_RANGE;
+    const range = this.meleeRange();
     const aimAngle = Math.atan2(this.aim.y, this.aim.x);
     this.slashVfx(aimAngle, this.comboIndex, this.maxCombo);
     let hitAny = false;
@@ -578,6 +606,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (hitAny) {
       this.gs.juice.hitStop(isFinisher ? 70 : 40);
       this.gs.juice.shake(isFinisher ? 140 : 80, isFinisher ? 0.008 : 0.004);
+    }
+    // Susanoo : une lame spectrale VIOLETTE prolonge l'attaque (+portée, +dégâts).
+    if (this.mods.susanoo > 0) {
+      const R = range * 1.45;
+      this.lineDamage(this.x, this.y - 8, this.x + this.aim.x * R, this.y - 8 + this.aim.y * R, 26, Math.round(baseDmg * 0.7), 0x9a5cff);
     }
   }
 
@@ -804,6 +837,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     this.swordR?.destroy(); this.swordL?.destroy();
     this.orbitBlades.forEach((b) => b.destroy()); this.orbitBlades = [];
     this.orbitHammers.forEach((b) => b.destroy()); this.orbitHammers = [];
+    this.susanooAura?.destroy(); this.susanooSprite?.destroy();
     super.destroy(fromScene);
   }
 }

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { genSprite, genMask, genOrb, genPixel } from './PixelArtGenerator';
-import { CAT, SWORD, KATANA, MERCHANT_CAT, HAMMER, WATER_WAVE } from './hero';
+import { CAT, SWORD, KATANA, MERCHANT_CAT, HAMMER, WATER_WAVE, SUSANOO } from './hero';
 import { GLYPHS } from './icons';
 import { genCritter, MONSTER_RECIPES } from './critters';
 import { BOSS_CATS } from './bosscats';
@@ -18,6 +18,7 @@ export function generateAll(scene: Phaser.Scene): void {
   genSprite(scene, SWORD);
   genSprite(scene, KATANA); // katana noir orbital (Troisième Lame)
   genSprite(scene, HAMMER); // Mjölnir orbital
+  genSprite(scene, SUSANOO); // aura spectrale du boon Susanoo
   genSprite(scene, WATER_WAVE); // vague de la Première Danse de l'Eau
   genSprite(scene, MERCHANT_CAT); // chat marchand du désert
   genSprite(scene, MINE);   // marqueur de danger au sol

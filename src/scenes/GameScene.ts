@@ -718,7 +718,8 @@ export class GameScene extends Phaser.Scene {
     this.juice.popText(s.x, s.orb.y - 18, 'Âme', '#bff7f6', 14);
     AudioManager.play('soul');
     this.addRunCurrency(1);
-    if (this.player.stats.soulHealBonus > 0) this.player.heal(this.player.stats.soulHealBonus); // Senzu / Cueilleur
+    // Chaque âme récupérée rend 1 PV (+ bonus Senzu / Cueilleur).
+    this.player.heal(1 + this.player.stats.soulHealBonus);
     s.orb.destroy(); s.ring.destroy();
     this.souls.splice(i, 1);
     this.checkWaveCleared();

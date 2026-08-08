@@ -448,17 +448,9 @@ export const POWERS: PowerDef[] = [
     },
   },
   {
-    id: 'bungee_gum', name: 'Gomme Élastique', god: 'Magicien', category: 'attack', rarity: 'rare', icon: 'fist',
-    description: 'Un ennemi touché 3 fois est attiré vers le chaton (étourdi 0,5 s).',
-    apply(p) {
-      const counts = new WeakMap<object, number>();
-      p.addOnHit((e) => {
-        const k = e as unknown as object;
-        const n = (counts.get(k) || 0) + 1;
-        counts.set(k, n);
-        if (n >= 3) { counts.set(k, 0); p.combat.pullEnemy(e, p.px(), p.py(), 500); }
-      });
-    },
+    id: 'bungee_gum', name: 'Bras Élastique', god: 'Pirate', category: 'attack', rarity: 'rare', icon: 'fist', repeatable: true,
+    description: '+12% de portée d’attaque de base (cumulable 3 fois).',
+    apply(p) { p.mods.armReach = Math.min(3, (p.mods.armReach || 0) + 1); },
   },
   {
     id: 'third_blade', name: 'Troisième Lame', god: 'Chasseur de Pirates', category: 'divine', rarity: 'rare', icon: 'sword',
