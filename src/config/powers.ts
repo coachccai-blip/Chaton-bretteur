@@ -507,7 +507,7 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'getsuga', name: 'Multi-Clonage', god: 'Maître des Clones', category: 'divine', rarity: 'epic', icon: 'clone',
-    description: 'Deux mini-chats t’entourent et copient tes attaques à 10 %. Cumulable avec Kage Bunshin : chaque mini-chat gagne alors sa propre ombre qui frappe aussi.',
+    description: 'Deux mini-chats t’entourent et copient tes attaques à 50 %. Cumulable avec Kage Bunshin : chaque mini-chat gagne alors sa propre ombre qui frappe à 50 % du mini-chat.',
     apply(p) { p.mods.multiClone = 1; },
   },
   {
@@ -611,7 +611,7 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'kage_bunshin', name: 'Kage Bunshin', god: 'Ninja de l’Ombre', category: 'divine', rarity: 'legendary', icon: 'clone',
-    description: 'Un clone d’ombre te suit et tranche sans cesse les ennemis proches.',
+    description: 'Un clone d’ombre te suit et copie tes attaques à 50 % sur les ennemis proches.',
     // Le clone visible est géré par le Player (mods.kageClone) : il flotte près du
     // chaton et porte un coup de sabre spectral aux ennemis à portée.
     apply(p) { p.mods.kageClone = 1; },

@@ -624,7 +624,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     c.setPosition(Phaser.Math.Linear(c.x, tx, 0.12), Phaser.Math.Linear(c.y, ty, 0.12));
     c.setAlpha(0.58 + 0.12 * Math.sin(now * 0.006));
     // Le clone ne frappe plus tout seul : il DUPLIQUE les attaques du chaton
-    // (voir cloneMirrorMelee), pour 10% des dégâts d'origine.
+    // (voir cloneMirrorMelee), pour 50% des dégâts d'origine.
   }
 
   /** Multi-Clonage : 2 mini-chats en orbite + (si Kage Bunshin) leurs ombres. */
@@ -776,15 +776,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     });
   }
 
-  /** Un clone (ombre Kage ou mini-chat) DUPLIQUE la frappe du chaton à 10%. */
-  private mirrorSlashFrom(c: Phaser.GameObjects.Sprite | undefined, baseDmg: number): void {
+  /** Un clone (ombre Kage ou mini-chat) DUPLIQUE la frappe du chaton. Le montant de
+   *  dégâts (`dmg`) est déjà calculé par l'appelant selon le type de clone. */
+  private mirrorSlashFrom(c: Phaser.GameObjects.Sprite | undefined, dmg: number): void {
     if (!c || this.dead) return;
     const near = this.gs.enemiesNear(c.x, c.y, this.meleeRange() + 40);
     const ang = near.length
       ? Math.atan2(near[0].y - c.y, near[0].x - c.x)
       : Math.atan2(this.aim.y, this.aim.x);
     c.setFlipX(Math.cos(ang) < 0);
-    this.gs.spectralSlash(c.x, c.y - 8, ang, this.meleeRange() * 0.9, Math.max(1, Math.round(baseDmg * 0.1)));
+    this.gs.spectralSlash(c.x, c.y - 8, ang, this.meleeRange() * 0.9, Math.max(1, Math.round(dmg)));
     // Pop d'attaque ANCRÉ sur l'échelle de base du clone : sans cela, des frappes
     // rapprochées lisaient l'échelle déjà agrandie d'un tween en cours et faisaient
     // grossir le clone sans fin. On tue le tween précédent et on repart de la base.
@@ -794,14 +795,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     this.gs.tweens.add({ targets: c, scaleX: base * 1.15, scaleY: base * 1.15, duration: 90, yoyo: true, onComplete: () => c.setScale(base) });
   }
 
-  /** Duplique la frappe sur TOUS les clones : ombre Kage, mini-chats et leurs ombres. */
-  private cloneMirrorMelee(baseDmg: number): void {
+  /** Duplique la frappe sur TOUS les clones, chacun à sa part des dégâts :
+   *  - Ombre Kage du héros : 50% de ce qu'elle copie (le héros).
+   *  - Mini-chats du Multi-Clonage : 50% de l'attaque du héros.
+   *  - Ombres Kage des mini-chats : 50% de ce qu'elles copient (le mini-chat) → 25% du héros. */
+  private cloneMirrorMelee(heroDmg: number): void {
     if (this.dead) return;
     let any = false;
-    const fire = (s?: Phaser.GameObjects.Sprite) => { if (s) { this.mirrorSlashFrom(s, baseDmg); any = true; } };
-    fire(this.kageClone);
-    for (const m of this.miniClones) fire(m);
-    for (const s of this.miniShadows) fire(s);
+    const fire = (s: Phaser.GameObjects.Sprite | undefined, dmg: number) => { if (s) { this.mirrorSlashFrom(s, dmg); any = true; } };
+    const miniDmg = heroDmg * 0.5;      // mini-chat = 50% du héros
+    fire(this.kageClone, heroDmg * 0.5); // ombre du héros = 50% du héros
+    for (const m of this.miniClones) fire(m, miniDmg);
+    for (const s of this.miniShadows) fire(s, miniDmg * 0.5); // ombre du mini-chat = 50% du mini-chat
     if (any) this.gs.sfx('slash1');
   }
 
