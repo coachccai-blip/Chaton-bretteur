@@ -17,6 +17,14 @@ import { ART_CELL } from './PixelArtGenerator';
  */
 export const HERO_ART_COMP = 30 / 52;
 
+/**
+ * Les 8 sprites de boss HD sont dessinés à EXACTEMENT 2× (largeur ET hauteur) de
+ * l'ancienne grille peinte à la main, puis rendus à ART_CELL → texture ×2. On
+ * multiplie donc l'échelle d'affichage des boss (et des mini-boss « Écho » qui
+ * réutilisent ces textures) par 0,5 → taille à l'écran et hitbox inchangées.
+ */
+export const BOSS_ART_COMP = 0.5;
+
 type Grid = (string | null)[][];
 const mk = (w: number, h: number): Grid => Array.from({ length: h }, () => Array<string | null>(w).fill(null));
 
@@ -62,6 +70,14 @@ function outline(g: Grid, color: string): void {
     }
   }
   for (const [x, y] of add) g[y][x] = color;
+}
+
+function lighten(hex: string, amt: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.max(0, Math.min(255, ((n >> 16) & 255) + amt));
+  const gg = Math.max(0, Math.min(255, ((n >> 8) & 255) + amt));
+  const b = Math.max(0, Math.min(255, (n & 255) + amt));
+  return '#' + ((r << 16) | (gg << 8) | b).toString(16).padStart(6, '0');
 }
 
 function render(scene: Phaser.Scene, key: string, g: Grid, cell = ART_CELL): void {
@@ -172,4 +188,480 @@ export function genHeroCat(scene: Phaser.Scene): void {
   mirror(g);
   outline(g, P.out);
   render(scene, 'cat', g);
+}
+
+// ===================== BOSS : Gorbak — Bourbier Vivant (mud beast) =====================
+// Monticule de boue amorphe, pics rocheux dégoulinants, gros yeux rouges furieux,
+// large rictus denté. Dessin plein (asymétrie organique, pas de miroir).
+export function genBossGorbak(scene: Phaser.Scene): void {
+  const W = 64, H = 58;
+  const g = mk(W, H);
+  const K = '#241a0e', m = '#5a4a24', M = '#7a6636', w = '#9a8848', Wl = '#b8a666';
+  const rD = '#a01810', r = '#e03018', R = '#ff6a3a', T = '#f4efe0', tS = '#c9bfa0', soc = '#160f06';
+
+  // ---- masse de boue (disques empilés, lumpy) ----
+  disc(g, 32, 40, 27, 17, m);
+  disc(g, 22, 44, 17, 13, M);
+  disc(g, 42, 42, 18, 14, M);
+  disc(g, 32, 34, 22, 16, M);
+  disc(g, 34, 30, 16, 12, w);          // haut plus clair (lumière)
+  disc(g, 40, 33, 12, 10, Wl);
+  disc(g, 20, 38, 10, 9, m);
+  disc(g, 48, 46, 11, 8, m);
+  // base large
+  rect(g, 8, 46, 56, 55, m);
+  disc(g, 32, 52, 26, 8, m);
+
+  // ---- pics rocheux dégoulinants sur le dessus ----
+  const spikes: [number, number, number][] = [[13, 26, 12], [20, 22, 16], [29, 18, 20], [38, 20, 17], [46, 24, 14], [53, 30, 10]];
+  for (const [sx, sy, hgt] of spikes) {
+    tri(g, sx - 4, sy, sx, sy - hgt, sx + 4, sy, M);
+    tri(g, sx - 2, sy, sx + 0.5, sy - hgt * 0.7, sx + 2.5, sy, w);
+    tri(g, sx - 1, sy, sx, sy - hgt * 0.4, sx + 1.2, sy, Wl);
+  }
+
+  // ---- coulures en bas ----
+  for (const [dx, dw, dh] of [[14, 3, 6], [26, 4, 8], [40, 3, 7], [50, 4, 6]] as const) {
+    rect(g, dx - dw, 52, dx + dw, 55 + dh, m);
+    disc(g, dx, 55 + dh, dw, 2.5, M);
+  }
+
+  // ---- yeux rouges furieux ----
+  for (const [ex, dir] of [[23, -1], [42, 1]] as const) {
+    disc(g, ex, 33, 6.5, 4.5, soc);                     // orbite sombre creusée
+    disc(g, ex + dir * 0.6, 33.5, 5, 3.4, rD);
+    disc(g, ex + dir * 0.9, 33.8, 4, 2.6, r);
+    disc(g, ex + dir * 1.4, 33.4, 2.2, 1.8, R);         // éclat vif
+    disc(g, ex + dir * 2, 32.7, 0.9, 0.9, '#ffd0b0');
+    // sourcil de boue (surplomb agressif, incliné vers le centre)
+    tri(g, ex - dir * 7, 27, ex + dir * 7, 29.5, ex + dir * 7, 31.5, M);
+  }
+
+  // ---- large rictus denté ----
+  const my = 45;
+  disc(g, 32, my, 15, 4.5, soc);          // bouche sombre
+  disc(g, 32, my - 1.5, 14, 3.2, m);      // lèvre sup
+  // dents haut (triangles pointant bas) et bas (pointant haut)
+  for (let i = 0; i < 7; i++) {
+    const tx = 19 + i * 4.3;
+    tri(g, tx - 1.8, my - 2.5, tx, my + 1.5, tx + 1.8, my - 2.5, T);
+    tri(g, tx + 0.3 - 1.6, my + 4.5, tx + 0.3, my + 0.5, tx + 0.3 + 1.6, my + 4.5, tS);
+  }
+
+  outline(g, K);
+  render(scene, 'boss_gobugeant', g);
+}
+
+// ===================== BOSS : Ignis — Dragon de Lave =====================
+// Dragon bipède ailé de face : corps de braise sombre, ventre-fournaise incandescent
+// (fissures de lave), ailes de feu, cornes, crocs, pattes griffues. Symétrique.
+export function genBossIgnis(scene: Phaser.Scene): void {
+  const W = 64, H = 64, cx = W / 2;
+  const g = mk(W, H);
+  const kk = '#1a0e0a', kB = '#3a2018', kM = '#4e2a1e', rD = '#7a2410', o = '#d0500f', O = '#ff7a1f', Y = '#ffc23a', y = '#ffe89a', fH = '#ff9a2a';
+
+  // ---- ailes de feu (derrière) ----
+  for (const s of [-1, 1] as const) {
+    tri(g, cx + s * 10, 34, cx + s * 30, 8, cx + s * 20, 40, rD);       // membrane sombre
+    tri(g, cx + s * 12, 33, cx + s * 28, 12, cx + s * 19, 37, o);
+    tri(g, cx + s * 13, 32, cx + s * 25, 16, cx + s * 18, 33, O);       // flammes
+    tri(g, cx + s * 14, 30, cx + s * 22, 19, cx + s * 17, 30, Y);
+    // langues de feu montantes
+    for (let k = 0; k < 3; k++) tri(g, cx + s * (16 + k * 4), 22 - k, cx + s * (17 + k * 4), 12 - k * 2, cx + s * (18 + k * 4), 22 - k, fH);
+  }
+
+  // ---- queue (sous le corps, pointe de flèche) ----
+  tri(g, cx - 6, 54, cx - 1, 60, cx + 6, 54, kB);
+  tri(g, cx - 3, 58, cx, 63, cx + 3, 58, o);
+
+  // ---- pattes griffues ----
+  for (const s of [-1, 1] as const) {
+    disc(g, cx + s * 8, 54, 5, 6, kB);
+    disc(g, cx + s * 8, 58, 5.5, 3, kM);
+    for (let k = -1; k <= 1; k++) tri(g, cx + s * 8 + k * 3, 60, cx + s * 8 + k * 3 - 0.6, 63, cx + s * 8 + k * 3 + 1.4, 60.5, y); // griffes
+  }
+
+  // ---- bras griffus ----
+  for (const s of [-1, 1] as const) {
+    disc(g, cx + s * 13, 36, 3.4, 7, kB);
+    disc(g, cx + s * 13.5, 42, 3.6, 3.4, kM);
+    for (let k = -1; k <= 1; k++) tri(g, cx + s * 13.5 + k * 2, 44, cx + s * 13.5 + k * 2 - 0.5, 47, cx + s * 13.5 + k * 2 + 1.2, 44.5, y);
+  }
+
+  // ---- corps sombre + ventre fournaise ----
+  disc(g, cx, 40, 14, 15, kB);
+  disc(g, cx, 38, 12, 13, kM);
+  disc(g, cx, 43, 9.5, 10, rD);
+  disc(g, cx, 44, 8, 8.5, o);
+  disc(g, cx, 45, 6, 6.5, O);
+  disc(g, cx, 46, 4, 4.5, Y);
+  disc(g, cx, 46, 2, 2.4, y);
+  // fissures de lave sur le torse
+  for (const [ax, ay, bx, by] of [[-9, 32, -4, 40], [9, 32, 4, 40], [-6, 30, -8, 24], [6, 30, 8, 24]] as const) {
+    rect(g, cx + Math.min(ax, bx), 30 + Math.min(ay - 30, by - 30), cx + Math.max(ax, bx), 30 + Math.max(ay - 30, by - 30), o);
+  }
+  // écailles ventrales (segments) sur la fournaise
+  for (let i = 0; i < 3; i++) rect(g, cx - 5, 42 + i * 3, cx + 5, 42 + i * 3, rD);
+
+  // ---- tête ----
+  disc(g, cx, 20, 9, 8, kB);
+  disc(g, cx, 21, 7.5, 6.5, kM);
+  // museau
+  disc(g, cx, 25, 5, 3.4, kB);
+  disc(g, cx, 26.5, 3.5, 1.6, rD);
+  // cornes
+  for (const s of [-1, 1] as const) {
+    tri(g, cx + s * 5, 15, cx + s * 10, 3, cx + s * 8, 16, kM);
+    tri(g, cx + s * 5.5, 14, cx + s * 8.5, 6, cx + s * 7.5, 15, lighten(kM, 20));
+  }
+  // yeux incandescents furieux
+  for (const s of [-1, 1] as const) {
+    disc(g, cx + s * 4, 20, 2.4, 2, Y);
+    disc(g, cx + s * 4.6, 20.2, 1.2, 1.3, y);
+    tri(g, cx + s * 1, 16.6, cx + s * 6.5, 15.4, cx + s * 6.5, 18.4, kk); // sourcil
+  }
+  // crocs
+  rect(g, cx - 3, 27.5, cx - 1.6, 29.5, y);
+  rect(g, cx + 1.6, 27.5, cx + 3, 29.5, y);
+
+  outline(g, kk);
+  render(scene, 'boss_serpentlave', g);
+}
+
+// ===================== BOSS : Glacior — Léviathan des Abysses =====================
+// Serpent-dragon de glace lové : corps bleu cristallin en boucle, crête d'épines de
+// glace en couronne, tête anguleuse, yeux cyan lumineux, épines dorsales.
+export function genBossGlacior(scene: Phaser.Scene): void {
+  const W = 64, H = 68, cx = W / 2;
+  const g = mk(W, H);
+  const k = '#0a1420', iD = '#123a54', m = '#2a4a60', r = '#3a6a8a', w = '#a8c8e0', Wl = '#dcecf8', C = '#9fe0f8', Hc = '#7fdcff', e = '#e8f8ff';
+
+  // ---- boucle du corps (anneau de disques) ----
+  const loopCx = 32, loopCy = 46, loopR = 16;
+  for (let i = 0; i < 22; i++) {
+    const a = (i / 22) * Math.PI * 2 + 0.3;
+    const bx = loopCx + Math.cos(a) * loopR, by = loopCy + Math.sin(a) * loopR * 0.92;
+    disc(g, bx, by, 8, 7.5, r);
+    disc(g, bx + 1.4, by - 1.4, 6, 5.5, w);       // reflet
+    disc(g, bx + 2.4, by - 2.4, 3, 2.6, Wl);
+    disc(g, bx - 1.6, by + 1.8, 4.5, 3.8, m);     // ombre
+    // épine dorsale vers l'extérieur
+    const ox = loopCx + Math.cos(a) * (loopR + 8), oy = loopCy + Math.sin(a) * (loopR + 8) * 0.92;
+    tri(g, bx + Math.cos(a + 0.25) * 6, by + Math.sin(a + 0.25) * 6, ox, oy, bx + Math.cos(a - 0.25) * 6, by + Math.sin(a - 0.25) * 6, C);
+  }
+
+  // ---- cou + tête (montent en haut-gauche depuis la boucle) ----
+  for (let i = 0; i < 7; i++) {
+    const t = i / 6;
+    const nx = 30 - t * 6, ny = 34 - t * 16;
+    disc(g, nx, ny, 7 - t * 1.5, 6.5 - t, r);
+    disc(g, nx + 1.2, ny - 1, 4.5 - t, 4 - t * 0.6, w);
+  }
+  // tête anguleuse
+  disc(g, 22, 17, 9, 8, w);
+  disc(g, 23, 18, 7, 6.5, Wl);
+  // museau vers la gauche
+  tri(g, 20, 14, 8, 18, 20, 22, w);
+  disc(g, 12, 18.5, 2, 1.6, m);   // narine
+  // crête d'épines de glace (couronne) derrière/au-dessus de la tête
+  for (let i = 0; i < 6; i++) {
+    const a = -1.2 + i * 0.42;
+    const bx = 24 + Math.cos(a) * 6, by = 14 + Math.sin(a) * 6;
+    const tx = 24 + Math.cos(a) * 18, ty = 14 + Math.sin(a) * 18;
+    tri(g, bx - 2.4, by, tx, ty, bx + 2.4, by, i % 2 ? C : Wl);
+    tri(g, bx - 1.2, by, tx, ty - 1, bx + 1.2, by, e);
+  }
+  // yeux cyan lumineux + sourcil
+  disc(g, 19, 17, 2.4, 2, Hc);
+  disc(g, 19.4, 17.2, 1.2, 1.2, e);
+  tri(g, 15, 13.6, 24, 12.4, 24, 15.4, iD);
+  // crocs de glace
+  tri(g, 15, 21, 15.6, 24.5, 16.8, 21, e);
+  tri(g, 18, 21.5, 18.6, 24.5, 19.8, 21.5, e);
+
+  outline(g, k);
+  render(scene, 'boss_leviathan', g);
+}
+
+// ===================== BOSS : Sylvaan — Centaure Sylvestre =====================
+// Centaure de bois : corps équin en écorce (4 pattes), torse humanoïde, ramure de
+// cerf, crinière/queue de feuillage. Vue 3/4 vers la droite.
+export function genBossSylvaan(scene: Phaser.Scene): void {
+  const W = 68, H = 78, cx = W / 2;
+  const g = mk(W, H);
+  const k = '#2a1c0e', o = '#5a3e1e', W1 = '#8b6534', a = '#a8824a', s = '#d0aa66', gD = '#2f5f2f', g1 = '#4f8f3f', g2 = '#7db84a', gL = '#a8d86a';
+
+  // ---- corps équin (écorce) ----
+  disc(g, 34, 50, 22, 12, W1);
+  disc(g, 30, 48, 18, 10, a);
+  disc(g, 40, 52, 16, 9, o);           // croupe (ombre)
+  // pattes (4)
+  for (const [lx, top] of [[18, 56], [26, 58], [44, 58], [52, 56]] as const) {
+    rect(g, lx - 3, top, lx + 3, 72, W1);
+    rect(g, lx - 3, top, lx, 72, o);   // ombre interne
+    rect(g, lx - 3.5, 71, lx + 3.5, 74, k); // sabot
+  }
+  // queue de feuillage (arrière-gauche)
+  for (const [lx, ly, rr] of [[13, 48, 5], [9, 54, 4], [12, 60, 4], [8, 44, 3]] as const) disc(g, lx, ly, rr, rr, g1);
+  for (const [lx, ly] of [[10, 46], [7, 52], [11, 58]] as const) disc(g, lx, ly, 2.4, 2.4, g2);
+
+  // ---- torse humanoïde (se dresse à l'avant/droite) ----
+  disc(g, 44, 30, 9, 12, W1);
+  disc(g, 42, 28, 7, 10, a);
+  // épaules/pectoraux
+  disc(g, 40, 26, 5, 5, s);
+  // bras
+  disc(g, 52, 30, 3.4, 8, W1);
+  disc(g, 36, 30, 3.2, 7, o);
+  // crinière de feuilles sur les épaules
+  for (const [lx, ly, rr] of [[38, 20, 5], [44, 18, 5], [50, 22, 4], [34, 24, 4]] as const) disc(g, lx, ly, rr, rr * 0.9, g1);
+  for (const [lx, ly] of [[40, 18], [46, 17], [36, 22]] as const) disc(g, lx, ly, 2.6, 2.6, g2);
+
+  // ---- tête + ramure ----
+  disc(g, 47, 12, 6, 7, a);
+  disc(g, 46, 12, 4.5, 5.5, s);
+  // museau
+  disc(g, 51, 14, 3, 2.4, W1);
+  // ramure de cerf (branches)
+  for (const s2 of [-1, 1] as const) {
+    const bx = 47 + s2 * 3;
+    rect(g, Math.min(bx, bx + s2 * 6), 3, Math.max(bx, bx + s2 * 6), 4, o); // base courbe
+    tri(g, bx, 7, bx + s2 * 8, -2, bx + s2 * 2, 7, o);
+    tri(g, bx + s2 * 5, 2, bx + s2 * 11, -3, bx + s2 * 6, 3, o);           // andouiller
+    tri(g, bx + s2 * 2, 4, bx + s2 * 4, -4, bx + s2 * 3.5, 4, o);
+  }
+  // yeux lumineux verts
+  disc(g, 48.5, 11.5, 1.8, 1.6, gL);
+  disc(g, 49, 11.6, 0.9, 0.9, '#eaffd0');
+  // feuilles éparses sur le corps
+  for (const [lx, ly] of [[30, 44], [40, 46], [24, 50], [48, 48]] as const) disc(g, lx, ly, 2.2, 1.6, g2);
+
+  outline(g, k);
+  render(scene, 'boss_centaure', g);
+}
+
+// ===================== BOSS : Mortis — Dracoliche Archimage =====================
+// Liche-dragon : capuchon/col à pointes violet, crâne aux yeux violets, robe en
+// lambeaux à liseré d'or + gemme losange, ailes de chauve-souris déchirées, bâton
+// à flamme violette. Vue de face symétrique.
+export function genBossMortis(scene: Phaser.Scene): void {
+  const W = 60, H = 70, cx = W / 2;
+  const g = mk(W, H);
+  const k = '#0e0b1a', p = '#3a2c5a', P = '#4a2c7a', v = '#5a3a8a', B = '#241a3a', gD = '#8a6a20', g1 = '#c9a23a', y = '#f4c430', Wb = '#e6e2d4', wb = '#b8b0a0', e = '#c78aff', f = '#8a5cff';
+
+  // ---- ailes de chauve-souris déchirées (derrière) ----
+  for (const sx of [-1, 1] as const) {
+    tri(g, cx + sx * 8, 30, cx + sx * 28, 22, cx + sx * 22, 46, B);
+    tri(g, cx + sx * 8, 32, cx + sx * 24, 30, cx + sx * 20, 44, p);
+    // nervures + festons
+    for (let k2 = 0; k2 < 3; k2++) rect(g, cx + sx * (10 + k2 * 5), 34 + k2 * 2, cx + sx * (10 + k2 * 5), 44, B);
+  }
+
+  // ---- robe (corps) ----
+  disc(g, cx, 44, 15, 16, p);
+  disc(g, cx, 42, 12, 13, P);
+  // bas en lambeaux
+  for (let i = -3; i <= 3; i++) tri(g, cx + i * 4 - 2.5, 56, cx + i * 4, 66, cx + i * 4 + 2.5, 56, P);
+  // liseré d'or + gemme losange
+  rect(g, cx - 8, 40, cx + 8, 41.5, g1);
+  tri(g, cx, 40, cx - 4, 46, cx, 52, y); tri(g, cx, 40, cx + 4, 46, cx, 52, g1);
+  disc(g, cx, 46, 2, 3, e);
+  // crânes suspendus
+  for (const sx of [-1, 1] as const) { disc(g, cx + sx * 10, 48, 2.6, 2.8, Wb); rect(g, cx + sx * 10 - 1.4, 49.5, cx + sx * 10 + 1.4, 51, wb); }
+
+  // ---- col/capuchon à pointes ----
+  for (let i = -3; i <= 3; i++) {
+    const bx = cx + i * 5;
+    tri(g, bx - 3, 30, bx, 30 - (10 - Math.abs(i) * 1.5), bx + 3, 30, i === 0 ? P : p);
+  }
+  disc(g, cx, 30, 15, 6, p);
+  rect(g, cx - 13, 29, cx + 13, 31, g1);   // liseré d'or du col
+  // capuchon central
+  tri(g, cx - 9, 26, cx, 4, cx + 9, 26, P);
+  tri(g, cx - 6, 25, cx, 9, cx + 6, 25, p);
+  disc(g, cx, 8, 3, 3, y); disc(g, cx, 8, 1.6, 1.6, e); // gemme frontale
+
+  // ---- crâne de dragon dans le capuchon ----
+  disc(g, cx, 20, 8, 8, Wb);
+  disc(g, cx, 21, 6.5, 6.5, wb);
+  disc(g, cx, 25, 5, 3.5, Wb);   // museau
+  // cornes latérales
+  for (const sx of [-1, 1] as const) tri(g, cx + sx * 6, 16, cx + sx * 13, 12, cx + sx * 7, 19, Wb);
+  // yeux violets flamboyants
+  for (const sx of [-1, 1] as const) { disc(g, cx + sx * 3.4, 20, 2.2, 2.4, f); disc(g, cx + sx * 3.4, 19, 1.1, 1.1, e); }
+  // dents
+  for (let i = -2; i <= 2; i++) rect(g, cx + i * 2, 27, cx + i * 2, 29, Wb);
+
+  // ---- bâton à flamme violette (gauche) ----
+  rect(g, cx - 20, 30, cx - 18, 60, gD);
+  disc(g, cx - 19, 28, 4, 5, B);         // tête du bâton
+  tri(g, cx - 23, 26, cx - 19, 14, cx - 15, 26, f); // flamme
+  tri(g, cx - 21, 24, cx - 19, 18, cx - 17, 24, e);
+  disc(g, cx - 19, 27, 1.6, 1.6, y);
+
+  outline(g, k);
+  render(scene, 'boss_archimage', g);
+}
+
+// ===================== BOSS : Voltaïr — Panda-Tonnerre =====================
+// Panda quadrupède caparaçonné : corps noir & blanc, crinière de nuage d'orage
+// violette, liseré/emblème d'or (éclair), accents d'éclair bleu, face féroce.
+export function genBossVoltair(scene: Phaser.Scene): void {
+  const W = 64, H = 64, cx = W / 2;
+  const g = mk(W, H);
+  const k = '#141422', kk = '#0c0c16', Wl = '#f0f0f8', w = '#c8c8d8', p = '#7a4ad0', P = '#9a6ae8', pD = '#4a2a8a', g1 = '#e0b83a', y = '#ffe066', B = '#8ab8ff', b = '#3a6ad0';
+
+  // ---- nuage d'orage violet (crinière, derrière le dos) ----
+  for (const [lx, ly, rr] of [[24, 16, 8], [34, 12, 9], [44, 16, 8], [30, 20, 7], [40, 20, 7], [50, 22, 5], [18, 22, 5]] as const) {
+    disc(g, lx, ly, rr, rr * 0.9, p);
+    disc(g, lx + 1.5, ly - 1.5, rr * 0.55, rr * 0.5, P);
+  }
+  // éclairs jaunes autour du nuage
+  for (const [x0, y0] of [[16, 26], [52, 28]] as const) { rect(g, x0, y0, x0 + 1, y0 + 6, y); rect(g, x0 - 2, y0 + 6, x0 + 1, y0 + 7, y); rect(g, x0 - 2, y0 + 7, x0 - 1, y0 + 12, y); }
+
+  // ---- corps quadrupède (blanc) ----
+  disc(g, cx, 40, 20, 14, Wl);
+  disc(g, cx, 42, 17, 12, w);
+  // pattes noires (4)
+  for (const [lx, top] of [[18, 44], [28, 48], [40, 48], [50, 44]] as const) {
+    rect(g, lx - 4, top, lx + 4, 60, k);
+    disc(g, lx, 60, 5, 3, Wl);   // patte blanche
+  }
+  // caparaçon d'or (couverture dorsale) + emblème éclair
+  disc(g, cx, 36, 13, 7, Wl);
+  rect(g, cx - 13, 33, cx + 13, 34, g1);
+  rect(g, cx - 13, 42, cx + 13, 43, g1);
+  rect(g, cx - 1, 32, cx + 1, 37, y); rect(g, cx - 3, 37, cx + 1, 38, y); rect(g, cx - 3, 38, cx - 1, 43, y); // éclair d'or
+
+  // ---- tête de panda (avant, penchée) ----
+  disc(g, cx, 46, 12, 10, Wl);
+  disc(g, cx, 47, 10, 8.5, w);
+  // oreilles noires
+  for (const sx of [-1, 1] as const) disc(g, cx + sx * 9, 38, 4, 4, k);
+  // taches d'yeux noires (obliques, féroces)
+  for (const sx of [-1, 1] as const) {
+    tri(g, cx + sx * 2, 44, cx + sx * 9, 42, cx + sx * 8, 50, k);
+    disc(g, cx + sx * 5, 46, 1.8, 1.8, y);  // œil doré
+    disc(g, cx + sx * 5.4, 46, 0.9, 0.9, kk);
+  }
+  // museau + nez
+  disc(g, cx, 51, 4, 3, w);
+  disc(g, cx, 50, 1.8, 1.4, kk);
+  // croc/éclair bleu en gueule
+  tri(g, cx - 4, 53, cx - 6, 60, cx - 1, 55, B);
+  tri(g, cx + 4, 53, cx + 6, 60, cx + 1, 55, B);
+
+  outline(g, kk);
+  render(scene, 'boss_rapace', g);
+}
+
+// ===================== BOSS : Néantis — Roi du Néant =====================
+// Rongeur royal doré : grandes oreilles, couronne, cape violette, spirale de vide
+// ventrale, sceptre du néant. Vue de face.
+export function genBossNeantis(scene: Phaser.Scene): void {
+  const W = 60, H = 68, cx = W / 2;
+  const g = mk(W, H);
+  const k = '#0a0612', gD = '#8a6a1a', g1 = '#c99a2a', G = '#e0b83a', y = '#ffe066', p = '#7a2ad0', P = '#b060ff', v = '#3a1470', Wc = '#f0e6c8', wc = '#c8b890', b = '#180f28';
+
+  // ---- cape violette (derrière) ----
+  disc(g, cx, 44, 22, 18, v);
+  disc(g, cx, 42, 19, 15, p);
+  for (let i = -3; i <= 3; i++) tri(g, cx + i * 6 - 3, 58, cx + i * 6, 66, cx + i * 6 + 3, 58, v);
+  rect(g, cx - 16, 34, cx + 16, 36, G);   // liseré d'or
+
+  // ---- oreilles (grandes, dressées) ----
+  for (const sx of [-1, 1] as const) {
+    tri(g, cx + sx * 5, 18, cx + sx * 12, -2, cx + sx * 11, 20, g1);
+    tri(g, cx + sx * 6, 17, cx + sx * 10, 3, cx + sx * 9.5, 18, G);
+    rect(g, cx + sx * 8, 2, cx + sx * 9, 8, k);  // pointe sombre
+  }
+
+  // ---- corps doré ----
+  disc(g, cx, 40, 15, 16, g1);
+  disc(g, cx, 42, 12.5, 14, G);
+  disc(g, cx, 46, 10, 11, y);        // ventre plus clair
+  // bras + pieds
+  for (const sx of [-1, 1] as const) {
+    disc(g, cx + sx * 14, 40, 3.4, 6, g1);
+    disc(g, cx + sx * 8, 58, 5, 3.4, g1);
+    for (let kf = -1; kf <= 1; kf++) rect(g, cx + sx * 8 + kf * 2, 59, cx + sx * 8 + kf * 2, 61, k);
+  }
+
+  // ---- spirale de vide (ventre) ----
+  for (let i = 0; i < 26; i++) {
+    const t = i / 26, a = t * Math.PI * 5, rr = 9 * (1 - t * 0.9);
+    const sx = cx + Math.cos(a) * rr, sy = 46 + Math.sin(a) * rr;
+    disc(g, sx, sy, 1.6, 1.6, i % 2 ? P : v);
+  }
+  disc(g, cx, 46, 2, 2, b);
+
+  // ---- tête + couronne ----
+  disc(g, cx, 20, 10, 9, g1);
+  disc(g, cx, 21, 8.5, 7.5, G);
+  disc(g, cx, 24, 5, 3.4, y);   // museau clair
+  // couronne
+  rect(g, cx - 8, 12, cx + 8, 14, G);
+  for (let i = -2; i <= 2; i++) tri(g, cx + i * 4 - 2, 12, cx + i * 4, 6, cx + i * 4 + 2, 12, G);
+  disc(g, cx, 9, 1.8, 1.8, P);  // gemme violette
+  for (const sx of [-1, 1] as const) disc(g, cx + sx * 6, 10, 1, 1, P);
+  // yeux violets féroces
+  for (const sx of [-1, 1] as const) { disc(g, cx + sx * 4, 20, 2.2, 2, P); disc(g, cx + sx * 4.4, 20, 1, 1, '#f0d0ff'); tri(g, cx + sx * 1, 16.6, cx + sx * 6.5, 15.6, cx + sx * 6.5, 18.4, gD); }
+  // dents de rongeur
+  rect(g, cx - 1.6, 26, cx - 0.2, 29, Wc); rect(g, cx + 0.2, 26, cx + 1.6, 29, Wc);
+
+  // ---- sceptre du néant (gauche) ----
+  rect(g, cx - 19, 30, cx - 17, 60, gD);
+  disc(g, cx - 18, 27, 4, 5, v);
+  disc(g, cx - 18, 27, 2.4, 3, P);
+  disc(g, cx - 18, 27, 1, 1.4, b);
+
+  outline(g, k);
+  render(scene, 'boss_reflet', g);
+}
+
+// ===================== BOSS : Général Kaptain Miaou — chat militaire (final) =====================
+// Chat de guerre : béret à étoile, cache-œil, balafre, treillis camo, bandoulière
+// dorée, face féroce. Vue de face symétrique.
+export function genBossMilitaire(scene: Phaser.Scene): void {
+  const W = 60, H = 68, cx = W / 2;
+  const g = mk(W, H);
+  const k = '#0a0e08', bD = '#234523', b = '#2e5a2e', B = '#3f7a3f', fD = '#5a6058', f = '#8a8f86', F = '#b8beb0', kk = '#101010', y = '#ffd24a', r = '#d0402a', cD = '#3a4a28', c = '#5a6a38', v = '#7a8a4a';
+
+  // ---- corps (treillis camo) ----
+  disc(g, cx, 46, 18, 16, c);
+  disc(g, cx, 48, 15, 14, cD);
+  disc(g, cx, 44, 14, 10, '#4a5a30');
+  // taches de camo
+  for (const [lx, ly, rr] of [[24, 42, 4], [38, 48, 5], [28, 54, 4], [40, 40, 3], [20, 50, 3]] as const) disc(g, lx, ly, rr, rr * 0.8, v);
+  // bandoulière dorée
+  for (let i = 0; i < 10; i++) rect(g, cx - 12 + i * 3, 38 + i * 1.6, cx - 10 + i * 3, 40 + i * 1.6, y);
+  // pattes
+  for (const sx of [-1, 1] as const) { disc(g, cx + sx * 12, 58, 5, 4, cD); for (let kf = -1; kf <= 1; kf++) rect(g, cx + sx * 12 + kf * 2, 60, cx + sx * 12 + kf * 2, 62, F); }
+
+  // ---- tête (fourrure grise) ----
+  disc(g, cx, 24, 12, 11, f);
+  disc(g, cx, 25, 10, 9, F);
+  // oreilles
+  for (const sx of [-1, 1] as const) { tri(g, cx + sx * 7, 16, cx + sx * 11, 6, cx + sx * 3, 15, f); tri(g, cx + sx * 7, 15, cx + sx * 9, 9, cx + sx * 5, 14, fD); }
+  // museau + nez + moustaches
+  disc(g, cx, 28, 4.5, 3, F);
+  disc(g, cx, 27.5, 1.6, 1.3, kk);
+  rect(g, cx - 2, 30, cx + 2, 30, kk);
+  // œil droit féroce (jaune) + cache-œil gauche
+  disc(g, cx + 5, 24, 2.4, 2.2, y); disc(g, cx + 5.4, 24, 1.1, 1.3, kk);
+  tri(g, cx + 1.5, 21, cx + 8, 20, cx + 8, 22.5, kk);          // sourcil droit
+  disc(g, cx - 5, 24, 3, 3, kk);                                // cache-œil
+  rect(g, cx - 12, 21, cx - 2, 22, kk);                        // sangle du cache-œil
+  rect(g, cx - 7, 28, cx - 2, 29, r);                          // balafre
+
+  // ---- béret vert à étoile (incliné) ----
+  disc(g, cx + 1, 13, 12, 5, b);
+  disc(g, cx + 1, 12, 10.5, 4, B);
+  disc(g, cx - 9, 12, 2.4, 2.4, bD);   // pli
+  disc(g, cx - 3, 11, 2.4, 2.2, r);    // étoile (disque rouge)
+  tri(g, cx - 3, 8.5, cx - 4.6, 13, cx - 1.4, 13, y);
+  tri(g, cx - 3, 13.5, cx - 4.6, 9.5, cx - 1.4, 9.5, y);
+
+  outline(g, k);
+  render(scene, 'boss_militaire', g);
 }

@@ -4,6 +4,7 @@ import type { BossDef, BossMove, BossPhase } from '../config/bosses';
 import type { Element, IEnemyLike } from '../config/types';
 import { REACTIONS, reactKey } from './Enemy';
 import { BlackFlameFx } from './BlackFlameFx';
+import { BOSS_ART_COMP } from '../art/heroesHD';
 
 interface StatusInfo { expire: number; nextTick: number; }
 
@@ -27,6 +28,8 @@ const OPENER_RANK: Record<string, number> = {
 export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   gs: GameScene;
   def: BossDef;
+  /** Échelle d'affichage réelle = def.scale compensée (textures boss HD ×2). */
+  private baseScale = 1;
   maxHp: number;
   hp: number;
   alive = true;
@@ -64,7 +67,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     scene.physics.add.existing(this);
     this.setDepth(16);
     this.setOrigin(0.5, 0.9);
-    this.setScale(def.scale);
+    // Textures boss HD ×2 → échelle compensée ; la hitbox (this.width×…) double et
+    // l'échelle est divisée par 2 : produit inchangé, boîte de collision identique.
+    this.baseScale = def.scale * BOSS_ART_COMP;
+    this.setScale(this.baseScale);
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setSize(this.width * 0.55, this.height * 0.45);
     body.setOffset(this.width * 0.22, this.height * 0.5);
@@ -90,8 +96,8 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.nextStanceAt = t0 + 3500 + Math.random() * 3000;
     this.stance = Math.random() < 0.5 ? 'rush' : 'kite';
     // entrée
-    this.setScale(def.scale * 0.2).setAlpha(0);
-    scene.tweens.add({ targets: this, scaleX: def.scale, scaleY: def.scale, alpha: 1, duration: 500, ease: 'Back.easeOut' });
+    this.setScale(this.baseScale * 0.2).setAlpha(0);
+    scene.tweens.add({ targets: this, scaleX: this.baseScale, scaleY: this.baseScale, alpha: 1, duration: 500, ease: 'Back.easeOut' });
   }
 
   /** Flammes noires d'Amaterasu superposées au boss tant que la Brûlure Noire brûle. */
@@ -213,7 +219,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
     this.bobT += dt / 1000 * 5;
     const bob = Math.sin(this.bobT) * 0.03;
-    if (!this.busy) this.setScale(this.def.scale * (1 - bob * 0.4), this.def.scale * (1 + bob));
+    if (!this.busy) this.setScale(this.baseScale * (1 - bob * 0.4), this.baseScale * (1 + bob));
     // Orientation : face au joueur (intention), figée pendant une attaque.
     if (!this.busy && Math.abs(dx) > 6) this.setFlipX(dx < 0);
     if (frozen) this.setTint(0x8fdfff);
@@ -339,11 +345,11 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     // moves à télégraphe interne : brève amorce seulement
     const selfTel = m.type === 'arrowRain' || m.type === 'mudFlood' || m.type === 'glyphs' || m.type === 'geysers' || m.type === 'diveBomb' || m.type === 'teleport' || m.type === 'iceRain' || m.type === 'icePylons';
     const windup = selfTel ? 320 : m.telegraph;
-    this.gs.tweens.add({ targets: this, scaleX: this.def.scale * 1.12, scaleY: this.def.scale * 1.12, duration: windup, ease: 'Sine.easeInOut' });
+    this.gs.tweens.add({ targets: this, scaleX: this.baseScale * 1.12, scaleY: this.baseScale * 1.12, duration: windup, ease: 'Sine.easeInOut' });
     this.gs.time.delayedCall(windup, () => {
       if (!this.alive) { this.busy = false; return; }
       this.clearTint();
-      this.setScale(this.def.scale);
+      this.setScale(this.baseScale);
       this.runMove(m, dir);
     });
     // Cadence d'attaque très soutenue : temps mort entre coups réduit de moitié

@@ -7,6 +7,7 @@ import { getDifficulty } from '../config/difficulty';
 import { RunState } from '../systems/RunState';
 import { BlackFlameFx } from './BlackFlameFx';
 import { CHAR_COMP } from '../art/PixelArtGenerator';
+import { BOSS_ART_COMP } from '../art/heroesHD';
 
 type State = 'idle' | 'telegraph' | 'charging' | 'recover' | 'signature';
 
@@ -87,13 +88,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     scene.physics.add.existing(this);
     this.setDepth(15);
     this.setOrigin(0.5, 0.9);
-    // Compensation d'échelle : seules les textures « critter » (mob_*) sont
-    // densifiées à CHAR_CELL. Les mini-boss/tourelles/chars qui réutilisent un
-    // sprite dessiné à la main (def.texKey) restent en ART_CELL → pas de
-    // compensation. Pour un critter : this.width double, on divise l'échelle par
-    // le même facteur (CHAR_COMP) → produits width×scale (affichage ET hitbox)
-    // identiques à avant.
-    const scale = def.scale * (def.texKey ? 1 : CHAR_COMP);
+    // Compensation d'échelle selon la texture :
+    //  - critter (mob_*, pas de texKey) : densifié CHAR_CELL → ×CHAR_COMP ;
+    //  - mini-boss « Écho » (texKey boss_*) : texture boss HD ×2 → ×BOSS_ART_COMP ;
+    //  - tourelles/chars (autre texKey) : dessin inchangé → ×1.
+    // Dans tous les cas this.width×scale (affichage ET hitbox) reste identique.
+    const texComp = !def.texKey ? CHAR_COMP : (def.texKey.startsWith('boss_') ? BOSS_ART_COMP : 1);
+    const scale = def.scale * texComp;
     this.baseScale = scale;
     this.setScale(scale);
     const body = this.body as Phaser.Physics.Arcade.Body;

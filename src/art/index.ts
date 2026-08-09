@@ -3,8 +3,7 @@ import { genSprite, genMask, genOrb, genPixel } from './PixelArtGenerator';
 import { CAT, SWORD, KATANA, MERCHANT_CAT, HAMMER, WATER_WAVE, SUSANOO, KAGE_BUNSHIN, RASENSHURIKEN } from './hero';
 import { GLYPHS } from './icons';
 import { genCritter, MONSTER_RECIPES } from './critters';
-import { BOSS_CATS } from './bosscats';
-import { genHeroCat } from './heroesHD';
+import { genHeroCat, genBossGorbak, genBossIgnis, genBossGlacior, genBossSylvaan, genBossMortis, genBossVoltair, genBossNeantis, genBossMilitaire } from './heroesHD';
 import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, MINE, FIREBALL, ICE_SHARD, FROST, ICE_STALACTITE, ICE_PYLON, BLACK_FLAME, MUD_BLOB, MUD_SPLAT, TORNADO, FIRE_TORNADO, BOOMERANG, CAT_PAW, LIGHTNING_BLUE, ANGEL_WINGS, MINE_BOSS, GRENADE, MISSILE, EXPLOSION, TURRET, TANK, TANK_MISSILE, GATLING_BULLET, MATERIAL_ART, RED_AURA } from './environment';
 import { ZONES } from '../config/worlds';
 
@@ -52,8 +51,15 @@ export function generateAll(scene: Phaser.Scene): void {
 
   // Monstres (procéduraux)
   for (const [key, recipe] of Object.entries(MONSTER_RECIPES)) genCritter(scene, `mob_${key}`, recipe);
-  // Boss : chats-champions dessinés à la main (taille du héros)
-  for (const def of BOSS_CATS) genSprite(scene, def);
+  // Boss : redessinés en HD procédural (≈2× la résolution) — voir heroesHD.ts
+  genBossGorbak(scene);
+  genBossIgnis(scene);
+  genBossGlacior(scene);
+  genBossSylvaan(scene);
+  genBossMortis(scene);
+  genBossVoltair(scene);
+  genBossNeantis(scene);
+  genBossMilitaire(scene);
 
   // Projectiles & particules
   genOrb(scene, 'orb', '#ffffff', 5);
