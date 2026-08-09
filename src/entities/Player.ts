@@ -950,11 +950,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (this.stats.hitSlow && anyE.applySlow) anyE.applySlow(1 - this.stats.hitSlow, 800);
     for (const fn of this.onHitFns) fn(e, dmg, isCrit, info);
     if (this.stats.lifesteal > 0) this.heal(dmg * this.stats.lifesteal);
-    // ORA ORA : coups instantanés supplémentaires (dégâts bruts)
+    // ORA ORA ORA ! : coups supplémentaires, calculés SÉPARÉMENT (0,5× le coup de
+    // base) et affichés en nombres ROSES distincts du coup principal (blanc).
     for (let i = 0; i < this.stats.extraHits; i++) {
       if (!e.isAlive()) break;
-      e.takeDamage(Math.round(baseDmg * rage * 0.5), this.x, this.y, { silent: true });
-      this.gs.juice.burst(e.x, e.y - 8, 0xffd24a, 3, 90, 0.6);
+      const oraDmg = Math.round(baseDmg * rage * 0.5);
+      e.takeDamage(oraDmg, this.x, this.y, { silent: true });
+      this.gs.juice.damageNumber(e.x, e.y - 30 - i * 7, oraDmg, false, '#ff5ccf');
+      this.gs.juice.burst(e.x, e.y - 8, 0xff9ad8, 3, 90, 0.6);
     }
   }
 

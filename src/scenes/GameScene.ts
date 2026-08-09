@@ -2013,7 +2013,9 @@ export class GameScene extends Phaser.Scene {
           if (Math.hypot(dx, dy) > range) continue;
           const da = Phaser.Math.Angle.Wrap(Math.atan2(dy, dx) - aimAngle);
           if (Math.abs(da) > span) continue;
-          e.takeDamage(Math.round(damage * 0.5), cx, cy, { silent: true });
+          const oraDmg = Math.round(damage * 0.5);
+          e.takeDamage(oraDmg, cx, cy, { silent: true });
+          this.juice.damageNumber(e.x, e.y - 30 - k * 7, oraDmg, false, '#ff5ccf'); // dégâts ORA en rose
         }
       }
     }
