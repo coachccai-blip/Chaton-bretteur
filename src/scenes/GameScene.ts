@@ -1961,6 +1961,28 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * ORA ORA ORA ! : `count` croissants d'attaque SUPPLÉMENTAIRES, roses et
+   * légèrement décalés en angle (et étagés en rayon) par rapport au coup de base,
+   * pour qu'on VOIE la rafale de coups. Purement visuel — les dégâts additionnels
+   * sont appliqués par ailleurs (stats.extraHits côté héros, boucle ORA côté clones).
+   */
+  oraSlashFx(cx: number, cy: number, aimAngle: number, R: number, count: number): void {
+    const span = 1.2;
+    for (let i = 0; i < count; i++) {
+      // décalage alterné et croissant : chaque ligne rose est distincte de la précédente
+      const off = (i % 2 === 0 ? 1 : -1) * (Math.floor(i / 2) + 1) * 0.22;
+      const center = aimAngle + off;
+      const rr = R * (0.88 + (i % 2) * 0.14);
+      const g = this.add.graphics().setDepth(23);
+      g.lineStyle(13, 0xff5ccf, 0.55);
+      g.beginPath(); g.arc(cx, cy, rr, center - span, center + span, false); g.strokePath();
+      g.lineStyle(5, 0xffc0ec, 0.92);
+      g.beginPath(); g.arc(cx, cy, rr, center - span * 0.8, center + span * 0.8, false); g.strokePath();
+      this.tweens.add({ targets: g, alpha: 0, duration: 230, ease: 'Cubic.easeIn', delay: i * 25, onComplete: () => g.destroy() });
+    }
+  }
+
   spectralSlash(cx: number, cy: number, aimAngle: number, range: number, damage: number): void {
     this.elementSlash(cx, cy, aimAngle, range, 3); // particules élémentaires (clones)
     const span = 1.1, col = 0x9a5cff;
@@ -1978,6 +2000,22 @@ export class GameScene extends Phaser.Scene {
       if (Math.abs(da) > span) continue;
       e.takeDamage(damage, cx, cy);
       this.juice.burst(e.x, e.y, col, 5, 120, 0.7);
+    }
+    // ORA ORA ORA ! : les clones profitent aussi du buff — lignes roses + coups
+    // supplémentaires (0,5× le coup du clone par ligne).
+    const extra = this.player?.stats.extraHits ?? 0;
+    if (extra > 0) {
+      this.oraSlashFx(cx, cy, aimAngle, range * 0.95, extra);
+      for (let k = 0; k < extra; k++) {
+        for (const e of this.getTargets()) {
+          if (!e.isAlive()) continue;
+          const dx = e.x - cx, dy = e.y - cy;
+          if (Math.hypot(dx, dy) > range) continue;
+          const da = Phaser.Math.Angle.Wrap(Math.atan2(dy, dx) - aimAngle);
+          if (Math.abs(da) > span) continue;
+          e.takeDamage(Math.round(damage * 0.5), cx, cy, { silent: true });
+        }
+      }
     }
   }
 

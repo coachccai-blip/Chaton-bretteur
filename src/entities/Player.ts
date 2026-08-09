@@ -850,6 +850,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     }
     // Particules élémentaires sur la lame si le joueur porte un boon de feu/gel/poison.
     this.gs.elementSlash(cx, cy, aimAngle, R, finisher ? 7 : 5);
+    // ORA ORA ORA ! : lignes d'attaque roses supplémentaires (une par coup bonus),
+    // décalées pour être bien visibles en plus du croissant de base.
+    if (this.stats.extraHits > 0) this.gs.oraSlashFx(cx, cy, aimAngle, R, this.stats.extraHits);
   }
 
   /** Direction normalisée vers l'ennemi vivant le plus proche (ou null). */

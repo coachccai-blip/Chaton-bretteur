@@ -507,7 +507,7 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'ora_ora', name: 'ORA ORA ORA !', god: 'Poing Stellaire', category: 'divine', rarity: 'epic', icon: 'fist', repeatable: true,
-    description: '+2 coups instantanés supplémentaires à chaque frappe.',
+    description: '+2 coups supplémentaires par frappe, matérialisés par des lignes d’attaque roses. Les clones et ombres en profitent aussi.',
     apply(p) { p.stats.extraHits += 2; },
   },
   {
