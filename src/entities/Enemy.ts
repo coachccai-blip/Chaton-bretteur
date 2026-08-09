@@ -65,6 +65,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
   private hpBg?: Phaser.GameObjects.Rectangle;
   private hpFill?: Phaser.GameObjects.Rectangle;
+  private hpText?: Phaser.GameObjects.Text; // Scouter : PV chiffrés (ex. « 10/32 »)
   private blackFlame?: BlackFlameFx; // flammes noires d'Amaterasu (Brûlure Noire)
 
   constructor(scene: GameScene, x: number, y: number, def: EnemyDef, hpMul: number, dmgMul: number,
@@ -754,6 +755,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.gs.onEnemyKilled(this, byPlayer);
     this.hpBg?.destroy();
     this.hpFill?.destroy();
+    this.hpText?.destroy();
     this.blackFlame?.destroy(); this.blackFlame = undefined;
     this.gs.tweens.add({
       targets: this, scaleX: this.baseScale * 1.3, scaleY: 0, alpha: 0, duration: 200,
@@ -762,10 +764,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   private updateHpBar(): void {
-    const scouter = !!this.gs.player?.mods.scouter; // Scouter : barre de PV toujours visible
+    const scouter = !!this.gs.player?.mods.scouter; // Scouter : barre + PV chiffrés toujours visibles
     if (this.hp >= this.maxHp && !scouter) {
       this.hpBg?.setVisible(false);
       this.hpFill?.setVisible(false);
+      this.hpText?.setVisible(false);
       return;
     }
     const w = 30;
@@ -777,11 +780,26 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.hpBg.setPosition(this.x, y).setVisible(true);
     this.hpFill!.setPosition(this.x - w / 2, y).setVisible(true);
     this.hpFill!.width = w * Phaser.Math.Clamp(this.hp / this.maxHp, 0, 1);
+    // Scouter : nombre de PV « courant/max » juste au-dessus de la barre.
+    if (scouter) {
+      const cur = Math.max(0, Math.ceil(this.hp));
+      const label = `${cur}/${Math.ceil(this.maxHp)}`;
+      if (!this.hpText) {
+        this.hpText = this.gs.add.text(this.x, y - 7, label, {
+          fontFamily: 'monospace', fontSize: '10px', color: '#eafcff',
+          fontStyle: 'bold', stroke: '#000000', strokeThickness: 3,
+        }).setOrigin(0.5, 1).setDepth(32);
+      }
+      this.hpText.setPosition(this.x, y - 7).setText(label).setVisible(true);
+    } else {
+      this.hpText?.setVisible(false);
+    }
   }
 
   destroy(fromScene?: boolean): void {
     this.hpBg?.destroy();
     this.hpFill?.destroy();
+    this.hpText?.destroy();
     this.blackFlame?.destroy();
     super.destroy(fromScene);
   }
