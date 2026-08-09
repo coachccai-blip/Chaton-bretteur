@@ -551,11 +551,6 @@ export const POWERS: PowerDef[] = [
     },
   },
   {
-    id: 'mirror_portal', name: 'Portail Miroitant', god: 'Sorcier Suprême', category: 'defense', rarity: 'epic', icon: 'domain',
-    description: '20% des projectiles ennemis proches sont renvoyés (dégâts ×1,5).',
-    apply(p) { p.mods.reflect = 0.2; },
-  },
-  {
     id: 'rasenshuriken', name: 'Rasenshuriken', god: 'Tourbillon', category: 'divine', rarity: 'epic', icon: 'spiral',
     description: 'Le Spécial lance un shuriken de vent qui explose en dôme (60, rayon 110).',
     apply(p) { p.addSpecialFlag('rasenshuriken'); },
