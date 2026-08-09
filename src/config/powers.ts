@@ -156,11 +156,6 @@ export const POWERS: PowerDef[] = [
     apply(p) { p.stats.moveSpeedMult *= 1.08; p.mods.celerite = 1; },
   },
   {
-    id: 'second_wind', name: 'Second Souffle', god: 'Vagabond', category: 'hp', rarity: 'common', icon: 'heart', repeatable: true,
-    description: 'Régénère 1 PV/s hors combat.',
-    apply(p) { p.mods.regenOoc = (p.mods.regenOoc || 0) + 1; },
-  },
-  {
     id: 'super_serum', name: 'Sérum du Super-Chaton', god: 'Super-Soldat', category: 'hp', rarity: 'common', icon: 'heart', repeatable: true,
     description: '+10 PV max et +5% de dégâts.',
     apply(p) { p.stats.maxHp += 10; p.heal(10); p.stats.swordDamage = p.stats.swordDamage.map((d) => Math.round(d * 1.05)); },
@@ -287,11 +282,6 @@ export const POWERS: PowerDef[] = [
     id: 'rubber_body', name: 'Corps de Gomme', god: 'Pirate', category: 'defense', rarity: 'common', icon: 'armor', repeatable: true,
     description: 'Le corps élastique amortit les coups : -10% de dégâts subis.',
     apply(p) { p.stats.armor = 1 - (1 - p.stats.armor) * 0.90; p.stats.knockbackResist = Math.min(0.9, p.stats.knockbackResist + 0.5); },
-  },
-  {
-    id: 'red_stone', name: 'Éclat de Pierre Rouge', god: 'Alchimiste', category: 'hp', rarity: 'common', icon: 'heart', repeatable: true,
-    description: 'Les cartes de repli soignent 50% de plus.',
-    apply(p) { p.mods.fallbackHealBonus = (p.mods.fallbackHealBonus || 0) + 0.5; },
   },
   {
     id: 'transmutation', name: 'Transmutation Mineure', god: 'Alchimiste', category: 'defense', rarity: 'common', icon: 'shield', repeatable: true,
