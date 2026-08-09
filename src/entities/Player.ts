@@ -851,8 +851,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     // Particules élémentaires sur la lame si le joueur porte un boon de feu/gel/poison.
     this.gs.elementSlash(cx, cy, aimAngle, R, finisher ? 7 : 5);
     // ORA ORA ORA ! : lignes d'attaque roses supplémentaires (une par coup bonus),
-    // décalées pour être bien visibles en plus du croissant de base.
-    if (this.stats.extraHits > 0) this.gs.oraSlashFx(cx, cy, aimAngle, R, this.stats.extraHits);
+    // décalées pour être bien visibles en plus du croissant de base + petits « Ora »
+    // qui jaillissent près de la tête du chaton (clin d'œil au barrage stellaire).
+    if (this.stats.extraHits > 0) {
+      this.gs.oraSlashFx(cx, cy, aimAngle, R, this.stats.extraHits);
+      // haut de la tête : l'origine du sprite est à 0.9 (proche des pieds), donc le
+      // sommet est à this.y - 0.9*hauteur. On place les « Ora » LÉGÈREMENT au-dessus.
+      const headTop = this.y - this.displayHeight * 0.9 - 8;
+      const n = Math.min(3, 1 + Math.floor(this.stats.extraHits / 2));
+      for (let i = 0; i < n; i++) {
+        const ox = this.x + (i - (n - 1) / 2) * 30 + (Math.random() - 0.5) * 6;
+        const oy = headTop - Math.random() * 10;
+        this.gs.juice.popText(ox, oy, 'Ora', '#ff5ccf', 15);
+      }
+    }
   }
 
   /** Direction normalisée vers l'ennemi vivant le plus proche (ou null). */
