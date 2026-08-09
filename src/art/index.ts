@@ -4,7 +4,7 @@ import { CAT, SWORD, KATANA, MERCHANT_CAT, HAMMER, WATER_WAVE, SUSANOO, KAGE_BUN
 import { GLYPHS } from './icons';
 import { genCritter, MONSTER_RECIPES } from './critters';
 import { genHeroCat, genBossGorbak, genBossIgnis, genBossGlacior, genBossSylvaan, genBossMortis, genBossVoltair, genBossNeantis, genBossMilitaire } from './heroesHD';
-import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, MINE, FIREBALL, ICE_SHARD, FROST, ICE_STALACTITE, ICE_PYLON, BLACK_FLAME, MUD_BLOB, MUD_SPLAT, TORNADO, FIRE_TORNADO, BOOMERANG, CAT_PAW, LIGHTNING_BLUE, ANGEL_WINGS, MINE_BOSS, GRENADE, MISSILE, EXPLOSION, TURRET, TANK, TANK_MISSILE, GATLING_BULLET, MATERIAL_ART, RED_AURA } from './environment';
+import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, genShieldWave, MINE, FIREBALL, ICE_SHARD, FROST, ICE_STALACTITE, ICE_PYLON, BLACK_FLAME, MUD_BLOB, MUD_SPLAT, TORNADO, FIRE_TORNADO, BOOMERANG, CAT_PAW, LIGHTNING_BLUE, ANGEL_WINGS, MINE_BOSS, GRENADE, MISSILE, EXPLOSION, TURRET, TANK, TANK_MISSILE, GATLING_BULLET, MATERIAL_ART, RED_AURA } from './environment';
 import { ZONES } from '../config/worlds';
 
 let generated = false;
@@ -48,6 +48,7 @@ export function generateAll(scene: Phaser.Scene): void {
   genSprite(scene, ICE_STALACTITE); // stalactite tombante (Glacior)
   genSprite(scene, ICE_PYLON); // pilône d'invincibilité (Glacior)
   genSprite(scene, BLACK_FLAME); // flamme noire d'Amaterasu (Brûlure Noire)
+  genShieldWave(scene, 'shield_wave'); // onde circulaire du boon Ricochet du Bouclier
 
   // Monstres (procéduraux)
   for (const [key, recipe] of Object.entries(MONSTER_RECIPES)) genCritter(scene, `mob_${key}`, recipe);

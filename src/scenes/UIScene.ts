@@ -132,7 +132,10 @@ export class UIScene extends Phaser.Scene {
     this.bossLayer.add([bbg, this.bossBar, this.bossName, this.bossPhase]);
 
     // Flash rouge sur les bords de l'écran quand le chaton est touché.
-    this.hurtFx = this.add.graphics().setDepth(20).setAlpha(0).setScrollFactor(0);
+    // NB : pas de setScrollFactor(0) — la caméra UI est zoomée ×RENDER_SCALE et
+    // recentrée ; le cadre est dessiné en coordonnées monde 0..GAME_WIDTH/HEIGHT,
+    // que la caméra étire au plein écran (sinon il ne couvrait qu'un coin).
+    this.hurtFx = this.add.graphics().setDepth(20).setAlpha(0);
     this.drawHurtBorder();
 
     this.setupEvents();

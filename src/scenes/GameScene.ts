@@ -2276,6 +2276,20 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** Onde circulaire du Ricochet du Bouclier : anneau d'énergie qui se propage
+   *  (pixel art `shield_wave`) + dégâts de zone. */
+  shieldWave(x: number, y: number, radius: number, damage: number): void {
+    const w = this.add.image(x, y, 'shield_wave').setDepth(17).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.95);
+    const finalScale = (radius * 2) / 64; // texture 64px → diamètre 2×rayon
+    w.setScale(finalScale * 0.35);
+    this.tweens.add({ targets: w, scale: finalScale, alpha: 0, duration: 340, ease: 'Cubic.easeOut', onComplete: () => w.destroy() });
+    this.juice.burst(x, y, 0x9fe6ff, 10, 200, 1.1);
+    this.sfx('slash1');
+    for (const e of this.getTargets()) {
+      if (e.isAlive() && Phaser.Math.Distance.Between(x, y, e.x, e.y) <= radius) e.takeDamage(Math.round(damage), x, y);
+    }
+  }
+
   /** Pulse de domaine autour du joueur (Sukuna). */
   domainPulse(damage: number, radius: number): void {
     if (!this.player || this.player.dead) return;

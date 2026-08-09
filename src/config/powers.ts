@@ -261,7 +261,7 @@ export const POWERS: PowerDef[] = [
   {
     id: 'shield_ricochet', name: 'Ricochet du Bouclier', god: 'Super-Soldat', category: 'attack', rarity: 'common', icon: 'shield', repeatable: true,
     description: 'Le 3e coup du combo projette une onde circulaire (portée 90).',
-    apply(p) { p.addOnHit((_e, _d, _c, info) => { if (info?.finisher) p.combat.explosionAt(p.px(), p.py(), 90, 8); }); },
+    apply(p) { p.addOnHit((_e, _d, _c, info) => { if (info?.finisher) p.combat.shieldWave(p.px(), p.py(), 90, 8); }); },
   },
   {
     id: 'repulsor', name: 'Gant Réacteur', god: 'Ingénieur', category: 'special', rarity: 'common', icon: 'special', repeatable: true,

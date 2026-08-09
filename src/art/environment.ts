@@ -121,6 +121,38 @@ export function genRadialLight(scene: Phaser.Scene, key: string, color: string, 
   });
 }
 
+/** Onde de choc circulaire en pixel art (boon Ricochet du Bouclier) : anneaux
+ *  concentriques d'énergie cyan + pointes radiales, centre transparent. Destinée
+ *  à être agrandie et estompée à l'usage (effet d'onde qui se propage). */
+export function genShieldWave(scene: Phaser.Scene, key = 'shield_wave', size = 64): void {
+  canvasTex(scene, key, size, size, (ctx) => {
+    const c = size / 2, px = 2; // pas de « pixel » pour un rendu net
+    const rings = [
+      { r: 0.95, w: 0.085, col: '#eafcff' },
+      { r: 0.82, w: 0.065, col: '#9fe6ff' },
+      { r: 0.66, w: 0.05, col: '#59c8ff' },
+      { r: 0.50, w: 0.04, col: '#3a9ae0' },
+    ];
+    for (let y = 0; y < size; y += px) {
+      for (let x = 0; x < size; x += px) {
+        const dx = (x + px / 2 - c) / c, dy = (y + px / 2 - c) / c;
+        const d = Math.hypot(dx, dy);
+        for (const ring of rings) {
+          if (Math.abs(d - ring.r) <= ring.w) { ctx.fillStyle = ring.col; ctx.fillRect(x, y, px, px); break; }
+        }
+      }
+    }
+    // pointes radiales (4 axes) — impulsion d'énergie
+    ctx.fillStyle = '#eafcff';
+    for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+      for (let t = 0.9; t <= 1.06; t += 0.03) {
+        const x = Math.round((c + ax * c * t) / px) * px, y = Math.round((c + ay * c * t) / px) * px;
+        if (x >= 0 && x < size && y >= 0 && y < size) ctx.fillRect(x, y, px, px);
+      }
+    }
+  });
+}
+
 /** Vignette (bords sombres, centre transparent). */
 export function genVignette(scene: Phaser.Scene, key: string, w = 960, h = 540): void {
   canvasTex(scene, key, w, h, (ctx) => {

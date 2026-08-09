@@ -847,7 +847,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     }
     if (hitAny) {
       this.gs.juice.hitStop(isFinisher ? 70 : 40);
-      this.gs.juice.shake(isFinisher ? 140 : 80, isFinisher ? 0.008 : 0.004);
+      // Tremblement d'impact allégé (en plus de la compensation RENDER_SCALE) :
+      // un coup d'épée ne doit pas secouer tout l'écran.
+      this.gs.juice.shake(isFinisher ? 100 : 55, isFinisher ? 0.0045 : 0.0022);
     }
     // Susanoo : une lame spectrale VIOLETTE prolonge l'attaque (+portée, +dégâts).
     if (this.mods.susanoo > 0) {

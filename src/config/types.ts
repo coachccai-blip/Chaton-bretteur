@@ -21,6 +21,7 @@ export interface ICombatScene {
   lightningChain(x: number, y: number, damage: number, jumps: number): void;
   slashWave(x: number, y: number, dx: number, dy: number, damage: number): void;
   explosionAt(x: number, y: number, radius: number, damage: number): void;
+  shieldWave(x: number, y: number, radius: number, damage: number): void;
   timeSlow(ms: number, factor: number): void;
   domainPulse(damage: number, radius: number): void;
   spawnClone(ms: number): void;

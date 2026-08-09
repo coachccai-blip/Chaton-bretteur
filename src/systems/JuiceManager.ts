@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { RENDER_SCALE } from '../config/game';
 
 /** Effets de "game feel" : shake, hit-stop, particules, flash. */
 export class JuiceManager {
@@ -11,7 +12,10 @@ export class JuiceManager {
   }
 
   shake(duration = 120, intensity = 0.006): void {
-    this.scene.cameras.main.shake(duration, intensity);
+    // Le passage en 1920×1080 natif a doublé la largeur du canvas, donc l'amplitude
+    // à l'écran de camera.shake (en pixels écran) : on divise par RENDER_SCALE pour
+    // retrouver le ressenti d'origine sur TOUS les shakes.
+    this.scene.cameras.main.shake(duration, intensity / RENDER_SCALE);
   }
 
   /**
