@@ -660,6 +660,31 @@ export const CAT_PAW: SpriteDef = {
   ],
 };
 
+/** Toile de Combat (15x15) : toile d'araignée circulaire — rayons + anneaux
+ *  concentriques en losange — tirée par le boon éponyme pour immobiliser la cible.
+ *  Fils argentés translucides, léger reflet cyan au cœur. */
+export const COMBAT_NET: SpriteDef = {
+  key: 'combat_net',
+  pal: { '.': null, '#': '#8a93a3', 'w': '#dfe8f2', 'c': '#bfeaff' },
+  rows: [
+    '#......#......#',
+    '.w.....w.....w.',
+    '..w...www...w..',
+    '...w.w.w.w.w...',
+    '....w..w..w....',
+    '...w.wwwww.w...',
+    '..w..wwwww..w..',
+    '#wwwwwwcwwwwww#',
+    '..w..wwwww..w..',
+    '...w.wwwww.w...',
+    '....w..w..w....',
+    '...w.w.w.w.w...',
+    '..w...www...w..',
+    '.w.....w.....w.',
+    '#......#......#',
+  ],
+};
+
 /** Éclair bleu (12x14) : arc électrique du boon Chidori (dash foudroyant). */
 export const LIGHTNING_BLUE: SpriteDef = {
   key: 'lightning_blue',

@@ -783,6 +783,7 @@ export class GameScene extends Phaser.Scene {
     const glob = this.add.image(sx, sy - 12, 'mud_blob').setDepth(24).setScale(1.5);
     const shadow = this.add.ellipse(tx, ty, 20, 9, 0x000000, 0.32).setDepth(3);
     let hit = false;
+    let reflected = false;
     this.tweens.add({
       targets: glob, x: tx, y: ty, duration: dur, ease: 'Sine.easeIn',
       onUpdate: () => {
@@ -790,6 +791,27 @@ export class GameScene extends Phaser.Scene {
         const p = this.player;
         if (this.combatActive && p && !p.dead && Math.hypot(p.x - glob.x, p.y - glob.y) < 18) {
           hit = true;
+          // Le glob de boue n'est pas un Projectile « standard » (tween maison), donc il
+          // faut réappliquer ici la logique de renvoi : Poil Voile Miroir (dash) le
+          // renvoie vers l'ennemi le plus proche, et Portail Miroitant a sa chance.
+          const veil = !!(p.mods.mirrorVeil && p.isDashing());
+          const reflectRoll = !veil && !!p.mods.reflect && Math.random() < (p.mods.reflect as number);
+          if (veil || reflectRoll) {
+            reflected = true;
+            const gx = glob.x, gy = glob.y;
+            let bx = sx, by = sy, bd = Infinity; // défaut : renvoyé à l'expéditeur
+            for (const e of this.getTargets()) {
+              if (!e.isAlive()) continue;
+              const dd = Math.hypot(e.x - gx, e.y - gy);
+              if (dd < bd) { bd = dd; bx = e.x; by = e.y; }
+            }
+            const dl = Math.hypot(bx - gx, by - gy) || 1;
+            this.friendlyShot(gx, gy, (bx - gx) / dl, (by - gy) / dl, 460, Math.round(damage * 1.5), { color: 0x9fe6ff, texture: 'mud_blob', scale: 1.5 });
+            this.juice.ring(gx, gy, 26, 0x9fe6ff, 240);
+            this.tweens.killTweensOf(glob);
+            glob.destroy(); shadow.destroy();
+            return;
+          }
           p.takeDamage(damage, glob.x, glob.y);
           this.poisonPlayer();
         }
@@ -798,6 +820,7 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: glob, scale: 2.0, duration: dur / 2, yoyo: true });
     this.tweens.add({ targets: glob, angle: 360, duration: dur });
     this.time.delayedCall(dur, () => {
+      if (reflected) return; // glob renvoyé par la toile miroir : ni flaque ni impact au sol
       glob.destroy();
       shadow.destroy();
       this.juice.burst(tx, ty, 0x7a8a3a, 8, 150, 1.1);
@@ -2048,11 +2071,29 @@ export class GameScene extends Phaser.Scene {
     const len = Math.hypot(dx, dy) || 1; const nx = dx / len, ny = dy / len;
     const col = opts?.color ?? 0xffffff;
     const tex = opts?.texture ?? 'orb';
-    const s = this.add.sprite(x, y, tex).setDepth(18).setScale(opts?.scale ?? 1.4);
-    // Sprite dédié (patte de chat…) : garde ses couleurs ; sinon on teinte l'orbe.
+    const isNet = tex === 'combat_net';
+    const targetScale = opts?.scale ?? 1.4;
+    const s = this.add.sprite(x, y, tex).setDepth(18).setScale(targetScale);
+    // Sprite dédié (patte de chat, toile…) : garde ses couleurs ; sinon on teinte l'orbe.
     if (opts?.texture) { if (opts.color) s.setTint(col); } else s.setTint(col);
-    if (opts?.orient) s.setRotation(Math.atan2(ny, nx)); else s.setRotation(Math.atan2(ny, nx));
-    if (opts?.texture) { this.tweens.add({ targets: s, angle: s.angle + 720, duration: 600, repeat: -1 }); }
+    s.setRotation(Math.atan2(ny, nx));
+    if (isNet) {
+      // Lancer de toile : la toile se DÉPLOIE (compacte → pleine taille) en jaillissant
+      // du lanceur, tourne lentement, et un BRIN DE SOIE la relie au lanceur puis se rompt.
+      s.setScale(targetScale * 0.3);
+      this.tweens.add({ targets: s, scaleX: targetScale, scaleY: targetScale, duration: 200, ease: 'Back.easeOut' });
+      this.tweens.add({ targets: s, angle: s.angle + 360, duration: 1600, repeat: -1 });
+      const ox = x, oy = y;
+      const strand = this.add.graphics().setDepth(17);
+      this.tweens.addCounter({ from: 0.75, to: 0, duration: 260, onUpdate: (tw) => {
+        strand.clear();
+        if (!s.active) return;
+        strand.lineStyle(2, 0xdfe8f2, tw.getValue() ?? 0);
+        strand.beginPath(); strand.moveTo(ox, oy); strand.lineTo(s.x, s.y); strand.strokePath();
+      }, onComplete: () => strand.destroy() });
+    } else if (opts?.texture) {
+      this.tweens.add({ targets: s, angle: s.angle + 720, duration: 600, repeat: -1 });
+    }
     this.friendlyShots.push({ sprite: s, vx: nx * speed, vy: ny * speed, damage, dieAt: performance.now() + 900, hit: new Set(), pierce: !!opts?.pierce, immobilizeMs: opts?.immobilizeMs, knockback: opts?.knockback, color: col });
   }
 

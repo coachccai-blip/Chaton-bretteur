@@ -416,7 +416,7 @@ export const POWERS: PowerDef[] = [
         const t = nearest(p, p.px(), p.py(), 340);
         if (!t) return;
         const d = Math.hypot(t.x - p.px(), t.y - p.py()) || 1;
-        p.combat.friendlyShot(p.px(), p.py(), (t.x - p.px()) / d, (t.y - p.py()) / d, 440, 10, { color: 0xffffff, immobilizeMs: 1000 });
+        p.combat.friendlyShot(p.px(), p.py(), (t.x - p.px()) / d, (t.y - p.py()) / d, 420, 10, { immobilizeMs: 1000, texture: 'combat_net', scale: 1.5 });
       });
     },
   },
