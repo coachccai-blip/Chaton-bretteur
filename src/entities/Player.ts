@@ -512,47 +512,45 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     // rotation (orbitSpeedMult = ×4). Sans arme orbitale, l'effet est nul.
     const orbMult = this.mods.orbitMult || 1;
     const orbSpeed = this.mods.orbitSpeedMult || 1;
-    this.orbitAngle += (dt / 1000) * (Math.PI * 2) * orbSpeed; // référence : 1 tour / s
-    // Katana : 1 tour / 1,2 s, pointe vers l'extérieur. Rayon DOUBLÉ (132).
+    const orbitDelta = (dt / 1000) * (Math.PI * 2) * orbSpeed; // radians ajoutés cette frame
+    this.orbitAngle += orbitDelta;
+    // Passages par arme cette frame = nombre de RÉVOLUTIONS accomplies (une arme croise
+    // un ennemi de l'anneau une fois par tour). Dégâts donc INDÉPENDANTS du framerate et
+    // exacts : les passages « sous-frame » d'une rotation rapide sont comptés au lieu
+    // d'être perdus. Le nombre d'armes AFFICHÉES est plafonné (12), mais TOUTES les armes
+    // logiques infligent leurs dégâts (le surplus est converti en dégâts par impact).
+    const katanaRevs = (orbitDelta / 1.2) / (Math.PI * 2);
+    const hammerRevs = (orbitDelta / 1.6) / (Math.PI * 2);
     this.syncOrbitWeapon(this.orbitBlades, (this.mods.orbitBlade || 0) * orbMult, 'katana_black', 132,
-      this.orbitAngle / 1.2, 8 + this.stats.swordDamage[0] * 0.3, 24, now, (a) => a + Math.PI / 2, false);
-    // Mjölnir : 1 tour / 1,6 s, culbute + traînée électrique. Rayon DOUBLÉ (116).
+      this.orbitAngle / 1.2, 8 + this.stats.swordDamage[0] * 0.3, 24, now, (a) => a + Math.PI / 2, false, katanaRevs);
     this.syncOrbitWeapon(this.orbitHammers, (this.mods.orbitHammer || 0) * orbMult, 'hammer_thor', 116,
-      this.orbitAngle / 1.6, 10, 27, now, () => this.orbitAngle * 2.4, true);
+      this.orbitAngle / 1.6, 10, 27, now, () => this.orbitAngle * 2.4, true, hammerRevs);
   }
+
+  /** Nombre max d'armes orbitales AFFICHÉES (au-delà, seuls les dégâts augmentent). */
+  private static ORBIT_VISUAL_CAP = 12;
 
   private syncOrbitWeapon(
     arr: Phaser.GameObjects.Sprite[], count: number, tex: string, R: number, angle: number,
     dmg: number, hitR: number, now: number, rot: (a: number) => number, electric: boolean,
+    revsPerWeapon: number,
   ): void {
     if (count <= 0) {
       if (arr.length) { arr.forEach((b) => b.destroy()); arr.length = 0; }
       return;
     }
-    while (arr.length < count) arr.push(this.gs.add.sprite(this.x, this.y, tex).setDepth(22).setOrigin(0.5, 0.5));
+    // On AFFICHE au plus ORBIT_VISUAL_CAP armes (les 486 sprites de Wilix ×5 feraient
+    // ramer le jeu) ; le `count` logique complet sert au calcul des dégâts.
+    const visual = Math.min(Player.ORBIT_VISUAL_CAP, Math.round(count));
+    while (arr.length < visual) arr.push(this.gs.add.sprite(this.x, this.y, tex).setDepth(22).setOrigin(0.5, 0.5));
+    while (arr.length > visual) arr.pop()!.destroy();
+
+    // ---- rendu des armes visibles + destruction des projectiles croisés ----
     for (let i = 0; i < arr.length; i++) {
-      const w = arr[i];
       const a = angle + (i / arr.length) * Math.PI * 2;
       const bx = this.x + Math.cos(a) * R, by = this.y - 8 + Math.sin(a) * R;
-      w.setPosition(bx, by).setRotation(rot(a)).setVisible(!this.dead);
+      arr[i].setPosition(bx, by).setRotation(rot(a)).setVisible(!this.dead);
       if (this.dead) continue;
-      // Dégâts À CHAQUE IMPACT : chaque arme frappe au FRONT du contact (entrée dans
-      // l'ennemi), suivi PAR ARME. Donc +d'armes (Wilix ×3) ET +de vitesse (Wilix +300%)
-      // = proportionnellement +d'impacts subis (aucun plafond partagé). Un ennemi qui
-      // sort puis re-rentre dans l'arme est de nouveau touché → 60 passages = 60 coups.
-      const prev = w.getData('touch') as Set<IEnemyLike> | undefined;
-      const cur = new Set<IEnemyLike>();
-      for (const e of this.gs.getTargets()) {
-        if (!e.isAlive()) continue;
-        if (Math.hypot(e.x - bx, e.y - by) <= hitR) {
-          cur.add(e);
-          // impact ! dégâts silencieux (pas de nombre/son par coup) pour rester lisible
-          // même à très haute cadence ; la barre de PV qui fond montre l'effet.
-          if (!prev?.has(e)) this.dealDamage(e, dmg, false, undefined, { silent: true });
-        }
-      }
-      w.setData('touch', cur);
-      // Les armes orbitales DÉTRUISENT les projectiles ennemis qu'elles croisent.
       const projs = this.gs.projectiles.getChildren();
       for (let j = projs.length - 1; j >= 0; j--) {
         const pr = projs[j] as Phaser.GameObjects.Sprite;
@@ -562,6 +560,26 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
         }
       }
     }
+
+    // ---- dégâts mathématiquement corrects (indépendants du framerate & du cap visuel) ----
+    // Chaque arme LOGIQUE croise un ennemi de l'anneau `revsPerWeapon` fois cette frame,
+    // donc `count × revsPerWeapon` passages au total. On accumule les fractions par ennemi
+    // pour appliquer des coups ENTIERS (aucun passage < 1/frame n'est perdu au round).
+    if (!this.dead) {
+      const totalPasses = count * revsPerWeapon;
+      const cy = this.y - 8;
+      const key = electric ? 'orbAccH' : 'orbAccK';
+      for (const e of this.gs.getTargets()) {
+        if (!e.isAlive()) continue;
+        if (Math.abs(Math.hypot(e.x - this.x, e.y - cy) - R) > hitR) continue; // hors de l'anneau
+        const es = e as unknown as Phaser.GameObjects.Sprite;
+        let acc = (es.getData(key) as number || 0) + totalPasses;
+        const whole = Math.floor(acc);
+        if (whole >= 1) { this.dealDamage(e, dmg * whole, false, undefined, { silent: true }); acc -= whole; }
+        es.setData(key, acc);
+      }
+    }
+
     // Traînée électrique du marteau (étincelles cyan qui suivent la tête).
     if (electric && arr.length && now >= this.nextOrbitSpark) {
       this.nextOrbitSpark = now + 55;

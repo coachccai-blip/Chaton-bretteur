@@ -16,6 +16,8 @@ export class Pylon extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   private hpBg: Phaser.GameObjects.Rectangle;
   private hpFill: Phaser.GameObjects.Rectangle;
   private aura: Phaser.GameObjects.Image;
+  private spawnX = 0;
+  private spawnY = 0;
 
   constructor(scene: GameScene, x: number, y: number, hp: number) {
     super(scene, x, y, 'ice_pylon');
@@ -29,8 +31,15 @@ export class Pylon extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.setScale(2);
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.setImmovable(true);
+    // Le pilône ne DOIT jamais bouger : setImmovable n'empêche que la poussée en
+    // collision, mais un knockback (coup final) lui donnait une vélocité qui le
+    // faisait dériver hors de l'arène et bloquait la run. moves=false désactive
+    // toute intégration de vélocité → il reste rivé à sa position.
+    body.moves = false;
+    body.setVelocity(0, 0);
     body.setSize(this.width * 0.6, this.height * 0.5);
     body.setOffset(this.width * 0.2, this.height * 0.45);
+    this.spawnX = x; this.spawnY = y;
 
     this.aura = scene.add.image(x, y - 24, 'light').setBlendMode(Phaser.BlendModes.ADD)
       .setTint(0x7fdcff).setDepth(14).setScale(1.4).setAlpha(0.45);
@@ -46,6 +55,15 @@ export class Pylon extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   isAlive(): boolean { return this.alive; }
+
+  /** Sécurité : ré-ancre le pilône à sa position d'origine à chaque frame (au cas où
+   *  une force quelconque le déplacerait malgré moves=false). */
+  protected preUpdate(t: number, dt: number): void {
+    super.preUpdate(t, dt);
+    if (this.alive && (this.x !== this.spawnX || this.y !== this.spawnY)) {
+      this.setPosition(this.spawnX, this.spawnY);
+    }
+  }
 
   // Immunisé aux statuts élémentaires (bloc de glace pur).
   applyStatus(_status: Element, _duration: number): void { /* no-op */ }
