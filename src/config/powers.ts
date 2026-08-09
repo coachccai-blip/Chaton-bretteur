@@ -105,9 +105,9 @@ export const POWERS: PowerDef[] = [
     apply(p) { p.stats.dashDistance = Math.round(p.stats.dashDistance * 1.25); },
   },
   {
-    id: 'roar', name: 'Rugissement', god: 'Dresseur', category: 'defense', rarity: 'common', icon: 'rage', repeatable: true,
-    description: 'Les ennemis proches infligent -10% de dégâts.',
-    apply(p) { p.mods.rugissement = (p.mods.rugissement || 0) + 1; },
+    id: 'wilix_rollerblade', name: 'Wilix Rollerblade', god: 'Patineur Cosmique', category: 'attack', rarity: 'epic', icon: 'lightning', repeatable: true,
+    description: 'Triple le nombre d’armes en orbite et accélère leur rotation de +300%. Inutile seul — combo avec Le Marteau de Thor et La 3ᵉ Lame de Zoro.',
+    apply(p) { p.mods.orbitMult = (p.mods.orbitMult || 1) * 3; p.mods.orbitSpeedMult = (p.mods.orbitSpeedMult || 1) * 4; },
   },
   {
     id: 'swords_dance', name: 'Danse-Lames', god: 'Dresseur', category: 'attack', rarity: 'common', icon: 'sword', repeatable: true,
@@ -453,7 +453,7 @@ export const POWERS: PowerDef[] = [
     apply(p) { p.mods.armReach = Math.min(3, (p.mods.armReach || 0) + 1); },
   },
   {
-    id: 'third_blade', name: 'Troisième Lame', god: 'Chasseur de Pirates', category: 'divine', rarity: 'rare', icon: 'sword',
+    id: 'third_blade', name: 'La 3ᵉ Lame de Zoro', god: 'Chasseur de Pirates', category: 'divine', rarity: 'rare', icon: 'sword',
     description: 'Un katana noir tournoie autour du chaton et tranche les ennemis (8 dégâts).',
     apply(p) { p.mods.orbitBlade = (p.mods.orbitBlade || 0) + 1; },
   },
@@ -548,7 +548,7 @@ export const POWERS: PowerDef[] = [
     },
   },
   {
-    id: 'mjolnir', name: 'Mjölnir', god: 'Dieu du Tonnerre', category: 'divine', rarity: 'epic', icon: 'lightning',
+    id: 'mjolnir', name: 'Le Marteau de Thor', god: 'Dieu du Tonnerre', category: 'divine', rarity: 'epic', icon: 'lightning',
     description: 'Un marteau électrique tournoie autour du chaton (contact 10) et s’abat en foudre toutes les 5 s (35, rayon 90).',
     apply(p) {
       p.mods.orbitHammer = (p.mods.orbitHammer || 0) + 1; // marteau tournant visible + traînée électrique

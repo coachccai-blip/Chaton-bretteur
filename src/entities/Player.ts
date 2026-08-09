@@ -506,12 +506,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
    * qu'elle croise (cooldown par ennemi).
    */
   private updateOrbitBlades(now: number, dt: number): void {
-    this.orbitAngle += (dt / 1000) * (Math.PI * 2); // référence : 1 tour / s
+    // Wilix Rollerblade : ×3 armes en orbite (orbitMult) et +300% de vitesse de
+    // rotation (orbitSpeedMult = ×4). Sans arme orbitale, l'effet est nul.
+    const orbMult = this.mods.orbitMult || 1;
+    const orbSpeed = this.mods.orbitSpeedMult || 1;
+    this.orbitAngle += (dt / 1000) * (Math.PI * 2) * orbSpeed; // référence : 1 tour / s
     // Katana : 1 tour / 1,2 s, pointe vers l'extérieur. Rayon DOUBLÉ (132).
-    this.syncOrbitWeapon(this.orbitBlades, this.mods.orbitBlade || 0, 'katana_black', 132,
+    this.syncOrbitWeapon(this.orbitBlades, (this.mods.orbitBlade || 0) * orbMult, 'katana_black', 132,
       this.orbitAngle / 1.2, 8 + this.stats.swordDamage[0] * 0.3, 24, now, (a) => a + Math.PI / 2, false);
     // Mjölnir : 1 tour / 1,6 s, culbute + traînée électrique. Rayon DOUBLÉ (116).
-    this.syncOrbitWeapon(this.orbitHammers, this.mods.orbitHammer || 0, 'hammer_thor', 116,
+    this.syncOrbitWeapon(this.orbitHammers, (this.mods.orbitHammer || 0) * orbMult, 'hammer_thor', 116,
       this.orbitAngle / 1.6, 10, 27, now, () => this.orbitAngle * 2.4, true);
   }
 
@@ -1020,7 +1024,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (this.mods.nettoyage) this.roomDamageBonus = 0;
     this.mods.hitThisRoom = 1;
     let dmg = amount * (1 - this.stats.armor);
-    if (this.mods.rugissement) dmg *= Math.max(0.5, 1 - 0.10 * this.mods.rugissement); // Rugissement
     if (this.mods.transformActive) dmg *= 0.5; // Titan / Gear Fifth : -50% de dégâts subis
     // Peau de Vibranium : premier coup de la salle réduit
     if (this.mods.firstHitRoom && this.mods.vibranium) { dmg *= 0.5; this.mods.firstHitRoom = 0; }
