@@ -799,6 +799,52 @@ export const FROST: SpriteDef = {
   ],
 };
 
+/** Particule de FEU (7x8) : petite braise/flamme (boons de brûlure sur l'épée). */
+export const SPARK_FIRE: SpriteDef = {
+  key: 'spark_fire',
+  pal: { '.': null, 'r': '#c0350f', 'o': '#ff6a1f', 'O': '#ffb020', 'y': '#ffe89a' },
+  rows: [
+    '...y...',
+    '..oOo..',
+    '.oOyOo.',
+    '.oOyOo.',
+    '.rOOOr.',
+    '.rooor.',
+    '..ror..',
+    '...r...',
+  ],
+};
+
+/** Particule de GEL (7x7) : éclat de glace / flocon (boons de gel sur l'épée). */
+export const SPARK_FROST: SpriteDef = {
+  key: 'spark_frost',
+  pal: { '.': null, 'H': '#7fdcff', 'C': '#bfeaff', 'W': '#eafcff' },
+  rows: [
+    '...W...',
+    '.H.C.H.',
+    '..CWC..',
+    'WCWWWCW',
+    '..CWC..',
+    '.H.C.H.',
+    '...W...',
+  ],
+};
+
+/** Particule de POISON (7x7) : bulle/goutte de venin (boons de poison sur l'épée). */
+export const SPARK_POISON: SpriteDef = {
+  key: 'spark_poison',
+  pal: { '.': null, 'd': '#3a6a1e', 'g': '#5aa02e', 'G': '#8fd94a', 'l': '#c9f07a' },
+  rows: [
+    '..GGG..',
+    '.GGlGG.',
+    'GGllGGG',
+    'GGGGGGG',
+    'dGGGGGd',
+    '.dGGGd.',
+    '..ddd..',
+  ],
+};
+
 /** Stalactite de glace (10x16) qui tombe du ciel — pointe vers le bas. */
 export const ICE_STALACTITE: SpriteDef = {
   key: 'ice_stalactite',

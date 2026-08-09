@@ -27,6 +27,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   private dashing = false;
   private dashEndAt = 0;
   private nextSparkAt = 0; // cadence des étincelles de Chidori
+  private tumbleReady = 0;  // Roulade (Vayne) : stacks de +30% pour la prochaine attaque après un dash
 
   // combat
   private comboIndex = 0;
@@ -454,6 +455,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       body.setVelocity(dir.x * speed, dir.y * speed);
     }
     this.dashing = true;
+    // Roulade (Vayne) : arme la prochaine attaque (+30% par stack) après ce dash.
+    if (this.mods.tumble) this.tumbleReady = this.mods.tumble;
     // Téléport = dash « instantané » : il se termine dès la frame suivante, ce qui
     // déclenche quand même les effets de fin de dash (Rasengan, etc.) à l'arrivée.
     this.dashEndAt = now + (teleport ? 1 : this.stats.dashDuration);
@@ -813,6 +816,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       this.gs.juice.ring(cx, cy, R * 0.92, col, 240);
       this.gs.juice.burst(tipX, tipY, col, 12, 220, 1.2);
     }
+    // Particules élémentaires sur la lame si le joueur porte un boon de feu/gel/poison.
+    this.gs.elementSlash(cx, cy, aimAngle, R, finisher ? 7 : 5);
   }
 
   /** Direction normalisée vers l'ennemi vivant le plus proche (ou null). */
@@ -833,7 +838,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const dmgTable = this.stats.swordDamage;
     const idxForDamage = Math.min(this.comboIndex, dmgTable.length - 1);
     const isFinisher = this.comboIndex === this.maxCombo - 1 || this.comboIndex >= dmgTable.length - 1;
-    const baseDmg = dmgTable[idxForDamage] ?? dmgTable[dmgTable.length - 1];
+    let baseDmg = dmgTable[idxForDamage] ?? dmgTable[dmgTable.length - 1];
+    // Roulade (Vayne) : la 1re attaque après un dash est boostée de +30% par stack.
+    const tumbling = this.tumbleReady > 0;
+    if (tumbling) baseDmg = Math.round(baseDmg * (1 + 0.30 * this.tumbleReady));
     const range = this.meleeRange();
     const aimAngle = Math.atan2(this.aim.y, this.aim.x);
     this.slashVfx(aimAngle, this.comboIndex, this.maxCombo);
@@ -854,6 +862,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       // Tremblement d'impact allégé (en plus de la compensation RENDER_SCALE) :
       // un coup d'épée ne doit pas secouer tout l'écran.
       this.gs.juice.shake(isFinisher ? 100 : 55, isFinisher ? 0.0045 : 0.0022);
+      // Roulade : la frappe boostée est consommée (éclat doré) une fois qu'elle touche.
+      if (tumbling) { this.tumbleReady = 0; this.gs.juice.burst(this.x, this.y - 8, 0xffe066, 10, 220, 1.1); }
     }
     // Susanoo : une lame spectrale VIOLETTE prolonge l'attaque (+portée, +dégâts).
     if (this.mods.susanoo > 0) {

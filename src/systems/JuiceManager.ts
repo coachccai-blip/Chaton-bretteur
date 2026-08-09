@@ -186,10 +186,10 @@ export class JuiceManager {
 
   /** Texte flottant (dégâts, gains). */
   /** Nombre de dégâts flottant : apparaît brièvement puis monte et s'efface. */
-  damageNumber(x: number, y: number, amount: number, crit = false): void {
+  damageNumber(x: number, y: number, amount: number, crit = false, colorOverride?: string): void {
     if (amount <= 0) return;
     const size = crit ? 22 : 15;
-    const color = crit ? '#ffd402' : '#ffffff';
+    const color = colorOverride ?? (crit ? '#ffd402' : '#ffffff');
     const jx = x + Phaser.Math.Between(-9, 9);
     const t = this.scene.add.text(jx, y, crit ? `${amount}!` : `${amount}`, {
       fontFamily: 'monospace', fontSize: `${size}px`, color, fontStyle: 'bold',

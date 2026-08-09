@@ -100,9 +100,9 @@ export const POWERS: PowerDef[] = [
     apply(p) { p.stats.greed += 0.25; },
   },
   {
-    id: 'quick_attack', name: 'Vive-Attaque', god: 'Dresseur', category: 'dash', rarity: 'common', icon: 'dash', repeatable: true,
-    description: '+25% de distance de dash.',
-    apply(p) { p.stats.dashDistance = Math.round(p.stats.dashDistance * 1.25); },
+    id: 'roulade', name: 'Roulade', god: 'Vayne', category: 'dash', rarity: 'common', icon: 'dash', repeatable: true,
+    description: '+10% de distance de dash. Après un dash, la prochaine attaque inflige +30% (cumulable).',
+    apply(p) { p.stats.dashDistance = Math.round(p.stats.dashDistance * 1.10); p.mods.tumble = (p.mods.tumble || 0) + 1; },
   },
   {
     id: 'wilix_rollerblade', name: 'Wilix Rollerblade', god: 'Patineur Cosmique', category: 'attack', rarity: 'epic', icon: 'lightning', repeatable: true,
@@ -198,12 +198,12 @@ export const POWERS: PowerDef[] = [
   {
     id: 'fire_fang', name: 'Croc de Feu', god: 'Dresseur', category: 'divine', rarity: 'common', icon: 'flame', repeatable: true,
     description: '10% de chance d’appliquer une BRÛLURE légère par coup.',
-    apply(p) { p.stats.fangBurn += 0.10; },
+    apply(p) { p.stats.fangBurn += 0.10; p.mods.elemFire = 1; },
   },
   {
     id: 'ice_fang', name: 'Croc de Givre', god: 'Dresseur', category: 'divine', rarity: 'common', icon: 'freeze', repeatable: true,
     description: '10% de chance d’appliquer un GEL court par coup.',
-    apply(p) { p.stats.fangFreeze += 0.10; },
+    apply(p) { p.stats.fangFreeze += 0.10; p.mods.elemFreeze = 1; },
   },
   {
     id: 'thunder_fang', name: 'Croc Éclair', god: 'Dresseur', category: 'divine', rarity: 'common', icon: 'lightning', repeatable: true,
@@ -345,17 +345,17 @@ export const POWERS: PowerDef[] = [
   {
     id: 'flamme_igneel', name: 'Flamme d’Igneel', god: 'Dragon de Feu', category: 'divine', rarity: 'rare', icon: 'flame', repeatable: true,
     description: 'Les coups appliquent BRÛLURE (dégâts de feu sur 3 s).',
-    apply(p) { p.addOnHit((e) => e.applyStatus('burn', 3000)); },
+    apply(p) { p.addOnHit((e) => e.applyStatus('burn', 3000)); p.mods.elemFire = 1; },
   },
   {
     id: 'givre_rukia', name: 'Givre de Rukia', god: 'Danse de Glace', category: 'divine', rarity: 'rare', icon: 'freeze', repeatable: true,
     description: 'Les coups ont 10% de chances d’appliquer GEL (1,6 s) : ralentit puis fige.',
-    apply(p) { p.addOnHit((e) => { if (Math.random() < 0.10) e.applyStatus('freeze', 1600); }); },
+    apply(p) { p.addOnHit((e) => { if (Math.random() < 0.10) e.applyStatus('freeze', 1600); }); p.mods.elemFreeze = 1; },
   },
   {
     id: 'crocs_venin', name: 'Crocs Venimeux', god: 'Serpent', category: 'divine', rarity: 'rare', icon: 'poison', repeatable: true,
     description: 'Les coups appliquent POISON (3 s, dégâts croissants).',
-    apply(p) { p.addOnHit((e) => e.applyStatus('poison', 3000)); },
+    apply(p) { p.addOnHit((e) => e.applyStatus('poison', 3000)); p.mods.elemPoison = 1; },
   },
   {
     id: 'rasengan', name: 'Rasengan', god: 'Tourbillon', category: 'divine', rarity: 'rare', icon: 'spiral',
@@ -373,9 +373,9 @@ export const POWERS: PowerDef[] = [
     apply(p) { p.stats.dodgeChance += 0.18; },
   },
   {
-    id: 'spiky_fur', name: 'Poils Piquants', god: 'Ronce', category: 'defense', rarity: 'rare', icon: 'thorns',
-    description: 'Renvoie 45% des dégâts subis à l’attaquant.',
-    apply(p) { p.stats.thorns += 0.45; },
+    id: 'spiky_fur', name: 'Poil Voile Miroir', god: 'Ronce', category: 'defense', rarity: 'rare', icon: 'thorns',
+    description: 'Pendant le dash, invincible aux projectiles : ils sont renvoyés vers l’ennemi le plus proche (×1,5 dégâts).',
+    apply(p) { p.mods.mirrorVeil = 1; },
   },
   {
     id: 'wide_whirl', name: 'Tourbillon Ample', god: 'Vent Tranchant', category: 'special', rarity: 'rare', icon: 'special', repeatable: true,
@@ -587,7 +587,7 @@ export const POWERS: PowerDef[] = [
   {
     id: 'amaterasu', name: 'Flammes d’Amaterasu', god: 'Œil Éternel', category: 'divine', rarity: 'epic', icon: 'flame',
     description: 'Les coups critiques appliquent BRÛLURE NOIRE : DoT doublé, inextinguible, se propage.',
-    apply(p) { p.addOnHit((e, _d, isCrit) => { if (isCrit) e.applyStatus('blackburn', 4000); }); },
+    apply(p) { p.addOnHit((e, _d, isCrit) => { if (isCrit) e.applyStatus('blackburn', 4000); }); p.mods.elemFire = 1; },
   },
 
   // ============================================================
@@ -669,7 +669,7 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'koji_bond', name: 'Koji Bond', god: 'Lien du Rayon', category: 'divine', rarity: 'legendary', icon: 'wave',
-    description: 'Chaque frappe fait ricocher un laser : tous les monstres de la zone subissent 5% des dégâts infligés.',
+    description: 'Chaque frappe fait ricocher un laser : tous les monstres de la zone subissent 15% des dégâts infligés.',
     apply(p) {
       p.addOnHit((target, dmg) => { p.combat.kojiLaser(target.x, target.y, dmg); });
     },

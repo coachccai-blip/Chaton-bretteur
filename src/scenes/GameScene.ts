@@ -1910,7 +1910,36 @@ export class GameScene extends Phaser.Scene {
    * Coup de sabre spectral porté par le clone d'ombre : croissant visible à la
    * position du clone + dégâts d'arc aux ennemis proches dans la direction visée.
    */
+  /** Particules élémentaires le long d'un arc de coup d'épée, selon les boons du
+   *  joueur (feu / gel / poison). Utilisé par le héros ET par tous ses clones. */
+  elementSlash(x: number, y: number, angle: number, range: number, count = 5): void {
+    const p = this.player;
+    if (!p || p.dead) return;
+    const specs: string[] = [];
+    if (p.mods.elemFire) specs.push('spark_fire');
+    if (p.mods.elemFreeze) specs.push('spark_frost');
+    if (p.mods.elemPoison) specs.push('spark_poison');
+    if (!specs.length) return;
+    const span = 1.0;
+    for (const tex of specs) {
+      for (let i = 0; i < count; i++) {
+        const a = angle - span + (i / Math.max(1, count - 1)) * span * 2 + (Math.random() - 0.5) * 0.2;
+        const r = range * (0.72 + Math.random() * 0.24);
+        const sx = x + Math.cos(a) * r, sy = y + Math.sin(a) * r;
+        const s = this.add.image(sx, sy, tex).setDepth(24).setScale(0.5 + Math.random() * 0.5).setAlpha(0.95);
+        if (tex !== 'spark_poison') s.setBlendMode(Phaser.BlendModes.ADD); // feu/gel lumineux
+        const drift = 12 + Math.random() * 18;
+        this.tweens.add({
+          targets: s, x: sx + Math.cos(a) * drift, y: sy + Math.sin(a) * drift - 8,
+          alpha: 0, scale: s.scaleX * 0.35, angle: (Math.random() - 0.5) * 220,
+          duration: 240 + Math.random() * 200, ease: 'Cubic.easeOut', onComplete: () => s.destroy(),
+        });
+      }
+    }
+  }
+
   spectralSlash(cx: number, cy: number, aimAngle: number, range: number, damage: number): void {
+    this.elementSlash(cx, cy, aimAngle, range, 3); // particules élémentaires (clones)
     const span = 1.1, col = 0x9a5cff;
     const g = this.add.graphics().setDepth(22);
     g.lineStyle(14, col, 0.55);
@@ -1967,7 +1996,7 @@ export class GameScene extends Phaser.Scene {
    * la zone, chacun subissant 5% des dégâts infligés. VFX limité pour rester fluide.
    */
   kojiLaser(x: number, y: number, damage: number): void {
-    const lz = Math.max(1, Math.round(damage * 0.05));
+    const lz = Math.max(1, Math.round(damage * 0.15));
     const targets = this.getTargets().filter((e) => e.isAlive());
     if (!targets.length) return;
     // Chaîne de ricochet par proximité (départ = monstre frappé).

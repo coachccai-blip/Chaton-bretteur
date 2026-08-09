@@ -281,6 +281,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         if (dmg > 0) {
           this.hp -= dmg;
           this.gs.juice.burst(this.x, this.y - 12, this.dotColor(key), 3, 60, 0.5);
+          // Nombres de dégâts de DoT : brûlure en ROUGE, poison en VERT (montent puis s'effacent).
+          const dotCol = (key === 'burn' || key === 'blackburn') ? '#ff4a2a' : key === 'poison' ? '#7bd93a' : undefined;
+          if (dotCol) this.gs.juice.damageNumber(this.x, this.y - this.displayHeight * 0.55, dmg, false, dotCol);
           if (this.hp <= 0) { this.kill(true); return; }
         }
       }

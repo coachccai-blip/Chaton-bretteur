@@ -656,8 +656,9 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         break;
       }
       case 'icePylons': {
-        // 4 pilônes d'invincibilité aux coins ; à briser pour blesser le boss
-        this.gs.spawnIcePylons(m.damage ?? 120);
+        // 4 pilônes d'invincibilité aux coins ; à briser pour blesser le boss.
+        // Chaque pilône a AUTANT de PV que Glacior lui-même (les casser est un vrai enjeu).
+        this.gs.spawnIcePylons(this.maxHp);
         this.gs.juice.ring(this.x, this.y, 120, 0x7fdcff, 420);
         done(300);
         break;
