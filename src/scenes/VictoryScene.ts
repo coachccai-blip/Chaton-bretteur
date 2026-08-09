@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config/game';
+import { GAME_WIDTH, GAME_HEIGHT, COLORS, RENDER_SCALE } from '../config/game';
 import { button, label, panel } from '../ui/theme';
 import { RunState } from '../systems/RunState';
 import { SaveSystem, formatTime } from '../systems/SaveSystem';
@@ -10,6 +10,7 @@ export class VictoryScene extends Phaser.Scene {
   constructor() { super('Victory'); }
 
   create(): void {
+    this.cameras.main.setZoom(RENDER_SCALE).centerOn(GAME_WIDTH / 2, GAME_HEIGHT / 2);
     this.cameras.main.setBackgroundColor(0x1a1430);
     this.add.tileSprite(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 'floor_citadelle').setAlpha(0.25);
     AudioManager.play('victory');

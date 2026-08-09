@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT, WORLD_ZOOM, COLORS, REWARDS } from '../config/game';
+import { GAME_WIDTH, GAME_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT, WORLD_ZOOM, RENDER_SCALE, COLORS, REWARDS } from '../config/game';
 import { ZONES, type ZoneDef } from '../config/worlds';
 import { ENEMIES } from '../config/enemies';
 import { BOSSES } from '../config/bosses';
@@ -185,8 +185,9 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(COLORS.bg);
     // dézoom : affiche le monde 1200×675 dans le canvas 960×540 (personnage
     // plus petit, plus d'espace). L'ATH (UIScene) reste en 960×540.
-    this.cameras.main.setZoom(WORLD_ZOOM);
-    this.cameras.main.setScroll((WORLD_WIDTH - GAME_WIDTH) / 2, (WORLD_HEIGHT - GAME_HEIGHT) / 2);
+    this.cameras.main.setZoom(WORLD_ZOOM * RENDER_SCALE);
+    // Le zoom pivote autour du centre caméra → on cadre par centerOn (robuste au zoom).
+    this.cameras.main.centerOn(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
     this.physics.world.setBounds(ARENA.x, ARENA.y, ARENA.w, ARENA.h);
 
     this.juice = new JuiceManager(this);
@@ -1365,8 +1366,8 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     cam.stopFollow();
     cam.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    cam.setZoom(WORLD_ZOOM);
-    cam.setScroll((WORLD_WIDTH - GAME_WIDTH) / 2, (WORLD_HEIGHT - GAME_HEIGHT) / 2);
+    cam.setZoom(WORLD_ZOOM * RENDER_SCALE);
+    cam.centerOn(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
     cam.setBackgroundColor(0x0a0d08);
     this.clearRoom(); // retire murs, bordures et props de la salle précédente
     this.floor?.setVisible(false);

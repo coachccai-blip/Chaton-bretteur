@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, COLORS } from './config/game';
+import { GAME_WIDTH, GAME_HEIGHT, RENDER_SCALE, COLORS } from './config/game';
 import { BootScene } from './scenes/BootScene';
 import { MenuScene } from './scenes/MenuScene';
 import { HubScene } from './scenes/HubScene';
@@ -28,8 +28,11 @@ const config: Phaser.Types.Core.GameConfig = {
     // centrer (CENTER_BOTH) ajoutait une marge → double décalage (plus de noir
     // d'un côté). NO_CENTER = centrage uniquement par le flex → bordures égales.
     autoCenter: Phaser.Scale.NO_CENTER,
-    width: GAME_WIDTH,
-    height: GAME_HEIGHT,
+    // Backing store NATIF 1920×1080 : on double la résolution réelle du canvas.
+    // Les scènes continuent d'être écrites en 960×540 grâce à un zoom caméra ×2
+    // (×RENDER_SCALE), donc AUCUNE coordonnée logique ne change.
+    width: GAME_WIDTH * RENDER_SCALE,
+    height: GAME_HEIGHT * RENDER_SCALE,
     // Plein écran sur le conteneur #game (stable) plutôt que sur le seul <canvas> :
     // ainsi l'overlay des boutons tactiles (enfant de #game) reste visible en plein
     // écran au lieu d'être masqué par le canvas fullscreené seul.

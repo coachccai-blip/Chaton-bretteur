@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from '../config/game';
+import { GAME_WIDTH, GAME_HEIGHT, RENDER_SCALE } from '../config/game';
 import { button, label, panel } from '../ui/theme';
 import { AudioManager } from '../systems/AudioManager';
 import type { GameScene } from './GameScene';
@@ -14,6 +14,7 @@ export class FinalChoiceScene extends Phaser.Scene {
   init(data: { gameScene: GameScene }): void { this.gs = data.gameScene; }
 
   create(): void {
+    this.cameras.main.setZoom(RENDER_SCALE).centerOn(GAME_WIDTH / 2, GAME_HEIGHT / 2);
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x05030a, 0.82);
     panel(this, GAME_WIDTH / 2, GAME_HEIGHT / 2, 560, 300);
     label(this, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 108, 'LE NÉANT EST VAINCU', 26, '#f4c430');

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config/game';
+import { GAME_WIDTH, GAME_HEIGHT, COLORS, RENDER_SCALE } from '../config/game';
 import { label, iconBadge } from '../ui/theme';
 import { rollChoices } from '../systems/PowerSystem';
 import { RARITY_COLORS, RARITY_NAMES, FALLBACK_BOONS, type PowerDef, type Rarity } from '../config/powers';
@@ -18,6 +18,7 @@ export class RewardScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.cameras.main.setZoom(RENDER_SCALE).centerOn(GAME_WIDTH / 2, GAME_HEIGHT / 2);
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.72);
 
     const luck = this.gameScene.player.stats.luck;

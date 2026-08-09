@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config/game';
+import { GAME_WIDTH, GAME_HEIGHT, COLORS, RENDER_SCALE } from '../config/game';
 import { button, label, panel } from '../ui/theme';
 import { RunState } from '../systems/RunState';
 import { ZONES } from '../config/worlds';
@@ -10,6 +10,7 @@ export class GameOverScene extends Phaser.Scene {
   constructor() { super('GameOver'); }
 
   create(): void {
+    this.cameras.main.setZoom(RENDER_SCALE).centerOn(GAME_WIDTH / 2, GAME_HEIGHT / 2);
     this.cameras.main.setBackgroundColor(0x1a0f14);
     this.add.tileSprite(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 'floor_forge').setAlpha(0.15);
     AudioManager.stopMusic();

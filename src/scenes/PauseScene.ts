@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config/game';
+import { GAME_WIDTH, GAME_HEIGHT, COLORS, RENDER_SCALE } from '../config/game';
 import { button, label, panel } from '../ui/theme';
 import { SaveSystem } from '../systems/SaveSystem';
 import { AudioManager } from '../systems/AudioManager';
@@ -11,6 +11,7 @@ export class PauseScene extends Phaser.Scene {
   init(data: { gameScene: GameScene }): void { this.gs = data.gameScene; }
 
   create(): void {
+    this.cameras.main.setZoom(RENDER_SCALE).centerOn(GAME_WIDTH / 2, GAME_HEIGHT / 2);
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.7);
     panel(this, GAME_WIDTH / 2, GAME_HEIGHT / 2, 400, 360);
     label(this, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 138, 'PAUSE', 32, '#f4c430');

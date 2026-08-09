@@ -3,6 +3,15 @@ import Phaser from 'phaser';
 /** Un art pixel = un bloc de ART_CELL px dans la texture (rendu net via pixelArt). */
 export const ART_CELL = 4;
 
+/**
+ * Densité DOUBLE réservée aux PERSONNAGES (héros, monstres, boss) : leurs textures
+ * ont 2× plus de pixels pour exploiter le rendu natif 1920×1080. On compense en
+ * divisant leur échelle d'affichage par CHAR_COMP → taille à l'écran / hitbox INCHANGÉES,
+ * seulement plus de détail. Effets, icônes, sols, projectiles restent en ART_CELL.
+ */
+export const CHAR_CELL = 8;
+export const CHAR_COMP = ART_CELL / CHAR_CELL; // 0.5 : facteur à appliquer à l'échelle des persos
+
 /** Sprite multicolore : chaque caractère de `rows` renvoie à une couleur de `pal`. */
 export interface SpriteDef {
   key: string;

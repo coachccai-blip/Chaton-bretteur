@@ -7,6 +7,13 @@ export const GAME_WIDTH = 960;
 export const GAME_HEIGHT = 540;
 
 /**
+ * Facteur de rendu NATIF : le canvas fait GAME_WIDTH×RENDER_SCALE (=1920×1080),
+ * mais toutes les scènes restent écrites en 960×540 grâce à un zoom caméra
+ * ×RENDER_SCALE. → 4× plus de pixels réels, zéro coordonnée logique à changer.
+ */
+export const RENDER_SCALE = 2;
+
+/**
  * Dimensions du MONDE de jeu (plus grandes que le canvas) : la caméra de la
  * scène de jeu est dézoomée (0.8) pour afficher tout ce monde, ce qui donne
  * ~20% d'espace de jeu en plus et un personnage 20% plus petit à l'écran.

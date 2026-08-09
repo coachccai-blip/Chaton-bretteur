@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config/game';
+import { GAME_WIDTH, GAME_HEIGHT, COLORS, RENDER_SCALE } from '../config/game';
 import { label, iconBadge } from '../ui/theme';
 import { glyphTexture } from '../art/icons';
 import type { GameScene } from './GameScene';
@@ -56,6 +56,7 @@ export class UIScene extends Phaser.Scene {
   init(data: { gameScene: GameScene }): void { this.gs = data.gameScene; }
 
   create(): void {
+    this.cameras.main.setZoom(RENDER_SCALE).centerOn(GAME_WIDTH / 2, GAME_HEIGHT / 2);
     // Armure (bouclier ramassé) : barre grise distincte AU-DESSUS de la vie.
     this.shieldBg = this.add.graphics().setDepth(1).setVisible(false);
     this.shieldBg.fillStyle(0x14161c, 1).fillRoundedRect(18, 6, 264, 8, 4);

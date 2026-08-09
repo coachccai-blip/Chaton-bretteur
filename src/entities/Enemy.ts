@@ -6,6 +6,7 @@ import type { Element, IEnemyLike } from '../config/types';
 import { getDifficulty } from '../config/difficulty';
 import { RunState } from '../systems/RunState';
 import { BlackFlameFx } from './BlackFlameFx';
+import { CHAR_COMP } from '../art/PixelArtGenerator';
 
 type State = 'idle' | 'telegraph' | 'charging' | 'recover' | 'signature';
 
@@ -32,6 +33,8 @@ export function reactKey(a: Element, b: Element): string {
 export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   gs: GameScene;
   def: EnemyDef;
+  /** Échelle d'affichage réelle = def.scale compensée (textures densifiées CHAR_CELL). */
+  private baseScale = 1;
   maxHp: number;
   hp: number;
   damage: number;
@@ -84,19 +87,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     scene.physics.add.existing(this);
     this.setDepth(15);
     this.setOrigin(0.5, 0.9);
-    this.setScale(def.scale);
+    // Compensation d'échelle : seules les textures « critter » (mob_*) sont
+    // densifiées à CHAR_CELL. Les mini-boss/tourelles/chars qui réutilisent un
+    // sprite dessiné à la main (def.texKey) restent en ART_CELL → pas de
+    // compensation. Pour un critter : this.width double, on divise l'échelle par
+    // le même facteur (CHAR_COMP) → produits width×scale (affichage ET hitbox)
+    // identiques à avant.
+    const scale = def.scale * (def.texKey ? 1 : CHAR_COMP);
+    this.baseScale = scale;
+    this.setScale(scale);
     const body = this.body as Phaser.Physics.Arcade.Body;
-    const bw = this.width * def.scale * 0.5;
-    const bh = this.height * def.scale * 0.4;
-    body.setSize(bw / def.scale, bh / def.scale);
-    body.setOffset((this.width - bw / def.scale) / 2, this.height * 0.55);
+    const bw = this.width * scale * 0.5;
+    const bh = this.height * scale * 0.4;
+    body.setSize(bw / scale, bh / scale);
+    body.setOffset((this.width - bw / scale) / 2, this.height * 0.55);
     body.setCollideWorldBounds(true);
     body.setBounce(0.2);
 
     this.nextActionAt = performance.now() + 400 + Math.random() * 800;
     this.sigNextAt = performance.now() + 1800 + Math.random() * 1600;
-    this.setScale(def.scale * 0.2);
-    scene.tweens.add({ targets: this, scaleX: def.scale, scaleY: def.scale, duration: 220, ease: 'Back.easeOut' });
+    this.setScale(scale * 0.2);
+    scene.tweens.add({ targets: this, scaleX: scale, scaleY: scale, duration: 220, ease: 'Back.easeOut' });
   }
 
   isAlive(): boolean { return this.alive; }
@@ -343,13 +354,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     const color = sig.color ?? 0xffd24a;
     const p = this.gs.player;
     this.setTintFill(0xffffff);
-    this.gs.tweens.add({ targets: this, scaleX: this.def.scale * 1.15, scaleY: this.def.scale * 1.15, duration: sig.telegraph, ease: 'Sine.easeInOut' });
+    this.gs.tweens.add({ targets: this, scaleX: this.baseScale * 1.15, scaleY: this.baseScale * 1.15, duration: sig.telegraph, ease: 'Sine.easeInOut' });
     const endSig = () => {
       if (!this.alive) return; // le monstre a pu mourir pendant le télégraphe
       this.aiState = 'idle';
       this.sigNextAt = performance.now() + this.cd(sig.cooldown);
       this.clearTint();
-      this.setScale(this.def.scale);
+      this.setScale(this.baseScale);
     };
 
     switch (sig.type) {
@@ -467,7 +478,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.bobT += dt / 1000 * 8;
     const moving = body.velocity.lengthSq() > 100;
     const bob = Math.sin(this.bobT) * (moving ? 0.08 : 0.04);
-    const s = this.def.scale;
+    const s = this.baseScale;
     if (this.aiState !== 'telegraph' && this.aiState !== 'signature') this.setScale(s * (1 - bob * 0.4), s * (1 + bob));
     // NB : l'orientation (flipX) est gérée dans update() à partir de l'intention.
   }
@@ -690,7 +701,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     ms = Math.round(this.cd(ms) * (this.gs.player?.stats.telegraphMult ?? 1)); // Sens du Chaton
     this.aiState = 'telegraph';
     this.setTintFill(color);
-    const s = this.def.scale;
+    const s = this.baseScale;
     this.gs.tweens.add({ targets: this, scaleX: s * 1.25, scaleY: s * 1.25, duration: ms, yoyo: false, ease: 'Sine.easeInOut' });
     this.gs.time.delayedCall(ms, () => {
       if (!this.alive) return;
@@ -735,7 +746,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     this.hpFill?.destroy();
     this.blackFlame?.destroy(); this.blackFlame = undefined;
     this.gs.tweens.add({
-      targets: this, scaleX: this.def.scale * 1.3, scaleY: 0, alpha: 0, duration: 200,
+      targets: this, scaleX: this.baseScale * 1.3, scaleY: 0, alpha: 0, duration: 200,
       onComplete: () => this.destroy(),
     });
   }

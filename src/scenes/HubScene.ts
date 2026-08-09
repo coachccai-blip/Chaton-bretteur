@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config/game';
+import { GAME_WIDTH, GAME_HEIGHT, COLORS, RENDER_SCALE } from '../config/game';
 import { button, label, panel, iconBadge } from '../ui/theme';
 import { SaveSystem, formatTime } from '../systems/SaveSystem';
 import { META_UPGRADES } from '../config/metaUpgrades';
@@ -21,6 +21,7 @@ export class HubScene extends Phaser.Scene {
   constructor() { super('Hub'); }
 
   create(): void {
+    this.cameras.main.setZoom(RENDER_SCALE).centerOn(GAME_WIDTH / 2, GAME_HEIGHT / 2);
     this.cameras.main.setBackgroundColor(0x140f1e);
     this.add.tileSprite(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 'floor_foret').setAlpha(0.25);
 
