@@ -405,36 +405,55 @@ export function genBossSylvaan(scene: Phaser.Scene): void {
   for (const [lx, ly, rr] of [[13, 48, 5], [9, 54, 4], [12, 60, 4], [8, 44, 3]] as const) disc(g, lx, ly, rr, rr, g1);
   for (const [lx, ly] of [[10, 46], [7, 52], [11, 58]] as const) disc(g, lx, ly, 2.4, 2.4, g2);
 
-  // ---- torse humanoïde (se dresse à l'avant/droite) ----
-  disc(g, 44, 30, 9, 12, W1);
-  disc(g, 42, 28, 7, 10, a);
-  // épaules/pectoraux
-  disc(g, 40, 26, 5, 5, s);
-  // bras
-  disc(g, 52, 30, 3.4, 8, W1);
-  disc(g, 36, 30, 3.2, 7, o);
-  // crinière de feuilles sur les épaules
-  for (const [lx, ly, rr] of [[38, 20, 5], [44, 18, 5], [50, 22, 4], [34, 24, 4]] as const) disc(g, lx, ly, rr, rr * 0.9, g1);
-  for (const [lx, ly] of [[40, 18], [46, 17], [36, 22]] as const) disc(g, lx, ly, 2.6, 2.6, g2);
-
-  // ---- tête + ramure ----
-  disc(g, 47, 12, 6, 7, a);
-  disc(g, 46, 12, 4.5, 5.5, s);
-  // museau
-  disc(g, 51, 14, 3, 2.4, W1);
-  // ramure de cerf (branches)
-  for (const s2 of [-1, 1] as const) {
-    const bx = 47 + s2 * 3;
-    rect(g, Math.min(bx, bx + s2 * 6), 3, Math.max(bx, bx + s2 * 6), 4, o); // base courbe
-    tri(g, bx, 7, bx + s2 * 8, -2, bx + s2 * 2, 7, o);
-    tri(g, bx + s2 * 5, 2, bx + s2 * 11, -3, bx + s2 * 6, 3, o);           // andouiller
-    tri(g, bx + s2 * 2, 4, bx + s2 * 4, -4, bx + s2 * 3.5, 4, o);
+  // ---- arc de bois vivant (à droite, DERRIÈRE le bras) ----
+  for (let i = 0; i <= 18; i++) {
+    const t = i / 18, yy = 16 + t * 30, xx = 55 + Math.sin(t * Math.PI) * 6;
+    disc(g, xx, yy, 1.7, 1.7, o); disc(g, xx - 0.6, yy, 0.9, 1.2, a);
   }
-  // yeux lumineux verts
-  disc(g, 48.5, 11.5, 1.8, 1.6, gL);
-  disc(g, 49, 11.6, 0.9, 0.9, '#eaffd0');
-  // feuilles éparses sur le corps
-  for (const [lx, ly] of [[30, 44], [40, 46], [24, 50], [48, 48]] as const) disc(g, lx, ly, 2.2, 1.6, g2);
+  for (let i = 0; i <= 18; i++) { const t = i / 18; g[Math.round(16 + t * 30)][55] = k; } // corde
+  disc(g, 55, 16, 1.8, 1.8, s); disc(g, 55, 46, 1.8, 1.8, s);            // encoches
+
+  // ---- torse humanoïde (se dresse au centre-avant) ----
+  const tcx = 38;
+  disc(g, tcx, 34, 8, 13, W1);
+  disc(g, tcx - 1.5, 33, 6, 11, a);          // face avant plus claire
+  disc(g, tcx, 26, 9.5, 5, o);               // épaules larges
+  rect(g, tcx - 5, 31, tcx + 5, 31, o);      // nervures de bois (pectoraux)
+  rect(g, tcx - 4, 37, tcx + 4, 37, o);
+  // bras arrière (gauche, plié le long du corps)
+  disc(g, tcx - 8, 30, 3, 6, o);
+  disc(g, tcx - 8.5, 36, 2.6, 3, W1);
+  // bras avant (droit, tendu vers l'arc)
+  disc(g, tcx + 8, 30, 3, 6, W1);
+  disc(g, tcx + 13, 33, 2.6, 3, a);          // main sur la corde
+  rect(g, tcx + 8, 33, tcx + 13, 33, W1);    // avant-bras
+
+  // ---- crinière de feuilles (épaules/nuque) ----
+  for (const [lx, ly, rr] of [[tcx - 6, 22, 4.5], [tcx, 20, 5], [tcx + 6, 23, 4], [tcx - 2, 25, 4]] as const) disc(g, lx, ly, rr, rr * 0.9, g1);
+  for (const [lx, ly] of [[tcx - 4, 21], [tcx + 2, 19], [tcx + 5, 22]] as const) disc(g, lx, ly, 2.4, 2.4, g2);
+
+  // ---- tête (cervidé humanoïde, de face) ----
+  disc(g, tcx, 14, 6.5, 7, a);
+  disc(g, tcx - 1, 14, 5, 6, s);
+  disc(g, tcx, 18.5, 3.2, 2.4, W1);          // museau/menton
+  disc(g, tcx, 19, 0.9, 0.9, k);             // truffe
+  // yeux verts lumineux
+  for (const sx of [-1, 1] as const) { disc(g, tcx + sx * 2.6, 13.5, 1.7, 1.9, gD); disc(g, tcx + sx * 2.6, 13.2, 0.9, 1, gL); }
+  // touffe de feuilles frontale
+  for (const [lx, ly, rr] of [[tcx - 3, 8.5, 2.6], [tcx, 7.5, 3], [tcx + 3, 8.5, 2.6]] as const) disc(g, lx, ly, rr, rr, g1);
+
+  // ---- ramure de cerf (branchue) ----
+  for (const s2 of [-1, 1] as const) {
+    const bx = tcx + s2 * 4, by = 9;
+    tri(g, bx - 1.5, by, bx + s2 * 3, by - 15, bx + 1.5, by, o);          // tige
+    tri(g, bx + s2 * 1, by - 4, bx + s2 * 8, by - 6, bx + s2 * 2, by - 3, o);   // andouiller bas
+    tri(g, bx + s2 * 2, by - 8, bx + s2 * 9, by - 12, bx + s2 * 3, by - 7, o);  // andouiller mid
+    tri(g, bx + s2 * 2.5, by - 12, bx + s2 * 6, by - 18, bx + s2 * 3.5, by - 11, o); // pointe
+    disc(g, bx + s2 * 8, by - 6, 1.2, 1.2, g2); disc(g, bx + s2 * 9, by - 12, 1.2, 1.2, g2); // bourgeons
+  }
+
+  // feuilles éparses sur la croupe
+  for (const [lx, ly] of [[30, 46], [42, 48], [24, 52]] as const) disc(g, lx, ly, 2.2, 1.6, g2);
 
   outline(g, k);
   render(scene, 'boss_centaure', g);
@@ -519,37 +538,52 @@ export function genBossVoltair(scene: Phaser.Scene): void {
   // éclairs jaunes autour du nuage
   for (const [x0, y0] of [[16, 26], [52, 28]] as const) { rect(g, x0, y0, x0 + 1, y0 + 6, y); rect(g, x0 - 2, y0 + 6, x0 + 1, y0 + 7, y); rect(g, x0 - 2, y0 + 7, x0 - 1, y0 + 12, y); }
 
-  // ---- corps quadrupède (blanc) ----
-  disc(g, cx, 40, 20, 14, Wl);
-  disc(g, cx, 42, 17, 12, w);
-  // pattes noires (4)
-  for (const [lx, top] of [[18, 44], [28, 48], [40, 48], [50, 44]] as const) {
-    rect(g, lx - 4, top, lx + 4, 60, k);
-    disc(g, lx, 60, 5, 3, Wl);   // patte blanche
-  }
-  // caparaçon d'or (couverture dorsale) + emblème éclair
-  disc(g, cx, 36, 13, 7, Wl);
-  rect(g, cx - 13, 33, cx + 13, 34, g1);
-  rect(g, cx - 13, 42, cx + 13, 43, g1);
-  rect(g, cx - 1, 32, cx + 1, 37, y); rect(g, cx - 3, 37, cx + 1, 38, y); rect(g, cx - 3, 38, cx - 1, 43, y); // éclair d'or
-
-  // ---- tête de panda (avant, penchée) ----
-  disc(g, cx, 46, 12, 10, Wl);
-  disc(g, cx, 47, 10, 8.5, w);
-  // oreilles noires
-  for (const sx of [-1, 1] as const) disc(g, cx + sx * 9, 38, 4, 4, k);
-  // taches d'yeux noires (obliques, féroces)
+  // ---- jambes noires (2, arrondies) + pieds blancs ----
   for (const sx of [-1, 1] as const) {
-    tri(g, cx + sx * 2, 44, cx + sx * 9, 42, cx + sx * 8, 50, k);
-    disc(g, cx + sx * 5, 46, 1.8, 1.8, y);  // œil doré
-    disc(g, cx + sx * 5.4, 46, 0.9, 0.9, kk);
+    disc(g, cx + sx * 7, 54, 5.5, 6, k);
+    disc(g, cx + sx * 7, 59, 5.5, 3.5, Wl);           // pied blanc
+    for (let t = -1; t <= 1; t++) rect(g, cx + sx * 7 + t * 2, 60, cx + sx * 7 + t * 2, 61, k); // orteils
   }
-  // museau + nez
-  disc(g, cx, 51, 4, 3, w);
-  disc(g, cx, 50, 1.8, 1.4, kk);
-  // croc/éclair bleu en gueule
-  tri(g, cx - 4, 53, cx - 6, 60, cx - 1, 55, B);
-  tri(g, cx + 4, 53, cx + 6, 60, cx + 1, 55, B);
+
+  // ---- corps (torse blanc) + bras noirs ----
+  disc(g, cx, 44, 14, 13, Wl);
+  disc(g, cx, 46, 11, 11, w);
+  for (const sx of [-1, 1] as const) {
+    disc(g, cx + sx * 13, 42, 4, 8, k);               // bras noir
+    disc(g, cx + sx * 13, 49, 4, 3.5, Wl);            // patte blanche
+  }
+  // plastron d'or + emblème éclair
+  disc(g, cx, 44, 8, 7, g1);
+  disc(g, cx, 44, 6.5, 5.5, y);
+  rect(g, cx - 0.5, 39, cx + 2, 44, g1); rect(g, cx - 3, 44, cx + 0.5, 45, g1); rect(g, cx - 3, 45, cx - 0.5, 50, g1); // éclair
+
+  // ---- tête de panda (de face, au-dessus du corps) ----
+  disc(g, cx, 27, 12, 11, Wl);
+  disc(g, cx, 28, 10.5, 9.5, w);
+  disc(g, cx, 27, 9.5, 9, Wl);
+  // oreilles noires
+  for (const sx of [-1, 1] as const) { disc(g, cx + sx * 9, 18, 4.5, 4.5, k); disc(g, cx + sx * 9, 18, 2.4, 2.4, kk); }
+  // taches d'yeux noires (classiques, inclinées → féroce)
+  for (const sx of [-1, 1] as const) {
+    disc(g, cx + sx * 5, 27, 3.6, 4.4, k);
+    tri(g, cx + sx * 1.5, 22.5, cx + sx * 8.5, 24.5, cx + sx * 8.5, 27, k);  // pointe interne (sourcil)
+    disc(g, cx + sx * 5, 28, 2, 2.2, y);              // œil doré
+    disc(g, cx + sx * 5.6, 28.4, 1, 1.1, kk);
+  }
+  // museau + nez + bouche
+  disc(g, cx, 33, 4.5, 3, Wl);
+  disc(g, cx, 32.5, 1.8, 1.4, kk);
+  rect(g, cx - 2, 35, cx + 2, 35, kk);
+  // liseré d'or frontal (diadème)
+  rect(g, cx - 7, 20, cx + 7, 20.5, g1);
+  disc(g, cx, 20, 1.6, 1.6, y);
+
+  // ---- éclairs bleus (canines + arcs sur les côtés) ----
+  tri(g, cx - 3.5, 35.5, cx - 5, 40, cx - 1.5, 36.5, B);
+  tri(g, cx + 3.5, 35.5, cx + 5, 40, cx + 1.5, 36.5, B);
+  for (const [x0, dir] of [[3, -1], [W - 3, 1]] as const) {   // arcs d'éclair bleu extérieurs
+    rect(g, x0, 40, x0, 44, B); rect(g, x0 + dir, 44, x0 + dir, 45, B); rect(g, x0 + dir, 45, x0 + dir, 49, B);
+  }
 
   outline(g, kk);
   render(scene, 'boss_rapace', g);
