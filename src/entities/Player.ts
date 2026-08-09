@@ -77,7 +77,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   private orbitBlades: Phaser.GameObjects.Sprite[] = [];
   private orbitHammers: Phaser.GameObjects.Sprite[] = [];
   private orbitAngle = 0;
-  private orbitHit = new WeakMap<object, number>();
   private nextOrbitSpark = 0;
   // Susanoo : aura violette + buste spectral tant que le boon est actif.
   private susanooAura?: Phaser.GameObjects.Image;
@@ -532,17 +531,27 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     }
     while (arr.length < count) arr.push(this.gs.add.sprite(this.x, this.y, tex).setDepth(22).setOrigin(0.5, 0.5));
     for (let i = 0; i < arr.length; i++) {
+      const w = arr[i];
       const a = angle + (i / arr.length) * Math.PI * 2;
       const bx = this.x + Math.cos(a) * R, by = this.y - 8 + Math.sin(a) * R;
-      arr[i].setPosition(bx, by).setRotation(rot(a)).setVisible(!this.dead);
+      w.setPosition(bx, by).setRotation(rot(a)).setVisible(!this.dead);
       if (this.dead) continue;
+      // Dégâts À CHAQUE IMPACT : chaque arme frappe au FRONT du contact (entrée dans
+      // l'ennemi), suivi PAR ARME. Donc +d'armes (Wilix ×3) ET +de vitesse (Wilix +300%)
+      // = proportionnellement +d'impacts subis (aucun plafond partagé). Un ennemi qui
+      // sort puis re-rentre dans l'arme est de nouveau touché → 60 passages = 60 coups.
+      const prev = w.getData('touch') as Set<IEnemyLike> | undefined;
+      const cur = new Set<IEnemyLike>();
       for (const e of this.gs.getTargets()) {
         if (!e.isAlive()) continue;
         if (Math.hypot(e.x - bx, e.y - by) <= hitR) {
-          const wk = e as unknown as object;
-          if (now - (this.orbitHit.get(wk) ?? 0) > 350) { this.orbitHit.set(wk, now); this.dealDamage(e, dmg, false); }
+          cur.add(e);
+          // impact ! dégâts silencieux (pas de nombre/son par coup) pour rester lisible
+          // même à très haute cadence ; la barre de PV qui fond montre l'effet.
+          if (!prev?.has(e)) this.dealDamage(e, dmg, false, undefined, { silent: true });
         }
       }
+      w.setData('touch', cur);
       // Les armes orbitales DÉTRUISENT les projectiles ennemis qu'elles croisent.
       const projs = this.gs.projectiles.getChildren();
       for (let j = projs.length - 1; j >= 0; j--) {
@@ -872,8 +881,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     }
   }
 
-  /** applique dégâts + crit + rage + hooks + vol de vie + knockback + rafale. */
-  dealDamage(e: IEnemyLike, baseDmg: number, finisher: boolean, info?: HitInfo): void {
+  /** applique dégâts + crit + rage + hooks + vol de vie + knockback + rafale.
+   *  `opts.silent` : dégâts SANS le retour visuel/sonore par coup (armes orbitales
+   *  à haute cadence — Wilix — pour éviter le spam de nombres/sons). */
+  dealDamage(e: IEnemyLike, baseDmg: number, finisher: boolean, info?: HitInfo, opts?: { silent?: boolean }): void {
     this.markCombat();
     const anyE = e as unknown as { hp?: number; maxHp?: number; applySlow?: (f: number, ms: number) => void };
     // Poing de Saitama : élimination instantanée (hors boss)
@@ -892,7 +903,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (finisher) dmg *= 1.15;
     if (info?.first) dmg *= this.stats.firstComboMult; // Vitesse Extrême
     dmg = Math.round(dmg);
-    e.takeDamage(dmg, this.x, this.y, { crit: isCrit });
+    e.takeDamage(dmg, this.x, this.y, { crit: isCrit, silent: opts?.silent });
     if (finisher) this.applyKnockback(e, this.stats.knockback);
     // crocs élémentaires (chance on-hit) + ralentissement (Toile Légère)
     if (this.stats.fangBurn && Math.random() < this.stats.fangBurn) e.applyStatus('burn', 1500);
