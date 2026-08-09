@@ -2,6 +2,14 @@ import Phaser from 'phaser';
 import { ART_CELL } from './PixelArtGenerator';
 
 /**
+ * Suréchantillonnage du dessin des créatures : la grille de tracé est agrandie
+ * de ce facteur (formes plus fines), MAIS la texture finale garde EXACTEMENT la
+ * même taille en pixels qu'avant (rendu via des cellules fractionnaires ART_CELL/DETAIL).
+ * → +détail visuel, ZÉRO impact sur la taille à l'écran, la hitbox ou le gameplay.
+ */
+const CRITTER_DETAIL = 3;
+
+/**
  * Générateur paramétrique de "créatures" en pixel art.
  * Rasterise des primitives (disques, triangles) sur une grille -> pixels nets.
  * Permet des silhouettes variées (oreilles, cornes, ailes, chapeau, couronne…)
@@ -95,20 +103,26 @@ function outlinePass(g: Grid, color: string): void {
   for (const [x, y] of add) g[y][x] = color;
 }
 
-function render(scene: Phaser.Scene, key: string, g: Grid): void {
+function render(scene: Phaser.Scene, key: string, g: Grid, superscale = 1): void {
   const h = g.length, w = g[0].length;
-  const cw = w * ART_CELL, ch = h * ART_CELL;
+  // Taille de texture INCHANGÉE : la grille suréchantillonnée (w = w_logique × superscale)
+  // est rendue avec des cellules de ART_CELL/superscale px, tuilées sur des bornes ENTIÈRES
+  // (aucune couture) → même taille finale, mais dessin plus fin.
+  const s = ART_CELL / superscale;
+  const cw = Math.round(w * s), ch = Math.round(h * s);
   if (scene.textures.exists(key)) scene.textures.remove(key);
   const tex = scene.textures.createCanvas(key, cw, ch);
   if (!tex) return;
   const ctx = tex.getContext();
   ctx.clearRect(0, 0, cw, ch);
   for (let y = 0; y < h; y++) {
+    const py0 = Math.round(y * s), py1 = Math.round((y + 1) * s);
     for (let x = 0; x < w; x++) {
       const c = g[y][x];
       if (!c) continue;
+      const px0 = Math.round(x * s), px1 = Math.round((x + 1) * s);
       ctx.fillStyle = c;
-      ctx.fillRect(x * ART_CELL, y * ART_CELL, ART_CELL, ART_CELL);
+      ctx.fillRect(px0, py0, Math.max(1, px1 - px0), Math.max(1, py1 - py0));
     }
   }
   tex.refresh();
@@ -122,7 +136,9 @@ function render(scene: Phaser.Scene, key: string, g: Grid): void {
  * La masse reste centrée sur l'axe du canvas : le flip ne déplace pas la bête.
  */
 export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
-  const W = r.w, H = r.h;
+  // Grille de tracé suréchantillonnée : toutes les primitives sont placées en
+  // fractions de W/H, donc le dessin gagne en finesse sans autre changement.
+  const W = r.w * CRITTER_DETAIL, H = r.h * CRITTER_DETAIL;
   const g = makeGrid(W, H);
   const cx = W / 2;
   const bodyCy = H * 0.56;
@@ -255,7 +271,7 @@ export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
     }
   }
 
-  render(scene, key, g);
+  render(scene, key, g, CRITTER_DETAIL);
 }
 
 /**
