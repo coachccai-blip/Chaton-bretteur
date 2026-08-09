@@ -14,14 +14,14 @@ const MELEE_MOVES = new Set(['charge', 'roll', 'diveBomb', 'shockwave', 'lineSwe
 // invocations auto-télégraphiés qui ne nécessitent pas que le boss se déplace.
 const DUAL_MOVES = new Set([
   'iceRain', 'geysers', 'glyphs', 'summon', 'mudFlood', 'arrowRain',
-  'fireBurst', 'fireTornado', 'mines', 'missileRain', 'grenades', 'summonBoss',
+  'fireBurst', 'fireTornado', 'mines', 'missileRain', 'grenades', 'summonBoss', 'summonClones',
 ]);
 
 /** Classement des coups pour l'ouverture : le boss lance sa MEILLEURE attaque au début. */
 const OPENER_RANK: Record<string, number> = {
   missileRain: 96, icePylons: 100, fireTornado: 94, mudFlood: 92, mines: 90, nova: 88, crossBeams: 86, geysers: 84, iceRain: 82, summonBoss: 76,
   fireBurst: 80, arrowRain: 74, spiral: 72, lineSweep: 66, diveBomb: 64, ringShot: 62,
-  tornadoSweep: 78, shockwave: 60, roll: 58, summon: 54, glyphs: 52, charge: 48, fan: 44, aimedBurst: 38,
+  tornadoSweep: 78, shockwave: 60, roll: 58, summon: 54, summonClones: 70, glyphs: 52, charge: 48, fan: 44, aimedBurst: 38,
   teleport: 8,
 };
 
@@ -460,6 +460,13 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         this.gs.summonMinions(this.x, this.y, m.summonId ?? 'slime', m.summonCount ?? 3);
         this.gs.juice.ring(this.x, this.y, 90, 0xb26bff, 350);
         done(220);
+        break;
+      }
+      case 'summonClones': {
+        // Néantis : reflets ténébreux du héros, chacun à la MOITIÉ des PV du boss.
+        this.gs.summonShadowClones(m.summonCount ?? 2, Math.round(this.maxHp * 0.5));
+        this.gs.juice.ring(this.x, this.y, 110, 0xd05aff, 420);
+        done(260);
         break;
       }
       case 'charge': {

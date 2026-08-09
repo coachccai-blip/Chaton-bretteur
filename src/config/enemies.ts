@@ -232,6 +232,13 @@ export const ENEMIES: Record<string, EnemyDef> = {
     attack: { telegraph: 520, cooldown: 2000, range: 340, projectileSpeed: 300, projectileDamage: 14 },
     signature: { type: 'castZone', telegraph: 720, cooldown: 3400, damage: 20, range: 360, radius: 62, color: 0xd05aff },
   },
+  // -- Reflet ténébreux du héros (invoqué par Néantis, PV fixés au spawn) --
+  shadow_hero: {
+    id: 'shadow_hero', name: 'Reflet du Chaton', sprite: 'reflet', texKey: 'cat_shadow', behavior: 'charger',
+    hp: 1000, speed: 165, damage: 22, scale: 0.4,
+    attack: { telegraph: 440, cooldown: 1600, range: 380, chargeSpeed: 560 },
+    signature: { type: 'spread', telegraph: 460, cooldown: 2800, damage: 16, count: 4, speed: 300, range: 340, color: 0xb060ff },
+  },
   // -- Renforts mécaniques du boss final --
   turret: {
     id: 'turret', name: 'Tourelle', sprite: 'turret', texKey: 'turret', behavior: 'shooter',

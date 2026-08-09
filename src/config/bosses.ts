@@ -14,7 +14,8 @@ export type BossMoveType =
   | 'mines'        // pose des mines télégraphiées (boss final, -100 PV)
   | 'grenades'     // lance des grenades qui explosent (boss final)
   | 'missileRain'  // pluie de missiles télégraphiés (boss final)
-  | 'summonBoss';  // invoque un écho enragé d'un boss déjà vaincu (boss final)
+  | 'summonBoss'   // invoque un écho enragé d'un boss déjà vaincu (boss final)
+  | 'summonClones'; // Néantis : invoque des reflets ténébreux du héros (boons aléatoires)
 
 export interface BossMove {
   type: BossMoveType;
@@ -189,10 +190,10 @@ export const BOSSES: Record<string, BossDef> = {
   },
 
   // =============================================================
-  // NÉCROPOLE CÉLESTE — Voltaïr, le Rapace du Jugement
+  // NÉCROPOLE CÉLESTE — Voltaïr, le Panda de Foudre
   // =============================================================
   rapace: {
-    id: 'rapace', name: 'Voltaïr', title: 'le Rapace du Jugement', sprite: 'rapace',
+    id: 'rapace', name: 'Voltaïr', title: 'le Panda de Foudre', sprite: 'rapace',
     hp: 20000, scale: 0.82, contactDamage: 24, auraColor: 0xb0c8ff, level: 85,
     phases: [
       { hpFrac: 1.0, speed: 175, moves: [
@@ -235,6 +236,8 @@ export const BOSSES: Record<string, BossDef> = {
         { type: 'teleport', telegraph: 420, cooldown: 2400 },
         { type: 'crossBeams', telegraph: 600, cooldown: 3000, width: 58, damage: 22, color: 0xd05aff },
         { type: 'arrowRain', telegraph: 600, cooldown: 2600, count: 10, radius: 46, damage: 22, color: 0x59d9ff },
+        // Reflets Ténébreux — invoque 2 clones du héros (boons aléatoires, ½ PV du boss)
+        { type: 'summonClones', telegraph: 820, cooldown: 14000, summonCount: 2, say: 'Deviens ce que tu combats.' },
       ]},
       { hpFrac: 0.5, speed: 220, tint: 0xd05aff, moves: [
         // 5. Gravité Renversée — glyphes + invocation de Doppelchats
@@ -248,6 +251,8 @@ export const BOSSES: Record<string, BossDef> = {
         { type: 'shockwave', telegraph: 600, cooldown: 2600, radius: 180, damage: 26, color: 0xd05aff },
         { type: 'glyphs', telegraph: 560, cooldown: 2400, count: 6, radius: 60, damage: 26, color: 0xd05aff },
         { type: 'teleport', telegraph: 300, cooldown: 1800 },
+        // Chœur des Reflets — l'armée de doubles ténébreux au climax
+        { type: 'summonClones', telegraph: 700, cooldown: 15000, summonCount: 2 },
       ]},
     ],
   },

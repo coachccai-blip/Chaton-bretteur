@@ -579,7 +579,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       return;
     }
     if (!this.kageClone) {
-      this.kageClone = this.gs.add.sprite(this.x, this.y, 'kage_bunshin').setDepth(19).setAlpha(0.7);
+      this.kageClone = this.gs.add.sprite(this.x, this.y, 'kage_bunshin').setDepth(19).setAlpha(0.7).setData('baseScale', 1);
       this.kageNextAt = now + 500;
     }
     const c = this.kageClone;
@@ -602,7 +602,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       return;
     }
     while (this.miniClones.length < 2) {
-      const s = this.gs.add.sprite(this.x, this.y, 'cat').setDepth(19).setScale(0.55 * HERO_ART_COMP).setAlpha(0.9).setTint(0x9fe6ff);
+      const s = this.gs.add.sprite(this.x, this.y, 'cat').setDepth(19).setScale(0.55 * HERO_ART_COMP).setAlpha(0.9).setTint(0x9fe6ff).setData('baseScale', 0.55 * HERO_ART_COMP);
       this.miniClones.push(s);
     }
     this.miniAngle += 0.02;
@@ -618,7 +618,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const wantShadow = (this.mods.kageClone || 0) > 0;
     if (wantShadow) {
       while (this.miniShadows.length < 2) {
-        const s = this.gs.add.sprite(this.x, this.y, 'kage_bunshin').setDepth(18).setScale(0.5).setAlpha(0.5);
+        const s = this.gs.add.sprite(this.x, this.y, 'kage_bunshin').setDepth(18).setScale(0.5).setAlpha(0.5).setData('baseScale', 0.5);
         this.miniShadows.push(s);
       }
       for (let i = 0; i < 2; i++) {
@@ -751,7 +751,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       : Math.atan2(this.aim.y, this.aim.x);
     c.setFlipX(Math.cos(ang) < 0);
     this.gs.spectralSlash(c.x, c.y - 8, ang, this.meleeRange() * 0.9, Math.max(1, Math.round(baseDmg * 0.1)));
-    this.gs.tweens.add({ targets: c, scaleX: c.scaleX * 1.15, scaleY: c.scaleY * 1.15, duration: 90, yoyo: true });
+    // Pop d'attaque ANCRÉ sur l'échelle de base du clone : sans cela, des frappes
+    // rapprochées lisaient l'échelle déjà agrandie d'un tween en cours et faisaient
+    // grossir le clone sans fin. On tue le tween précédent et on repart de la base.
+    const base = (c.getData('baseScale') as number) ?? c.scaleX;
+    this.gs.tweens.killTweensOf(c);
+    c.setScale(base);
+    this.gs.tweens.add({ targets: c, scaleX: base * 1.15, scaleY: base * 1.15, duration: 90, yoyo: true, onComplete: () => c.setScale(base) });
   }
 
   /** Duplique la frappe sur TOUS les clones : ombre Kage, mini-chats et leurs ombres. */

@@ -188,6 +188,19 @@ export function genHeroCat(scene: Phaser.Scene): void {
   mirror(g);
   outline(g, P.out);
   render(scene, 'cat', g);
+
+  // Variante « reflet ténébreux » (invocations de Néantis) : même silhouette,
+  // palette assombrie teintée void (violet-noir). La couleur de boon aléatoire
+  // est ajoutée par un tint à l'écran (voir GameScene.summonShadowClones).
+  const shadow: Grid = g.map((row) => row.map((c) => {
+    if (!c) return null;
+    const n = parseInt(c.slice(1), 16);
+    const lum = (((n >> 16) & 255) + ((n >> 8) & 255) + (n & 255)) / 3;
+    const v = Math.round(lum * 0.34);
+    const r = Math.min(255, v + 26), gg = Math.round(v * 0.5), b = Math.min(255, v + 46);
+    return '#' + ((r << 16) | (gg << 8) | b).toString(16).padStart(6, '0');
+  }));
+  render(scene, 'cat_shadow', shadow);
 }
 
 // ===================== BOSS : Gorbak — Bourbier Vivant (mud beast) =====================
@@ -208,9 +221,25 @@ export function genBossGorbak(scene: Phaser.Scene): void {
   disc(g, 40, 33, 12, 10, Wl);
   disc(g, 20, 38, 10, 9, m);
   disc(g, 48, 46, 11, 8, m);
-  // base large
-  rect(g, 8, 46, 56, 55, m);
-  disc(g, 32, 52, 26, 8, m);
+  // base
+  rect(g, 10, 42, 54, 50, m);
+  disc(g, 32, 46, 24, 7, m);
+
+  // ---- queue de boue trapue (part du flanc droit, s'enroule vers le haut) ----
+  for (let i = 0; i <= 7; i++) {
+    const t = i / 7, tx = 52 + Math.sin(t * 1.3) * 11, ty = 42 - t * 13;
+    disc(g, tx, ty, 5.6 - t * 3.4, 5 - t * 3, i % 2 ? M : w);
+  }
+  disc(g, 61, 27, 2, 2, Wl);   // bout clair de la queue
+
+  // ---- deux pieds trapus + orteils/griffes ----
+  for (const fx of [19, 45] as const) {
+    disc(g, fx, 52, 8.5, 6, M);
+    disc(g, fx, 55, 8, 3.5, m);
+    for (let t = -1; t <= 1; t++) rect(g, fx + t * 4 - 1, 56, fx + t * 4 + 1, 57, Wl);
+  }
+  tri(g, 29, 46, 32, 57, 35, 46, soc);   // creux sombre entre les pieds
+  for (const dx of [13, 51] as const) rect(g, dx - 2, 49, dx + 2, 55, m); // petites coulures latérales
 
   // ---- pics rocheux dégoulinants sur le dessus ----
   const spikes: [number, number, number][] = [[13, 26, 12], [20, 22, 16], [29, 18, 20], [38, 20, 17], [46, 24, 14], [53, 30, 10]];
@@ -218,12 +247,6 @@ export function genBossGorbak(scene: Phaser.Scene): void {
     tri(g, sx - 4, sy, sx, sy - hgt, sx + 4, sy, M);
     tri(g, sx - 2, sy, sx + 0.5, sy - hgt * 0.7, sx + 2.5, sy, w);
     tri(g, sx - 1, sy, sx, sy - hgt * 0.4, sx + 1.2, sy, Wl);
-  }
-
-  // ---- coulures en bas ----
-  for (const [dx, dw, dh] of [[14, 3, 6], [26, 4, 8], [40, 3, 7], [50, 4, 6]] as const) {
-    rect(g, dx - dw, 52, dx + dw, 55 + dh, m);
-    disc(g, dx, 55 + dh, dw, 2.5, M);
   }
 
   // ---- yeux rouges furieux ----
@@ -336,27 +359,35 @@ export function genBossGlacior(scene: Phaser.Scene): void {
   const g = mk(W, H);
   const k = '#0a1420', iD = '#123a54', m = '#2a4a60', r = '#3a6a8a', w = '#a8c8e0', Wl = '#dcecf8', C = '#9fe0f8', Hc = '#7fdcff', e = '#e8f8ff';
 
-  // ---- boucle du corps (anneau de disques) ----
-  const loopCx = 32, loopCy = 46, loopR = 16;
-  for (let i = 0; i < 22; i++) {
-    const a = (i / 22) * Math.PI * 2 + 0.3;
-    const bx = loopCx + Math.cos(a) * loopR, by = loopCy + Math.sin(a) * loopR * 0.92;
-    disc(g, bx, by, 8, 7.5, r);
-    disc(g, bx + 1.4, by - 1.4, 6, 5.5, w);       // reflet
-    disc(g, bx + 2.4, by - 2.4, 3, 2.6, Wl);
-    disc(g, bx - 1.6, by + 1.8, 4.5, 3.8, m);     // ombre
-    // épine dorsale vers l'extérieur
-    const ox = loopCx + Math.cos(a) * (loopR + 8), oy = loopCy + Math.sin(a) * (loopR + 8) * 0.92;
-    tri(g, bx + Math.cos(a + 0.25) * 6, by + Math.sin(a + 0.25) * 6, ox, oy, bx + Math.cos(a - 0.25) * 6, by + Math.sin(a - 0.25) * 6, C);
+  // ---- corps serpentin en S (tête en haut, queue en bas — jamais jointes) ----
+  const path: [number, number, number][] = [];
+  const N = 26;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const x = 30 + Math.sin(t * Math.PI * 2 - 0.5) * 15;
+    const y = 24 + t * 40;
+    path.push([x, y, Math.max(3, 8 - t * 5)]);   // rayon décroissant vers la queue
   }
+  for (const [bx, by, rad] of path) {
+    disc(g, bx, by, rad, rad, r);
+    disc(g, bx + rad * 0.22, by - rad * 0.22, rad * 0.72, rad * 0.66, w);
+    disc(g, bx + rad * 0.38, by - rad * 0.38, rad * 0.36, rad * 0.32, Wl);
+    disc(g, bx - rad * 0.3, by + rad * 0.32, rad * 0.5, rad * 0.44, m);
+  }
+  // épines dorsales le long de la courbe (côté extérieur)
+  for (let i = 3; i < path.length - 1; i += 2) {
+    const [bx, by, rad] = path[i]; const [px, py] = path[i - 2];
+    const dx = bx - px, dy = by - py, len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len, ny = dx / len;
+    tri(g, bx + nx * rad * 0.5 - ny * 2.2, by + ny * rad * 0.5 + nx * 2.2,
+      bx + nx * (rad + 7), by + ny * (rad + 7),
+      bx + nx * rad * 0.5 + ny * 2.2, by + ny * rad * 0.5 - nx * 2.2, i % 4 ? C : Wl);
+  }
+  // nageoire caudale
+  const tl = path[path.length - 1];
+  tri(g, tl[0], tl[1] - 2, tl[0] - 8, tl[1] + 5, tl[0] - 1, tl[1] + 2, C);
+  tri(g, tl[0], tl[1] - 2, tl[0] + 8, tl[1] + 5, tl[0] + 1, tl[1] + 2, C);
 
-  // ---- cou + tête (montent en haut-gauche depuis la boucle) ----
-  for (let i = 0; i < 7; i++) {
-    const t = i / 6;
-    const nx = 30 - t * 6, ny = 34 - t * 16;
-    disc(g, nx, ny, 7 - t * 1.5, 6.5 - t, r);
-    disc(g, nx + 1.2, ny - 1, 4.5 - t, 4 - t * 0.6, w);
-  }
   // tête anguleuse
   disc(g, 22, 17, 9, 8, w);
   disc(g, 23, 18, 7, 6.5, Wl);

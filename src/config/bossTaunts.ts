@@ -88,20 +88,20 @@ export const BOSS_TAUNTS: Record<string, Taunt[]> = {
     { cat: 'T’aurais un plaid ? Un petit ?', boss: 'J’ai mieux : un cercueil de glace.' },
     { cat: 'Les abysses, c’est humide et déprimant.', boss: 'C’est chez moi. Et ta dernière adresse.' },
   ],
-  // Voltaïr — Rapace du Jugement (Nécropole Céleste)
+  // Voltaïr — le Panda de Foudre (Nécropole Céleste)
   rapace: [
-    { cat: 'Chouette, un poulet géant. J’ai justement faim.', boss: 'Je suis le JUGEMENT. Et le verdict est : coupable d’exister.' },
+    { cat: 'Tiens, un panda électrique. J’adore le bambou grillé.', boss: 'Je suis le JUGEMENT. Et le verdict est : coupable d’exister.' },
     { cat: 'Parfait, je comptais pas rester.', boss: 'Cent rois reposent dans ma nécropole. Tu ne mérites même pas une tombe.' },
     { cat: 'Tu juges les gens ? Juge un peu ma lame.', boss: 'L’orage précède toujours la sentence.' },
     { cat: 'Monsieur le juge, je plaide coupable de trop de style.', boss: 'La peine : la mort. Comme d’habitude.' },
-    { cat: 'Beau plumage, cerveau d’oiseau ?', boss: 'Assez pour lire ta sentence. Coupable.' },
+    { cat: 'Gros nounours en peluche, petit cerveau ?', boss: 'Assez pour lire ta sentence. Coupable.' },
     { cat: 'L’orage, c’est ton intro dramatique ?', boss: 'C’est le tonnerre de ton verdict.' },
-    { cat: 'Tu juges, mais t’as jugé ta coiffure ?', boss: 'Silence dans le tribunal, félin.' },
-    { cat: 'Un poulet céleste. Rôti, ce serait mieux.', boss: 'Tes plaisanteries alourdissent ta peine.' },
+    { cat: 'Tu juges, mais t’as jugé ta coiffure d’orage ?', boss: 'Silence dans le tribunal, félin.' },
+    { cat: 'Un panda câlin. Enfin, avant qu’il branche 10 000 volts.', boss: 'Tes plaisanteries alourdissent ta peine.' },
     { cat: 'La sentence, tu peux la classer ?', boss: 'Elle est déjà exécutée. Tu l’ignores encore.' },
-    { cat: 'Cent rois ? T’as juste un gros nid.', boss: 'Un nid d’ossements. Tu compléteras la collection.' },
+    { cat: 'Cent rois ? T’as juste une grosse tanière.', boss: 'Une tanière d’ossements. Tu compléteras la collection.' },
     { cat: 'J’ai un avocat ? Non ? Bon.', boss: 'Ici, je suis juge, jury et bourreau.' },
-    { cat: 'Tu voles haut pour tomber bas.', boss: 'Je fonds sur les coupables. Tu voles où, toi ?' },
+    { cat: 'Tu grondes fort pour une peluche.', boss: 'Ma foudre s’abat sur les coupables. Reste bien immobile.' },
     { cat: 'Objection ! …ah, on peut pas.', boss: 'Objection rejetée. Exécution.' },
   ],
   // Néantis — le Reflet Noir (Faille du Néant)

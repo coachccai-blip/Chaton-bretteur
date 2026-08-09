@@ -632,6 +632,27 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** Néantis : invoque des reflets ténébreux du héros (boons aléatoires), chacun
+   *  avec la moitié des PV du boss. Ils surgissent près du joueur et foncent. */
+  summonShadowClones(count: number, hpEach: number): void {
+    if (!this.combatActive || !this.player) return;
+    if (this.activeEnemies.size > 18) return; // évite l'accumulation
+    const boonTints = [0xff6a3a, 0x59c8ff, 0x9ee06a, 0xffe066, 0xb060ff, 0xff5a9a, 0x7fdcff];
+    for (let i = 0; i < count; i++) {
+      const ang = (i / count) * Math.PI * 2 + Math.random() * 0.6;
+      const px = Phaser.Math.Clamp(this.player.x + Math.cos(ang) * 130, ARENA.x + 30, ARENA.x + ARENA.w - 30);
+      const py = Phaser.Math.Clamp(this.player.y + Math.sin(ang) * 130, ARENA.y + 30, ARENA.y + ARENA.h - 30);
+      this.juice.ring(px, py, 42, 0xb060ff, 420); // portail de vide (télégraphe)
+      this.time.delayedCall(300 + i * 130, () => {
+        if (!this.combatActive) return;
+        const e = this.spawnEnemy('shadow_hero', px, py);
+        e.setSummonHp(hpEach);
+        e.setTint(boonTints[Math.floor(Math.random() * boonTints.length)]); // « boon » aléatoire
+        this.juice.burst(px, py, 0xd05aff, 16, 220, 1.3);
+      });
+    }
+  }
+
   spawnEnemyProjectile(x: number, y: number, dx: number, dy: number, speed: number, damage: number, status?: 'poison' | 'freeze', tint?: number, opts?: { texture?: string; scale?: number; orient?: boolean; radius?: number }): void {
     const diff = getDifficulty(RunState.difficultyId);
     // Les projectiles de gel prennent d'office l'apparence d'un bloc de glace.

@@ -113,6 +113,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
 
   isAlive(): boolean { return this.alive; }
 
+  /** Fixe les PV à une valeur absolue (invocations de Néantis : moitié de ses PV). */
+  setSummonHp(hp: number): void {
+    this.maxHp = Math.max(1, Math.round(hp));
+    this.hp = this.maxHp;
+  }
+
   /**
    * Dégât de projectile mis à l'échelle de la ZONE uniquement : spawnEnemyProjectile
    * réapplique la difficulté, donc on la retire ici pour ne pas la compter deux fois.
