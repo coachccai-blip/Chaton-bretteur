@@ -31,6 +31,14 @@ export interface Recipe {
   feature: Feature;
   accent: string;
   feet?: boolean;
+  // --- traits d'espèce (optionnels : composables par-dessus `feature`) ---
+  mouth?: 'fangs' | 'wide' | 'beak' | 'grin' | 'tusks' | 'maw'; // bouche/mâchoire caractéristique
+  arms?: boolean;                                               // deux petits bras sur les flancs
+  snout?: boolean;                                              // museau allongé (loup, dragon, serpent)
+  tail?: 'plain' | 'forked' | 'tuft' | 'fin' | 'none';         // forme de queue (défaut = plain si au sol)
+  pattern?: 'spots' | 'stripes';                                // motifs sur le corps
+  wingStyle?: 'membrane';                                       // ailes membranées (chauve-souris)
+  earStyle?: 'long';                                            // oreilles longues/tombantes
 }
 
 type Grid = (string | null)[][];
@@ -149,9 +157,25 @@ export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
 
   // ================= arrière-plan (derrière le corps) =================
   if (r.feature === 'wings') {
-    // aile arrière (gauche) plus petite, aile avant (droite) plus grande (3/4)
-    tri(g, cx - rx * 0.9, bodyCy - ry * 0.6, cx - W * 0.44, bodyCy - ry * 0.9, cx - rx * 0.3, bodyCy + ry * 0.3, lighten(r.accent, -22));
-    tri(g, cx + rx, bodyCy - ry * 0.6, cx + W * 0.52, bodyCy - ry, cx + rx * 0.4, bodyCy + ry * 0.45, r.accent);
+    if (r.wingStyle === 'membrane') {
+      // ailes membranées (chauve-souris) : voile festonnée + doigts en contour
+      for (const dir of [-1, 1] as const) {
+        const base = dir < 0 ? cx - rx * 0.5 : cx + rx * 0.5;
+        const tipX = base + dir * W * 0.5;
+        const topY = bodyCy - ry * 1.0, botY = bodyCy + ry * 0.5;
+        tri(g, base, bodyCy - ry * 0.5, tipX, topY, tipX, botY, dir < 0 ? lighten(r.accent, -18) : r.accent);
+        // doigts (nervures) de l'aile
+        for (let k = 0; k <= 2; k++) {
+          const fx = base + (tipX - base) * (0.35 + k * 0.32);
+          const fy = topY + (botY - topY) * (0.2 + k * 0.28);
+          rect(g, Math.round(Math.min(base, fx)), Math.round(fy), Math.round(Math.max(base, fx)), Math.round(fy), r.outline);
+        }
+      }
+    } else {
+      // aile arrière (gauche) plus petite, aile avant (droite) plus grande (3/4)
+      tri(g, cx - rx * 0.9, bodyCy - ry * 0.6, cx - W * 0.44, bodyCy - ry * 0.9, cx - rx * 0.3, bodyCy + ry * 0.3, lighten(r.accent, -22));
+      tri(g, cx + rx, bodyCy - ry * 0.6, cx + W * 0.52, bodyCy - ry, cx + rx * 0.4, bodyCy + ry * 0.45, r.accent);
+    }
   }
   if (r.feature === 'spider') {
     for (let i = 0; i < 4; i++) {
@@ -162,11 +186,30 @@ export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
   }
 
   // ---- queue à GAUCHE (derrière) : casse la symétrie, contrepoids du regard ----
-  if (grounded && r.feature !== 'mushroom' && r.feature !== 'hat') {
+  const tailStyle = r.tail ?? ((grounded && r.feature !== 'mushroom' && r.feature !== 'hat') ? 'plain' : 'none');
+  if (tailStyle !== 'none') {
     const tx = cx - rx * 0.92, ty = bodyCy + ry * 0.2;
-    disc(g, tx, ty, rx * 0.26, ry * 0.3, lighten(r.body, -12));
-    disc(g, tx - rx * 0.14, ty - ry * 0.55, rx * 0.2, ry * 0.24, lighten(r.body, -6));
-    disc(g, tx - rx * 0.05, ty - ry * 1.12, rx * 0.15, ry * 0.18, r.accent); // pointe accentuée
+    if (tailStyle === 'fin') {
+      // nageoire caudale (poisson) : éventail vers la gauche
+      tri(g, cx - rx * 0.7, bodyCy, cx - rx * 1.5, bodyCy - ry * 0.7, cx - rx * 1.5, bodyCy + ry * 0.7, lighten(r.body, -8));
+      tri(g, cx - rx * 0.7, bodyCy, cx - rx * 1.28, bodyCy - ry * 0.42, cx - rx * 1.28, bodyCy + ry * 0.42, r.accent);
+    } else if (tailStyle === 'tuft') {
+      // queue touffue (loup) : base fine + gros plumeau accentué
+      disc(g, tx, ty, rx * 0.2, ry * 0.24, lighten(r.body, -12));
+      disc(g, tx - rx * 0.22, ty - ry * 0.7, rx * 0.32, ry * 0.4, lighten(r.body, -4));
+      disc(g, tx - rx * 0.3, ty - ry * 1.3, rx * 0.24, ry * 0.28, r.accent);
+    } else if (tailStyle === 'forked') {
+      // queue de diable : tige + pointe en flèche (deux triangles)
+      disc(g, tx + rx * 0.1, ty, rx * 0.16, ry * 0.2, lighten(r.body, -10));
+      disc(g, tx - rx * 0.1, ty - ry * 0.6, rx * 0.13, ry * 0.16, lighten(r.body, -6));
+      tri(g, tx - rx * 0.05, ty - ry * 1.0, tx - rx * 0.45, ty - ry * 1.3, tx - rx * 0.1, ty - ry * 1.4, r.accent);
+      tri(g, tx - rx * 0.05, ty - ry * 1.0, tx + rx * 0.35, ty - ry * 1.3, tx + rx * 0.0, ty - ry * 1.4, r.accent);
+    } else {
+      // plain (défaut)
+      disc(g, tx, ty, rx * 0.26, ry * 0.3, lighten(r.body, -12));
+      disc(g, tx - rx * 0.14, ty - ry * 0.55, rx * 0.2, ry * 0.24, lighten(r.body, -6));
+      disc(g, tx - rx * 0.05, ty - ry * 1.12, rx * 0.15, ry * 0.18, r.accent);
+    }
   }
 
   // ================= corps =================
@@ -188,8 +231,15 @@ export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
   // ---- museau/mâchoire qui DÉBORDE à droite (indicateur de direction le + lisible) ----
   if (r.feature !== 'ghost' && r.feature !== 'spider') {
     const mx = cx + rx * 0.82, my = bodyCy + ry * 0.04;
-    disc(g, mx, my, rx * 0.32, ry * 0.28, r.belly ?? lighten(r.body, 10));
-    disc(g, mx + rx * 0.2, my + ry * 0.04, Math.max(0.8, rx * 0.09), Math.max(0.8, ry * 0.08), r.outline); // narine
+    if (r.snout) {
+      // museau allongé (loup/dragon/serpent) : prolonge la silhouette vers la droite
+      disc(g, mx + rx * 0.18, my + ry * 0.06, rx * 0.4, ry * 0.24, r.body);
+      disc(g, mx + rx * 0.52, my + ry * 0.06, rx * 0.24, ry * 0.18, lighten(r.body, 8));
+      disc(g, mx + rx * 0.74, my + ry * 0.02, Math.max(0.9, rx * 0.1), Math.max(0.9, ry * 0.09), r.outline); // truffe
+    } else {
+      disc(g, mx, my, rx * 0.32, ry * 0.28, r.belly ?? lighten(r.body, 10));
+      disc(g, mx + rx * 0.2, my + ry * 0.04, Math.max(0.8, rx * 0.09), Math.max(0.8, ry * 0.08), r.outline); // narine
+    }
   }
 
   // volume : ombre basse + reflet HAUT-DROITE + éclat spéculaire (lumière haut-droite)
@@ -199,11 +249,42 @@ export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
     disc(g, cx + rx * 0.46, bodyCy - ry * 0.52, rx * 0.13, ry * 0.11, lighten(r.body, 70));
   }
 
+  // ---- motifs sur le corps (taches / rayures) ----
+  if (r.pattern === 'spots') {
+    const sp = lighten(r.body, -30);
+    disc(g, cx - rx * 0.3, bodyCy - ry * 0.1, rx * 0.16, ry * 0.14, sp);
+    disc(g, cx + rx * 0.15, bodyCy + ry * 0.35, rx * 0.14, ry * 0.12, sp);
+    disc(g, cx + rx * 0.42, bodyCy - ry * 0.15, rx * 0.12, ry * 0.11, sp);
+    disc(g, cx - rx * 0.05, bodyCy + ry * 0.05, rx * 0.1, ry * 0.09, sp);
+  } else if (r.pattern === 'stripes') {
+    const st = lighten(r.body, -30);
+    for (let i = -1; i <= 2; i++) {
+      const sx = cx + i * rx * 0.35;
+      disc(g, sx, bodyCy - ry * 0.1, rx * 0.06, ry * 0.62, st);
+    }
+  }
+
+  // ---- bras : arrière (gauche, plus petit) + avant (droite) ----
+  if (r.arms) {
+    disc(g, cx - rx * 0.78, bodyCy + ry * 0.35, rx * 0.16, ry * 0.34, lighten(r.body, -14));
+    disc(g, cx - rx * 0.8, bodyCy + ry * 0.78, rx * 0.14, ry * 0.16, lighten(r.body, -8)); // main arrière
+    disc(g, cx + rx * 0.86, bodyCy + ry * 0.3, rx * 0.18, ry * 0.38, r.body);
+    disc(g, cx + rx * 0.9, bodyCy + ry * 0.78, rx * 0.16, ry * 0.18, lighten(r.body, 6));   // main avant
+  }
+
   // ================= dessus / devant =================
   if (r.feature === 'ears') {
-    // oreille arrière (gauche) plus petite, oreille avant (droite) plus haute
-    tri(g, cx - rx * 0.85, bodyCy - ry * 0.7, cx - rx * 1.0, bodyCy - ry * 1.45, cx - rx * 0.25, bodyCy - ry, r.body);
-    tri(g, cx + rx * 0.7, bodyCy - ry * 0.7, cx + rx * 1.05, bodyCy - ry * 1.75, cx + rx * 0.15, bodyCy - ry, r.body);
+    if (r.earStyle === 'long') {
+      // grandes oreilles pointues (gobelin / lutin) qui partent sur les côtés
+      tri(g, cx - rx * 0.75, bodyCy - ry * 0.9, cx - rx * 1.6, bodyCy - ry * 1.2, cx - rx * 0.35, bodyCy - ry * 0.5, r.body);
+      tri(g, cx + rx * 0.6, bodyCy - ry * 0.9, cx + rx * 1.55, bodyCy - ry * 1.35, cx + rx * 0.25, bodyCy - ry * 0.5, r.body);
+      disc(g, cx - rx * 1.15, bodyCy - ry * 1.02, rx * 0.1, ry * 0.12, lighten(r.body, 18));
+      disc(g, cx + rx * 1.12, bodyCy - ry * 1.12, rx * 0.11, ry * 0.13, lighten(r.body, 24));
+    } else {
+      // oreille arrière (gauche) plus petite, oreille avant (droite) plus haute
+      tri(g, cx - rx * 0.85, bodyCy - ry * 0.7, cx - rx * 1.0, bodyCy - ry * 1.45, cx - rx * 0.25, bodyCy - ry, r.body);
+      tri(g, cx + rx * 0.7, bodyCy - ry * 0.7, cx + rx * 1.05, bodyCy - ry * 1.75, cx + rx * 0.15, bodyCy - ry, r.body);
+    }
   }
   if (r.feature === 'horns') {
     tri(g, cx - rx * 0.55, bodyCy - ry * 0.6, cx - rx * 0.8, bodyCy - ry * 1.4, cx - rx * 0.2, bodyCy - ry * 0.7, lighten(r.accent, -18));
@@ -249,6 +330,36 @@ export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
   // ---- contour (avant les yeux pour ne pas les cercler) ----
   outlinePass(g, r.outline);
 
+  // ================= bouche / mâchoire caractéristique =================
+  if (r.mouth) {
+    const mox = cx + rx * (r.snout ? 1.02 : 0.5);
+    const moy = bodyCy + ry * 0.42;
+    const mw = rx * (r.mouth === 'wide' || r.mouth === 'maw' ? 0.7 : 0.42);
+    const tooth = '#f6f1e4';
+    if (r.mouth === 'beak') {
+      tri(g, mox - rx * 0.12, moy - ry * 0.18, mox + rx * 0.62, moy + ry * 0.02, mox - rx * 0.12, moy + ry * 0.18, r.accent);
+      tri(g, mox - rx * 0.12, moy + ry * 0.03, mox + rx * 0.44, moy + ry * 0.06, mox - rx * 0.12, moy + ry * 0.2, lighten(r.accent, -34));
+    } else if (r.mouth === 'wide') {
+      disc(g, mox - rx * 0.18, moy, mw, ry * 0.15, r.outline);
+      disc(g, mox - rx * 0.18, moy - ry * 0.12, mw * 0.92, ry * 0.12, r.belly ?? r.body); // croissant (sourire)
+    } else if (r.mouth === 'maw') {
+      disc(g, mox - rx * 0.05, moy + ry * 0.04, mw, ry * 0.32, r.outline);
+      disc(g, mox - rx * 0.05, moy + ry * 0.08, mw * 0.6, ry * 0.17, lighten(r.outline, 34));
+      for (let k = -1; k <= 1; k++) tri(g, mox + k * mw * 0.5 - 1, moy - ry * 0.14, mox + k * mw * 0.5, moy + ry * 0.06, mox + k * mw * 0.5 + 1, moy - ry * 0.14, tooth);
+    } else {
+      rect(g, Math.round(mox - mw), Math.round(moy), Math.round(mox + mw * 0.4), Math.round(moy), r.outline); // ligne de bouche
+      if (r.mouth === 'fangs') {
+        tri(g, mox - mw * 0.5, moy, mox - mw * 0.25, moy + ry * 0.24, mox - mw * 0.02, moy, tooth);
+        tri(g, mox + mw * 0.02, moy, mox + mw * 0.22, moy + ry * 0.22, mox + mw * 0.4, moy, tooth);
+      } else if (r.mouth === 'grin') {
+        for (let k = 0; k < 4; k++) { const gx = Math.round(mox - mw + k * (mw * 1.4 / 3)); rect(g, gx, Math.round(moy), gx, Math.round(moy + ry * 0.13), tooth); }
+      } else if (r.mouth === 'tusks') {
+        tri(g, mox - mw * 0.4, moy, mox - mw * 0.62, moy - ry * 0.3, mox - mw * 0.18, moy, tooth);
+        tri(g, mox + mw * 0.18, moy, mox + mw * 0.02, moy - ry * 0.3, mox + mw * 0.4, moy, tooth);
+      }
+    }
+  }
+
   // ================= yeux (décalés vers la DROITE, vue 3/4) =================
   const eyeY = bodyCy - ry * 0.06;
   const backX = cx + rx * 0.02;   // œil arrière (côté gauche du visage tourné)
@@ -280,67 +391,67 @@ export function genCritter(scene: Phaser.Scene, key: string, r: Recipe): void {
  */
 export const MONSTER_RECIPES: Record<string, Recipe> = {
   // -- Forêt : émeraude / mousse, yeux turquoise --
-  slime: { w: 18, h: 16, body: '#3fae63', belly: '#6fd68f', outline: '#0f2418', eye: 'glow', eyeColor: '#bff7f6', feature: 'none', accent: '#2a8a4e' },
-  champignon: { w: 18, h: 18, body: '#d8cba8', belly: '#efe6cf', outline: '#2a2014', eye: 'normal', eyeColor: '#fff', feature: 'mushroom', accent: '#a83a34' },
-  chauvesouris: { w: 20, h: 15, body: '#2f4a52', outline: '#0e1c20', eye: 'glow', eyeColor: '#59d9a0', feature: 'wings', accent: '#1e343a' },
+  slime: { w: 18, h: 16, body: '#3fae63', belly: '#6fd68f', outline: '#0f2418', eye: 'glow', eyeColor: '#bff7f6', feature: 'none', accent: '#2a8a4e', mouth: 'wide' },
+  champignon: { w: 18, h: 18, body: '#d8cba8', belly: '#efe6cf', outline: '#2a2014', eye: 'normal', eyeColor: '#fff', feature: 'mushroom', accent: '#a83a34', mouth: 'wide' },
+  chauvesouris: { w: 20, h: 15, body: '#2f4a52', outline: '#0e1c20', eye: 'glow', eyeColor: '#59d9a0', feature: 'wings', accent: '#1e343a', wingStyle: 'membrane', mouth: 'fangs' },
   // -- Marais : vert acide toxique --
-  gobelin: { w: 18, h: 18, body: '#6a9a3f', belly: '#9fd04a', outline: '#1a2810', eye: 'angry', eyeColor: '#dfff9a', feature: 'ears', accent: '#4a6a2a' },
-  crapaud: { w: 20, h: 16, body: '#4f7a3a', belly: '#b8d97a', outline: '#16240e', eye: 'glow', eyeColor: '#dfff9a', feature: 'none', accent: '#33591f' },
-  bulle: { w: 18, h: 17, body: '#7aa83f', belly: '#c9f07a', outline: '#1e2a10', eye: 'normal', eyeColor: '#fff', feature: 'none', accent: '#557a2a' },
+  gobelin: { w: 18, h: 18, body: '#6a9a3f', belly: '#9fd04a', outline: '#1a2810', eye: 'angry', eyeColor: '#dfff9a', feature: 'ears', accent: '#4a6a2a', earStyle: 'long', arms: true, mouth: 'grin' },
+  crapaud: { w: 20, h: 16, body: '#4f7a3a', belly: '#b8d97a', outline: '#16240e', eye: 'glow', eyeColor: '#dfff9a', feature: 'none', accent: '#33591f', mouth: 'wide', pattern: 'spots' },
+  bulle: { w: 18, h: 17, body: '#7aa83f', belly: '#c9f07a', outline: '#1e2a10', eye: 'normal', eyeColor: '#fff', feature: 'none', accent: '#557a2a', mouth: 'wide' },
   // -- Forge : charbon + braise orangée --
-  diablotin: { w: 17, h: 18, body: '#8a2a20', belly: '#e05a2a', outline: '#200a08', eye: 'glow', eyeColor: '#ffd24a', feature: 'horns', accent: '#ff6a1f' },
-  chienlave: { w: 20, h: 16, body: '#221614', belly: '#ff6a1f', outline: '#0e0705', eye: 'glow', eyeColor: '#ffb020', feature: 'spikes', accent: '#ff5522' },
-  armure: { w: 18, h: 20, body: '#4a5058', belly: '#6a727e', outline: '#12161a', eye: 'glow', eyeColor: '#ff9a3a', feature: 'spikes', accent: '#ff7a2a' },
+  diablotin: { w: 17, h: 18, body: '#8a2a20', belly: '#e05a2a', outline: '#200a08', eye: 'glow', eyeColor: '#ffd24a', feature: 'horns', accent: '#ff6a1f', mouth: 'fangs', tail: 'forked', arms: true },
+  chienlave: { w: 20, h: 16, body: '#221614', belly: '#ff6a1f', outline: '#0e0705', eye: 'glow', eyeColor: '#ffb020', feature: 'spikes', accent: '#ff5522', snout: true, mouth: 'fangs', tail: 'tuft' },
+  armure: { w: 18, h: 20, body: '#4a5058', belly: '#6a727e', outline: '#12161a', eye: 'glow', eyeColor: '#ff9a3a', feature: 'spikes', accent: '#ff7a2a', arms: true },
   // -- Citadelle : pierre bleu-nuit + spectres violets, accents chauds --
-  fantome: { w: 18, h: 18, body: '#aeb8d6', outline: '#3a4258', eye: 'glow', eyeColor: '#bff7f6', feature: 'ghost', accent: '#8a94b8' },
-  squelette: { w: 18, h: 20, body: '#dcd8c8', belly: '#b8b2a0', outline: '#2a2820', eye: 'glow', eyeColor: '#f2a53a', feature: 'skull', accent: '#7a8290' },
-  sorcier: { w: 18, h: 20, body: '#3a2c5a', belly: '#5a4a7a', outline: '#160f28', eye: 'glow', eyeColor: '#c78aff', feature: 'hat', accent: '#8a5cff' },
+  fantome: { w: 18, h: 18, body: '#aeb8d6', outline: '#3a4258', eye: 'glow', eyeColor: '#bff7f6', feature: 'ghost', accent: '#8a94b8', mouth: 'wide' },
+  squelette: { w: 18, h: 20, body: '#dcd8c8', belly: '#b8b2a0', outline: '#2a2820', eye: 'glow', eyeColor: '#f2a53a', feature: 'skull', accent: '#7a8290', mouth: 'grin', arms: true },
+  sorcier: { w: 18, h: 20, body: '#3a2c5a', belly: '#5a4a7a', outline: '#160f28', eye: 'glow', eyeColor: '#c78aff', feature: 'hat', accent: '#8a5cff', arms: true },
   // rôles de soutien
   fee: { w: 15, h: 15, body: '#cdeaa8', belly: '#f2fbe0', outline: '#2a3a1a', eye: 'glow', eyeColor: '#bff7f6', feature: 'wings', accent: '#eaffc0' },
-  bombardier: { w: 20, h: 17, body: '#5a7a3a', belly: '#9fd04a', outline: '#16240e', eye: 'angry', eyeColor: '#dfff9a', feature: 'none', accent: '#3a5a24' },
-  gardien: { w: 18, h: 20, body: '#5a4038', belly: '#8a5a3a', outline: '#160d0a', eye: 'glow', eyeColor: '#ff9a3a', feature: 'spikes', accent: '#ff7a2a' },
+  bombardier: { w: 20, h: 17, body: '#5a7a3a', belly: '#9fd04a', outline: '#16240e', eye: 'angry', eyeColor: '#dfff9a', feature: 'none', accent: '#3a5a24', mouth: 'wide', pattern: 'spots' },
+  gardien: { w: 18, h: 20, body: '#5a4038', belly: '#8a5a3a', outline: '#160d0a', eye: 'glow', eyeColor: '#ff9a3a', feature: 'spikes', accent: '#ff7a2a', arms: true },
   // bestiaire créatif
-  loup: { w: 22, h: 15, body: '#5a5560', belly: '#8a8490', outline: '#161318', eye: 'angry', eyeColor: '#ffd24a', feature: 'ears', accent: '#3a3640' },
-  archer: { w: 17, h: 20, body: '#3a4a58', belly: '#5a6a78', outline: '#12181e', eye: 'glow', eyeColor: '#bff7f6', feature: 'ears', accent: '#c78aff' },
-  drake: { w: 22, h: 18, body: '#7a2a20', belly: '#e0603a', outline: '#200a08', eye: 'glow', eyeColor: '#ffd24a', feature: 'horns', accent: '#ff6a1f' },
+  loup: { w: 22, h: 15, body: '#5a5560', belly: '#8a8490', outline: '#161318', eye: 'angry', eyeColor: '#ffd24a', feature: 'ears', accent: '#3a3640', snout: true, mouth: 'fangs', tail: 'tuft' },
+  archer: { w: 17, h: 20, body: '#3a4a58', belly: '#5a6a78', outline: '#12181e', eye: 'glow', eyeColor: '#bff7f6', feature: 'ears', accent: '#c78aff', arms: true },
+  drake: { w: 22, h: 18, body: '#7a2a20', belly: '#e0603a', outline: '#200a08', eye: 'glow', eyeColor: '#ffd24a', feature: 'horns', accent: '#ff6a1f', snout: true, mouth: 'fangs' },
   // adds de boss
-  druide: { w: 16, h: 19, body: '#3a5a3a', belly: '#7aae5a', outline: '#12200e', eye: 'glow', eyeColor: '#dfffa0', feature: 'hat', accent: '#9ee06a' },
-  bebeserpent: { w: 14, h: 13, body: '#7a2a14', belly: '#ff8a3a', outline: '#1a0a05', eye: 'glow', eyeColor: '#ffd24a', feature: 'spikes', accent: '#ff5522' },
-  zombie: { w: 17, h: 19, body: '#5a6a4a', belly: '#7a8a5a', outline: '#161d10', eye: 'glow', eyeColor: '#9ee06a', feature: 'none', accent: '#3a4a2a' },
+  druide: { w: 16, h: 19, body: '#3a5a3a', belly: '#7aae5a', outline: '#12200e', eye: 'glow', eyeColor: '#dfffa0', feature: 'hat', accent: '#9ee06a', arms: true },
+  bebeserpent: { w: 14, h: 13, body: '#7a2a14', belly: '#ff8a3a', outline: '#1a0a05', eye: 'glow', eyeColor: '#ffd24a', feature: 'spikes', accent: '#ff5522', snout: true, mouth: 'fangs', feet: false, tail: 'none' },
+  zombie: { w: 17, h: 19, body: '#5a6a4a', belly: '#7a8a5a', outline: '#161d10', eye: 'glow', eyeColor: '#9ee06a', feature: 'none', accent: '#3a4a2a', arms: true, mouth: 'grin' },
   araigneemini: { w: 16, h: 13, body: '#3a2c5a', belly: '#5a4a7a', outline: '#140f24', eye: 'glow', eyeColor: '#c78aff', feature: 'spider', accent: '#8a5cff' },
-  minigorbak: { w: 18, h: 18, body: '#5f8a34', belly: '#b8d97a', outline: '#16240e', eye: 'angry', eyeColor: '#dfff9a', feature: 'horns', accent: '#3a5a24' },
+  minigorbak: { w: 18, h: 18, body: '#5f8a34', belly: '#b8d97a', outline: '#16240e', eye: 'angry', eyeColor: '#dfff9a', feature: 'horns', accent: '#3a5a24', arms: true, mouth: 'grin' },
 
   // ==================================================================
   //  Monde 5 — Abysses de Givre (bleus glaciers, blancs, cyan)
   // ==================================================================
-  yeti: { w: 24, h: 22, body: '#dce8f0', belly: '#9fc0d8', outline: '#1a2634', eye: 'angry', eyeColor: '#7fdcff', feature: 'spikes', accent: '#b8d4e8' },
-  spectregivre: { w: 18, h: 18, body: '#bfd8e8', outline: '#2a3a4a', eye: 'glow', eyeColor: '#7fdcff', feature: 'ghost', accent: '#8fb8d8' },
+  yeti: { w: 24, h: 22, body: '#dce8f0', belly: '#9fc0d8', outline: '#1a2634', eye: 'angry', eyeColor: '#7fdcff', feature: 'spikes', accent: '#b8d4e8', arms: true, mouth: 'fangs' },
+  spectregivre: { w: 18, h: 18, body: '#bfd8e8', outline: '#2a3a4a', eye: 'glow', eyeColor: '#7fdcff', feature: 'ghost', accent: '#8fb8d8', mouth: 'wide' },
   stalactite: { w: 16, h: 20, body: '#9fd0e8', belly: '#cfeaf8', outline: '#1e3644', eye: 'glow', eyeColor: '#e8f8ff', feature: 'spikes', accent: '#6ab0d8' },
-  pingouin: { w: 18, h: 18, body: '#1c2430', belly: '#f0f4f8', outline: '#0a0e14', eye: 'glow', eyeColor: '#ffd24a', feature: 'none', accent: '#ffa53a' },
-  sculpteur: { w: 17, h: 21, body: '#d8e8f4', belly: '#b0cce0', outline: '#2a3e4e', eye: 'glow', eyeColor: '#7fdcff', feature: 'hat', accent: '#9fd0e8' },
-  sorciereblizzard: { w: 18, h: 21, body: '#2a3a50', belly: '#3a4e68', outline: '#101824', eye: 'glow', eyeColor: '#7fdcff', feature: 'hat', accent: '#cfe8ff' },
-  brochet: { w: 24, h: 15, body: '#3a5a6a', belly: '#7fb0c8', outline: '#122430', eye: 'angry', eyeColor: '#e8f8ff', feature: 'spikes', accent: '#9fd0e8' },
+  pingouin: { w: 18, h: 18, body: '#1c2430', belly: '#f0f4f8', outline: '#0a0e14', eye: 'glow', eyeColor: '#ffd24a', feature: 'none', accent: '#ffa53a', mouth: 'beak' },
+  sculpteur: { w: 17, h: 21, body: '#d8e8f4', belly: '#b0cce0', outline: '#2a3e4e', eye: 'glow', eyeColor: '#7fdcff', feature: 'hat', accent: '#9fd0e8', arms: true },
+  sorciereblizzard: { w: 18, h: 21, body: '#2a3a50', belly: '#3a4e68', outline: '#101824', eye: 'glow', eyeColor: '#7fdcff', feature: 'hat', accent: '#cfe8ff', arms: true },
+  brochet: { w: 24, h: 15, body: '#3a5a6a', belly: '#7fb0c8', outline: '#122430', eye: 'angry', eyeColor: '#e8f8ff', feature: 'spikes', accent: '#9fd0e8', snout: true, mouth: 'fangs', tail: 'fin', feet: false },
 
   // ==================================================================
   //  Monde 6 — Nécropole Céleste (or terni, marbre nocturne, éclair)
   // ==================================================================
-  harpie: { w: 22, h: 18, body: '#3a3a5a', belly: '#5a5a7a', outline: '#141428', eye: 'angry', eyeColor: '#ffe08a', feature: 'wings', accent: '#ffe08a' },
+  harpie: { w: 22, h: 18, body: '#3a3a5a', belly: '#5a5a7a', outline: '#141428', eye: 'angry', eyeColor: '#ffe08a', feature: 'wings', accent: '#ffe08a', arms: true, mouth: 'beak' },
   nuagetonnerre: { w: 20, h: 16, body: '#2a2a3f', belly: '#5a5a7a', outline: '#101018', eye: 'glow', eyeColor: '#b0c8ff', feature: 'none', accent: '#8a9aff' },
-  djinn: { w: 19, h: 20, body: '#4a4a6a', belly: '#6a6a8a', outline: '#161624', eye: 'glow', eyeColor: '#ffe08a', feature: 'crown', accent: '#b0c8ff' },
-  chevalierceleste: { w: 18, h: 21, body: '#8a7a4a', belly: '#b0a068', outline: '#241e10', eye: 'glow', eyeColor: '#ffe08a', feature: 'horns', accent: '#ffe08a' },
+  djinn: { w: 19, h: 20, body: '#4a4a6a', belly: '#6a6a8a', outline: '#161624', eye: 'glow', eyeColor: '#ffe08a', feature: 'crown', accent: '#b0c8ff', arms: true },
+  chevalierceleste: { w: 18, h: 21, body: '#8a7a4a', belly: '#b0a068', outline: '#241e10', eye: 'glow', eyeColor: '#ffe08a', feature: 'horns', accent: '#ffe08a', arms: true },
   idole: { w: 20, h: 22, body: '#2a2a3a', belly: '#3a3a52', outline: '#0e0e18', eye: 'glow', eyeColor: '#59b8ff', feature: 'crown', accent: '#ffe08a' },
-  oiseauplasma: { w: 20, h: 15, body: '#b0c8ff', belly: '#e8f0ff', outline: '#4a5a8a', eye: 'glow', eyeColor: '#ffffff', feature: 'wings', accent: '#ffffff' },
-  porteursarco: { w: 22, h: 20, body: '#3a3a5a', belly: '#ffe08a', outline: '#141428', eye: 'glow', eyeColor: '#b0c8ff', feature: 'wings', accent: '#ffe08a' },
-  momie: { w: 15, h: 17, body: '#c9b878', belly: '#e8dca8', outline: '#2a2410', eye: 'glow', eyeColor: '#b0c8ff', feature: 'none', accent: '#8a9aff' },
+  oiseauplasma: { w: 20, h: 15, body: '#b0c8ff', belly: '#e8f0ff', outline: '#4a5a8a', eye: 'glow', eyeColor: '#ffffff', feature: 'wings', accent: '#ffffff', mouth: 'beak' },
+  porteursarco: { w: 22, h: 20, body: '#3a3a5a', belly: '#ffe08a', outline: '#141428', eye: 'glow', eyeColor: '#b0c8ff', feature: 'wings', accent: '#ffe08a', arms: true },
+  momie: { w: 15, h: 17, body: '#c9b878', belly: '#e8dca8', outline: '#2a2410', eye: 'glow', eyeColor: '#b0c8ff', feature: 'none', accent: '#8a9aff', arms: true },
 
   // ==================================================================
   //  Monde 7 — Faille du Néant (magenta du néant, cyan froid, obsidienne)
   // ==================================================================
   oeilneant: { w: 20, h: 18, body: '#0c0a16', belly: '#1a1428', outline: '#040209', eye: 'glow', eyeColor: '#d05aff', feature: 'none', accent: '#d05aff' },
-  golemstellaire: { w: 22, h: 22, body: '#1c1830', belly: '#2a2444', outline: '#0a0812', eye: 'glow', eyeColor: '#59d9ff', feature: 'spikes', accent: '#d05aff' },
-  doppelchat: { w: 18, h: 18, body: '#14101f', belly: '#241c34', outline: '#d05aff', eye: 'glow', eyeColor: '#ffffff', feature: 'ears', accent: '#d05aff' },
-  mangeurames: { w: 20, h: 17, body: '#1c1428', belly: '#3a2c50', outline: '#0a0612', eye: 'angry', eyeColor: '#7fff9a', feature: 'none', accent: '#d05aff' },
-  faucheurdim: { w: 18, h: 20, body: '#0c0a16', outline: '#2a1440', eye: 'glow', eyeColor: '#d05aff', feature: 'ghost', accent: '#d05aff' },
+  golemstellaire: { w: 22, h: 22, body: '#1c1830', belly: '#2a2444', outline: '#0a0812', eye: 'glow', eyeColor: '#59d9ff', feature: 'spikes', accent: '#d05aff', arms: true },
+  doppelchat: { w: 18, h: 18, body: '#14101f', belly: '#241c34', outline: '#d05aff', eye: 'glow', eyeColor: '#ffffff', feature: 'ears', accent: '#d05aff', tail: 'plain' },
+  mangeurames: { w: 20, h: 17, body: '#1c1428', belly: '#3a2c50', outline: '#0a0612', eye: 'angry', eyeColor: '#7fff9a', feature: 'none', accent: '#d05aff', mouth: 'maw' },
+  faucheurdim: { w: 18, h: 20, body: '#0c0a16', outline: '#2a1440', eye: 'glow', eyeColor: '#d05aff', feature: 'ghost', accent: '#d05aff', mouth: 'maw' },
   etoilenaine: { w: 16, h: 16, body: '#ffffff', belly: '#ffe8ff', outline: '#7a2ab0', eye: 'glow', eyeColor: '#d05aff', feature: 'spikes', accent: '#d05aff' },
-  larvechaos: { w: 19, h: 16, body: '#14101f', belly: '#3a2c50', outline: '#080510', eye: 'glow', eyeColor: '#d05aff', feature: 'none', accent: '#59d9ff' },
+  larvechaos: { w: 19, h: 16, body: '#14101f', belly: '#3a2c50', outline: '#080510', eye: 'glow', eyeColor: '#d05aff', feature: 'none', accent: '#59d9ff', mouth: 'maw', pattern: 'stripes' },
 };
