@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, RENDER_SCALE } from '../config/game';
+import { HERO_ART_COMP } from '../art/heroesHD';
 import { button, label, panel, iconBadge } from '../ui/theme';
 import { SaveSystem, formatTime } from '../systems/SaveSystem';
 import { META_UPGRADES } from '../config/metaUpgrades';
@@ -35,7 +36,7 @@ export class HubScene extends Phaser.Scene {
       tint: [0xffd24a, 0xff6a1f, 0xe8384f], blendMode: 'ADD',
     });
     fire.setDepth(1);
-    this.add.sprite(128, GAME_HEIGHT - 44, 'cat').setScale(2.4).setFlipX(true);
+    this.add.sprite(128, GAME_HEIGHT - 44, 'cat').setScale(2.4 * HERO_ART_COMP).setFlipX(true);
 
     // monnaie
     const coin = iconBadge(this, GAME_WIDTH - 150, 36, glyphTexture('coin'), COLORS.gold, 0x3a2f10, 16);

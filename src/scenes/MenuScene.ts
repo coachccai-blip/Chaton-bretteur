@@ -3,6 +3,7 @@ import { GAME_WIDTH, GAME_HEIGHT, COLORS, RENDER_SCALE } from '../config/game';
 import { button, label, panel } from '../ui/theme';
 import { AudioManager } from '../systems/AudioManager';
 import { SaveSystem } from '../systems/SaveSystem';
+import { HERO_ART_COMP } from '../art/heroesHD';
 
 export class MenuScene extends Phaser.Scene {
   constructor() { super('Menu'); }
@@ -21,7 +22,7 @@ export class MenuScene extends Phaser.Scene {
     });
 
     // héros (taille réduite + abaissé pour dégager le sous-titre au-dessus du casque)
-    const cat = this.add.sprite(GAME_WIDTH / 2, 278, 'cat').setScale(3.2);
+    const cat = this.add.sprite(GAME_WIDTH / 2, 278, 'cat').setScale(3.2 * HERO_ART_COMP);
     this.tweens.add({ targets: cat, y: 266, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     const sword = this.add.sprite(GAME_WIDTH / 2 + 52, 278, 'sword').setScale(1.6).setRotation(0.4);
     this.tweens.add({ targets: sword, rotation: 0.7, y: 266, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });

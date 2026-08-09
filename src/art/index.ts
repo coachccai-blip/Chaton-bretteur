@@ -4,6 +4,7 @@ import { CAT, SWORD, KATANA, MERCHANT_CAT, HAMMER, WATER_WAVE, SUSANOO, KAGE_BUN
 import { GLYPHS } from './icons';
 import { genCritter, MONSTER_RECIPES } from './critters';
 import { BOSS_CATS } from './bosscats';
+import { genHeroCat } from './heroesHD';
 import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, MINE, FIREBALL, ICE_SHARD, FROST, ICE_STALACTITE, ICE_PYLON, BLACK_FLAME, MUD_BLOB, MUD_SPLAT, TORNADO, FIRE_TORNADO, BOOMERANG, CAT_PAW, LIGHTNING_BLUE, ANGEL_WINGS, MINE_BOSS, GRENADE, MISSILE, EXPLOSION, TURRET, TANK, TANK_MISSILE, GATLING_BULLET, MATERIAL_ART, RED_AURA } from './environment';
 import { ZONES } from '../config/worlds';
 
@@ -13,8 +14,8 @@ let generated = false;
 export function generateAll(scene: Phaser.Scene): void {
   if (generated && scene.textures.exists('cat')) return;
 
-  // Héros
-  genSprite(scene, CAT);
+  // Héros (redessiné en HD procédural — voir heroesHD.ts)
+  genHeroCat(scene);
   genSprite(scene, SWORD);
   genSprite(scene, KATANA); // katana noir orbital (Troisième Lame)
   genSprite(scene, HAMMER); // Mjölnir orbital

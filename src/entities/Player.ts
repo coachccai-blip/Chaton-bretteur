@@ -3,14 +3,16 @@ import type { GameScene } from '../scenes/GameScene';
 import { ARENA_RECT } from '../scenes/GameScene';
 import type { PlayerStats } from '../config/game';
 import type { IPlayerContext, IEnemyLike, ICombatScene, OnHitFn, OnKillFn, VoidFn, SpecialFlag, DashFlag, BuffMods, HitInfo } from '../config/types';
+import { HERO_ART_COMP } from '../art/heroesHD';
 
 /** Portée d'auto-visée : au-delà, l'attaque suit la visée manuelle/déplacement. */
 const AUTO_AIM_RANGE = 260;
 /** Portée de base de la mêlée (réduite de 20% ; rallongée par Bras Élastique / Susanoo). */
 const MELEE_RANGE = 156;
-/** Sprite héros haute résolution (26×30) : on le rend à cette échelle pour garder
- * une taille à l'écran raisonnable tout en profitant du surcroît de détail. */
-const HERO_SCALE = 0.72;
+/** Sprite héros HD (44×52, redessiné) : l'échelle de base est compensée par
+ * HERO_ART_COMP pour garder EXACTEMENT la taille à l'écran d'avant (0.72 sur
+ * l'ancien 26×30) tout en profitant du surcroît de détail. */
+const HERO_SCALE = 0.72 * HERO_ART_COMP;
 
 export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerContext {
   gs: GameScene;
@@ -103,8 +105,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     this.setDepth(20);
     this.setOrigin(0.5, 0.85);
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setSize(28, 24);
-    body.setOffset((this.width - 28) / 2, this.height - 34);
+    // Hitbox exprimée en texels compensés → produit (texels × HERO_SCALE) inchangé
+    // malgré le sprite plus grand : boîte de collision et position identiques à avant.
+    const bw = 28 / HERO_ART_COMP, bh = 24 / HERO_ART_COMP;
+    body.setSize(bw, bh);
+    body.setOffset((this.width - bw) / 2, this.height - 34 / HERO_ART_COMP);
     body.setCollideWorldBounds(true);
 
     this.swordR = scene.add.sprite(x, y, 'sword').setOrigin(0.5, 0.85).setDepth(21).setScale(0.9);
@@ -597,7 +602,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       return;
     }
     while (this.miniClones.length < 2) {
-      const s = this.gs.add.sprite(this.x, this.y, 'cat').setDepth(19).setScale(0.55).setAlpha(0.9).setTint(0x9fe6ff);
+      const s = this.gs.add.sprite(this.x, this.y, 'cat').setDepth(19).setScale(0.55 * HERO_ART_COMP).setAlpha(0.9).setTint(0x9fe6ff);
       this.miniClones.push(s);
     }
     this.miniAngle += 0.02;

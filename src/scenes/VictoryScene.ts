@@ -5,6 +5,7 @@ import { RunState } from '../systems/RunState';
 import { SaveSystem, formatTime } from '../systems/SaveSystem';
 import { DIFFICULTIES } from '../config/difficulty';
 import { AudioManager } from '../systems/AudioManager';
+import { HERO_ART_COMP } from '../art/heroesHD';
 
 export class VictoryScene extends Phaser.Scene {
   constructor() { super('Victory'); }
@@ -22,7 +23,7 @@ export class VictoryScene extends Phaser.Scene {
       tint: [0xf4c430, 0x6ad46a, 0x59a8ff, 0xff6b6b], blendMode: 'ADD',
     });
 
-    const cat = this.add.sprite(GAME_WIDTH / 2, 150, 'cat').setScale(5);
+    const cat = this.add.sprite(GAME_WIDTH / 2, 150, 'cat').setScale(5 * HERO_ART_COMP);
     this.tweens.add({ targets: cat, angle: { from: -6, to: 6 }, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     const sword = this.add.sprite(GAME_WIDTH / 2 + 70, 130, 'sword').setScale(2.4).setRotation(-0.6);
     this.tweens.add({ targets: sword, rotation: -0.9, duration: 700, yoyo: true, repeat: -1 });
