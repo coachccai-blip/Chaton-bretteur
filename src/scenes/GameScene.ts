@@ -1363,8 +1363,8 @@ export class GameScene extends Phaser.Scene {
     const def = BOSSES['militaire'];
     const diff = getDifficulty(RunState.difficultyId);
     const zi = ZONES.length - 1;
-    // 20× les PV de Néantis (en mode Normal), modulé par la difficulté.
-    const hpMul = (diff.enemyHp / getDifficulty('normal').enemyHp) * 20 * (BOSSES['reflet'].hp / def.hp);
+    // 60× les PV de Néantis (en mode Normal), modulé par la difficulté.
+    const hpMul = (diff.enemyHp / getDifficulty('normal').enemyHp) * 60 * (BOSSES['reflet'].hp / def.hp);
     const dmgMul = Math.pow(1.3, zi) * 1.2;
     this.bossIntro(def, () => {
       this.banner(`BOSS FINAL : ${def.name}`, () => {

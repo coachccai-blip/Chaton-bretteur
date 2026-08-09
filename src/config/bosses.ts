@@ -264,7 +264,10 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   militaire: {
     id: 'militaire', name: 'BIG BOSS', title: 'le Chat Militaire', sprite: 'militaire',
-    hp: 6300, scale: 1.45, contactDamage: 34, auraColor: 0x8aa04a, level: 999,
+    // NB : ce `hp` est un placeholder neutre — les vrais PV du boss final sont
+    // recalculés dans GameScene.startFinalBoss() (= 60× ceux de Néantis) et cette
+    // valeur s'annule dans la formule. Modifier le boss final se fait là-bas.
+    hp: 2100, scale: 1.45, contactDamage: 34, auraColor: 0x8aa04a, level: 999,
     phases: [
       { hpFrac: 1.0, speed: 175, moves: [
         { type: 'mines', telegraph: 700, cooldown: 4200, count: 5, damage: 100, color: 0xff6a4a, say: 'Champ de mines !' },
