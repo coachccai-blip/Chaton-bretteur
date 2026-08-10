@@ -340,7 +340,11 @@ export class UIScene extends Phaser.Scene {
 
   /** Met le jeu en pause et affiche la carte du pouvoir collecté (effets appliqués). */
   private openPowerReview(def: PowerDef, n: number): void {
-    if (this.reviewing || !this.gameplayActive) return;
+    // Ne pas ouvrir la revue si le jeu est DÉJÀ en pause (écran de choix de boon,
+    // boutique…) : sinon la fermer appellerait scene.resume() et relancerait le
+    // combat derrière l'écran de récompense (surtout sur desktop où gameplayActive
+    // n'est piloté que par les listeners tactiles).
+    if (this.reviewing || !this.gameplayActive || this.gs.scene.isPaused()) return;
     this.reviewing = true;
     this.gameplayActive = false;
     this.gs.scene.pause();

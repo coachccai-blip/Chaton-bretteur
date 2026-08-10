@@ -259,6 +259,12 @@ export class GameScene extends Phaser.Scene {
     this.clearDoors();
     this.clearTraps();
     this.clearSouls();
+    // Projectiles alliés (Getsuga, patte, toile…) et ennemis restants : sans ça un tir
+    // encore en vol au moment de franchir une porte survit dans la salle suivante et
+    // frappe/traverse les nouveaux ennemis.
+    this.friendlyShots.forEach((s) => s.sprite.destroy());
+    this.friendlyShots = [];
+    this.projectiles.clear(true, true);
     this.hazards = [];
     this.bossHazards = [];
     this.hazardGfx.clear();
@@ -407,7 +413,9 @@ export class GameScene extends Phaser.Scene {
       const id = Phaser.Utils.Array.GetRandom(this.zone.enemyPool);
       const pos = this.randomSpawnPos();
       this.juice.ring(pos.x, pos.y, 30, this.zone.palette.accent, 300);
-      this.time.delayedCall(300, () => this.spawnEnemy(id, pos.x, pos.y, diff));
+      // garde d'état : si le joueur meurt / la salle change pendant le télégraphe,
+      // ne pas injecter un ennemi vivant dans une salle en train de se terminer.
+      this.time.delayedCall(300, () => { if (this.combatActive) this.spawnEnemy(id, pos.x, pos.y, diff); });
     }
   }
 
@@ -2607,11 +2615,12 @@ export class GameScene extends Phaser.Scene {
     // projectiles alliés (ondes tranchantes, clones)
     this.updateFriendlyShots(now, delta);
 
-    // projectiles hors zone
-    this.projectiles.getChildren().forEach((o) => {
+    // projectiles hors zone (snapshot : destroy() splice le tableau du groupe, donc
+    // itérer une copie évite de sauter le voisin lors d'une double-destruction).
+    for (const o of [...this.projectiles.getChildren()]) {
       const p = o as Projectile;
       if (p.active && (p.x < ARENA.x - 20 || p.x > ARENA.x + ARENA.w + 20 || p.y < ARENA.y - 20 || p.y > ARENA.y + ARENA.h + 20)) p.destroy();
-    });
+    }
 
     // HUD cooldowns
     if (this.player && !this.player.dead) {

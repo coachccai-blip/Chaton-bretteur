@@ -521,7 +521,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
       const n = this.def.signature.count ?? 6;
       for (let k = 0; k < n; k++) {
         const a = (k / n) * Math.PI * 2;
-        this.gs.spawnEnemyProjectile(this.x, this.y, Math.cos(a), Math.sin(a), this.def.signature.speed ?? 140, this.def.signature.damage, undefined, this.def.signature.color);
+        this.gs.spawnEnemyProjectile(this.x, this.y, Math.cos(a), Math.sin(a), this.def.signature.speed ?? 140, this.projDmg(this.def.signature.damage), undefined, this.def.signature.color);
       }
     }
     this.kill(false);
