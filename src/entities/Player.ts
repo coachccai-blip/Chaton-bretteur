@@ -470,8 +470,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (waterDash) this.waterDashVfx(dir);
     for (const fn of this.onDashFns) fn();
     // En téléport (Kunai), les dégâts du trajet sont déjà appliqués par lineDamage :
-    // pas d'accumulateur d'overlap, sinon l'ennemi à l'arrivée est frappé 2 fois.
-    if (!teleport && this.stats.dashDamage > 0) this.dashHitAccumulator = new Set();
+    // on FORCE l'accumulateur à null, sinon un Set laissé par un dash normal
+    // précédent laisserait tryDashHit re-frapper l'ennemi à l'arrivée (double coup).
+    this.dashHitAccumulator = (!teleport && this.stats.dashDamage > 0) ? new Set() : null;
 
     // Queue Équilibrière : un coup d'épée tranche pendant le dash.
     if (this.mods.dashAttack) {
@@ -767,8 +768,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const isFinisher = this.comboIndex === this.maxCombo - 1;
     this.gs.sfx(isFinisher ? 'slashfin' : `slash${(this.comboIndex % 3) + 1}`);
 
-    // résolution des dégâts au milieu du swing
-    const hitDmg = this.stats.swordDamage[this.comboIndex] ?? this.stats.swordDamage[0];
+    // résolution des dégâts au milieu du swing. On BORNE l'index comme resolveArcHit()
+    // (le boon de combo peut pousser comboIndex au-delà de swordDamage.length : sans
+    // ça les clones répliqueraient le 1er coup au lieu du dernier).
+    const hitDmg = this.stats.swordDamage[Math.min(this.comboIndex, this.stats.swordDamage.length - 1)];
     this.gs.time.delayedCall(this.attackDuration() * 0.35, () => {
       if (this.dead) return;
       this.resolveArcHit();
