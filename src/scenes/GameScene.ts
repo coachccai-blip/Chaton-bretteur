@@ -783,7 +783,6 @@ export class GameScene extends Phaser.Scene {
     const glob = this.add.image(sx, sy - 12, 'mud_blob').setDepth(24).setScale(1.5);
     const shadow = this.add.ellipse(tx, ty, 20, 9, 0x000000, 0.32).setDepth(3);
     let hit = false;
-    let reflected = false;
     this.tweens.add({
       targets: glob, x: tx, y: ty, duration: dur, ease: 'Sine.easeIn',
       onUpdate: () => {
@@ -791,27 +790,6 @@ export class GameScene extends Phaser.Scene {
         const p = this.player;
         if (this.combatActive && p && !p.dead && Math.hypot(p.x - glob.x, p.y - glob.y) < 18) {
           hit = true;
-          // Le glob de boue n'est pas un Projectile « standard » (tween maison), donc il
-          // faut réappliquer ici la logique de renvoi : Poil Voile Miroir (dash) le
-          // renvoie vers l'ennemi le plus proche, et Portail Miroitant a sa chance.
-          const veil = !!(p.mods.mirrorVeil && p.isDashing());
-          const reflectRoll = !veil && !!p.mods.reflect && Math.random() < (p.mods.reflect as number);
-          if (veil || reflectRoll) {
-            reflected = true;
-            const gx = glob.x, gy = glob.y;
-            let bx = sx, by = sy, bd = Infinity; // défaut : renvoyé à l'expéditeur
-            for (const e of this.getTargets()) {
-              if (!e.isAlive()) continue;
-              const dd = Math.hypot(e.x - gx, e.y - gy);
-              if (dd < bd) { bd = dd; bx = e.x; by = e.y; }
-            }
-            const dl = Math.hypot(bx - gx, by - gy) || 1;
-            this.friendlyShot(gx, gy, (bx - gx) / dl, (by - gy) / dl, 460, Math.round(damage * 1.5), { color: 0x9fe6ff, texture: 'mud_blob', scale: 1.5 });
-            this.juice.ring(gx, gy, 26, 0x9fe6ff, 240);
-            this.tweens.killTweensOf(glob);
-            glob.destroy(); shadow.destroy();
-            return;
-          }
           p.takeDamage(damage, glob.x, glob.y);
           this.poisonPlayer();
         }
@@ -820,7 +798,6 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: glob, scale: 2.0, duration: dur / 2, yoyo: true });
     this.tweens.add({ targets: glob, angle: 360, duration: dur });
     this.time.delayedCall(dur, () => {
-      if (reflected) return; // glob renvoyé par la toile miroir : ni flaque ni impact au sol
       glob.destroy();
       shadow.destroy();
       this.juice.burst(tx, ty, 0x7a8a3a, 8, 150, 1.1);

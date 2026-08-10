@@ -363,11 +363,6 @@ export const POWERS: PowerDef[] = [
     apply(p) { p.stats.dodgeChance += 0.18; },
   },
   {
-    id: 'spiky_fur', name: 'Poil Voile Miroir', god: 'Ronce', category: 'defense', rarity: 'rare', icon: 'thorns',
-    description: 'Pendant le dash, invincible aux projectiles : ils sont renvoyés vers l’ennemi le plus proche (×1,5 dégâts).',
-    apply(p) { p.mods.mirrorVeil = 1; },
-  },
-  {
     id: 'wide_whirl', name: 'Tourbillon Ample', god: 'Vent Tranchant', category: 'special', rarity: 'rare', icon: 'special', repeatable: true,
     description: '+35% de zone et +45% de dégâts du Spécial.',
     apply(p) { p.stats.specialRadius *= 1.35; p.stats.specialDamage = Math.round(p.stats.specialDamage * 1.45); },

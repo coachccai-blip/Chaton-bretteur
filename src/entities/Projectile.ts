@@ -56,33 +56,6 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   hitPlayer(): void {
     const p = this.gs.player;
     if (p && !p.dead) {
-      // Poil Voile Miroir : pendant le dash, invincible aux projectiles ; chacun est
-      // renvoyé vers l'ennemi vivant le plus proche (×1,5 dégâts).
-      if (p.mods.mirrorVeil && p.isDashing()) {
-        const b = this.body as Phaser.Physics.Arcade.Body;
-        const sp = Math.hypot(b.velocity.x, b.velocity.y) || 240;
-        let best: { x: number; y: number } | null = null, bd = Infinity;
-        for (const e of this.gs.getTargets()) {
-          if (!e.isAlive()) continue;
-          const d = Math.hypot(e.x - this.x, e.y - this.y);
-          if (d < bd) { bd = d; best = e; }
-        }
-        let dx = -b.velocity.x / sp, dy = -b.velocity.y / sp; // par défaut : renvoi à l'expéditeur
-        if (best) { const ddx = best.x - this.x, ddy = best.y - this.y, dd = Math.hypot(ddx, ddy) || 1; dx = ddx / dd; dy = ddy / dd; }
-        this.gs.friendlyShot(this.x, this.y, dx, dy, sp * 1.15, Math.round(this.damage * 1.5), { color: 0x9fe6ff, pierce: false });
-        this.gs.juice.ring(this.x, this.y, 28, 0x9fe6ff, 240);
-        this.destroy();
-        return;
-      }
-      // Portail Miroitant : chance d'avaler le projectile et de le renvoyer (×1,5).
-      if (p.mods.reflect && Math.random() < p.mods.reflect) {
-        const b = this.body as Phaser.Physics.Arcade.Body;
-        const sp = Math.hypot(b.velocity.x, b.velocity.y) || 220;
-        this.gs.friendlyShot(this.x, this.y, -b.velocity.x / sp, -b.velocity.y / sp, sp * 1.1, Math.round(this.damage * 1.5), { color: 0xb26bff, pierce: false });
-        this.gs.juice.ring(this.x, this.y, 30, 0xb26bff, 260);
-        this.destroy();
-        return;
-      }
       p.takeDamage(this.damage, this.x, this.y);
       if (this.status === 'poison') this.gs.poisonPlayer();
     }
