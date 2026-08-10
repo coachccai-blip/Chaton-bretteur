@@ -12,6 +12,7 @@ import { VictoryScene } from './scenes/VictoryScene';
 import { FinalChoiceScene } from './scenes/FinalChoiceScene';
 import { RunState } from './systems/RunState';
 import { SaveSystem } from './systems/SaveSystem';
+import './systems/pwa'; // capture tôt l'événement d'installation PWA (beforeinstallprompt)
 import { POWERS } from './config/powers';
 
 const config: Phaser.Types.Core.GameConfig = {

@@ -4,6 +4,7 @@ import { button, label, panel } from '../ui/theme';
 import { AudioManager } from '../systems/AudioManager';
 import { SaveSystem } from '../systems/SaveSystem';
 import { HERO_ART_COMP } from '../art/heroesHD';
+import { canInstall, hasNativePrompt, isIOS, promptInstall } from '../systems/pwa';
 
 export class MenuScene extends Phaser.Scene {
   constructor() { super('Menu'); }
@@ -47,9 +48,43 @@ export class MenuScene extends Phaser.Scene {
       'Clavier/souris · Manette · Tactile  —  🐾', 13, '#9a8fb0');
 
     this.buildFullscreenButton();
+    this.buildInstallButton();
 
     this.input.once('pointerdown', () => AudioManager.resume());
     AudioManager.startMusic('menu');
+  }
+
+  /**
+   * Bouton « Installer le jeu » : uniquement sur mobile, si l'app n'est pas déjà
+   * installée. Android/Chromium → prompt natif en un clic ; iOS → instructions.
+   */
+  private buildInstallButton(): void {
+    if (!canInstall()) return;
+    const b = button(this, GAME_WIDTH / 2, 486, 250, 44, '📲  Installer le jeu', () => {
+      AudioManager.resume(); AudioManager.play('ui');
+      if (hasNativePrompt()) {
+        promptInstall().then((r) => { if (r === 'accepted') b.container.destroy(); });
+      } else if (isIOS()) {
+        this.showIOSInstallHelp();
+      }
+    }, { fill: 0x1f3d2a, border: 0x6ad46a, textColor: '#c7f2d0', size: 17 });
+  }
+
+  /** Instructions d'installation iOS (pas d'API : « Ajouter à l'écran d'accueil »). */
+  private showIOSInstallHelp(): void {
+    const c = this.add.container(0, 0).setDepth(100);
+    const bg = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.72)
+      .setInteractive();
+    bg.on('pointerdown', () => c.destroy());
+    const p = panel(this, GAME_WIDTH / 2, GAME_HEIGHT / 2, 460, 260);
+    const title = label(this, GAME_WIDTH / 2, 168, 'Installer sur iPhone / iPad', 22, '#6ad46a');
+    const step1 = label(this, GAME_WIDTH / 2, 214, '1.  Appuie sur le bouton Partager', 16, '#eaf4ff');
+    const step1b = label(this, GAME_WIDTH / 2, 236, '(le carré avec une flèche vers le haut ⬆︎)', 12, '#9a8fb0');
+    const step2 = label(this, GAME_WIDTH / 2, 270, '2.  Choisis « Sur l’écran d’accueil »', 16, '#eaf4ff');
+    const step3 = label(this, GAME_WIDTH / 2, 300, '3.  Confirme avec « Ajouter »', 16, '#eaf4ff');
+    c.add([bg, p, title, step1, step1b, step2, step3]);
+    const close = button(this, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 92, 160, 42, 'Compris', () => c.destroy(), { size: 16 });
+    c.add(close.container);
   }
 
   /** Bouton plein écran (coin haut-droit) — utile en navigateur mobile/desktop. */
