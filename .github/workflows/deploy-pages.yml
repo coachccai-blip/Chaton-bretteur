@@ -1,0 +1,61 @@
+name: Déploiement GitHub Pages
+
+# Construit le jeu (Vite) et le publie sur GitHub Pages à chaque push.
+# Aucun glisser-déposer : l'URL est mise à jour automatiquement.
+on:
+  push:
+    branches:
+      - main
+      - claude/game-pixel-art-generation-s7qtbu
+  workflow_dispatch: # permet de relancer le déploiement manuellement
+
+# Droits requis par les actions officielles de déploiement Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un seul déploiement Pages à la fois (les nouveaux annulent les précédents).
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Construire le jeu
+        run: npm run build
+
+      - name: Configurer GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true # active Pages (source « GitHub Actions ») si besoin
+
+      - name: Téléverser l'artefact du site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Déployer sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
