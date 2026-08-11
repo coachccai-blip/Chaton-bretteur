@@ -236,6 +236,8 @@ export const BOSSES: Record<string, BossDef> = {
         { type: 'charge', telegraph: 520, cooldown: 2600, chargeSpeed: 600, damage: 22 },
         { type: 'glyphs', telegraph: 760, cooldown: 3000, count: 4, radius: 60, damage: 20, color: 0xd05aff, say: 'Gravité renversée !' },
         { type: 'arrowRain', telegraph: 640, cooldown: 3000, count: 8, radius: 46, damage: 20, color: 0x59d9ff },
+        // ZA WARUDO dès la phase 1 (Néantis peut le lancer dans TOUTES ses phases).
+        { type: 'timestopBoss', telegraph: 700, cooldown: 12000, duration: 2200, say: 'Zharu warudo !!!' },
       ]},
       { hpFrac: 0.75, speed: 185, tint: 0xe08aff, moves: [
         // 4. Éclipse du Reflet — téléportation
@@ -252,6 +254,7 @@ export const BOSSES: Record<string, BossDef> = {
         { type: 'glyphs', telegraph: 720, cooldown: 2800, count: 5, radius: 62, damage: 24, color: 0xd05aff },
         { type: 'summon', telegraph: 700, cooldown: 7000, summonId: 'doppelchat', summonCount: 2 },
         { type: 'crossBeams', telegraph: 560, cooldown: 3000, width: 60, damage: 24, color: 0xd05aff },
+        { type: 'timestopBoss', telegraph: 640, cooldown: 10000, duration: 2400, say: 'Zharu warudo !!!' },
       ]},
       { hpFrac: 0.25, speed: 250, tint: 0xf0a0ff, moves: [
         // Chœur des Vaincus + Néant Dévorant (approx. : salve totale)
