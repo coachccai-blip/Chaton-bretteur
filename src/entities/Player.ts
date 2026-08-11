@@ -519,7 +519,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   }
 
   /** Dégâts en ligne (dash-éclair, Kamehameha instantané). */
-  lineDamage(x1: number, y1: number, x2: number, y2: number, width: number, damage: number, color: number): void {
+  lineDamage(x1: number, y1: number, x2: number, y2: number, width: number, damage: number, color: number, magic = false): void {
     this.gs.beam(x1, y1, x2, y2, color);
     const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
     const nx = dx / len, ny = dy / len;
@@ -527,7 +527,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       if (!e.isAlive()) continue;
       const t = Phaser.Math.Clamp(((e.x - x1) * nx + (e.y - y1) * ny), 0, len);
       const px = x1 + nx * t, py = y1 + ny * t;
-      if (Math.hypot(e.x - px, e.y - py) <= width) this.dealDamage(e, damage, false);
+      if (Math.hypot(e.x - px, e.y - py) <= width) this.dealDamage(e, damage, false, undefined, { magic });
     }
   }
   private dashHitAccumulator: Set<IEnemyLike> | null = null;
@@ -605,7 +605,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
         const es = e as unknown as Phaser.GameObjects.Sprite;
         let acc = (es.getData(key) as number || 0) + totalPasses;
         const whole = Math.floor(acc);
-        if (whole >= 1) { this.dealDamage(e, dmg * whole, false, undefined, { silent: true }); acc -= whole; }
+        // Marteau de Thor (electric) = arme MAGIQUE (foudre) → annulée par Voltaïr.
+        // Katana noir = arme PHYSIQUE → le blesse.
+        if (whole >= 1) { this.dealDamage(e, dmg * whole, false, undefined, { silent: true, magic: electric }); acc -= whole; }
         es.setData(key, acc);
       }
     }
@@ -964,7 +966,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   /** applique dégâts + crit + rage + hooks + vol de vie + knockback + rafale.
    *  `opts.silent` : dégâts SANS le retour visuel/sonore par coup (armes orbitales
    *  à haute cadence — Wilix — pour éviter le spam de nombres/sons). */
-  dealDamage(e: IEnemyLike, baseDmg: number, finisher: boolean, info?: HitInfo, opts?: { silent?: boolean }): void {
+  dealDamage(e: IEnemyLike, baseDmg: number, finisher: boolean, info?: HitInfo, opts?: { silent?: boolean; magic?: boolean }): void {
     this.markCombat();
     const anyE = e as unknown as { hp?: number; maxHp?: number; applySlow?: (f: number, ms: number) => void };
     // Poing de Saitama : élimination instantanée (hors boss)
@@ -983,7 +985,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     if (finisher) dmg *= 1.15;
     if (info?.first) dmg *= this.stats.firstComboMult; // Vitesse Extrême
     dmg = Math.round(dmg);
-    e.takeDamage(dmg, this.x, this.y, { crit: isCrit, silent: opts?.silent });
+    e.takeDamage(dmg, this.x, this.y, { crit: isCrit, silent: opts?.silent, magic: opts?.magic });
     if (finisher) this.applyKnockback(e, this.stats.knockback);
     // crocs élémentaires (chance on-hit) + ralentissement (Toile Légère)
     if (this.stats.fangBurn && Math.random() < this.stats.fangBurn) e.applyStatus('burn', 1500);
@@ -1047,7 +1049,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     for (const e of this.gs.getTargets()) {
       if (!e.isAlive()) continue;
       if (Math.hypot(e.x - this.x, e.y - this.y) <= radius) {
-        this.dealDamage(e, this.stats.specialDamage, false);
+        this.dealDamage(e, this.stats.specialDamage, false, undefined, { magic: true });
         this.applyKnockback(e, 220);
       }
     }
@@ -1058,13 +1060,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       this.gs.juice.popText(this.x, this.y - 40, '-1 PV', '#ff5a5a', 13);
     }
     if (this.specialFlags.has('wave')) {
-      this.gs.slashWave(this.x, this.y, aimDir.x, aimDir.y, Math.round(this.stats.specialDamage * 0.9));
-      this.gs.slashWave(this.x, this.y, aimDir.x, aimDir.y, Math.round(this.stats.specialDamage * 0.9));
+      this.gs.slashWave(this.x, this.y, aimDir.x, aimDir.y, Math.round(this.stats.specialDamage * 0.9), true);
+      this.gs.slashWave(this.x, this.y, aimDir.x, aimDir.y, Math.round(this.stats.specialDamage * 0.9), true);
       this.gs.sfx('getsuga');
     }
     // Fulgurance de Pika : 4 éclairs en croix
     if (this.specialFlags.has('pika')) {
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) this.lineDamage(this.x, this.y, this.x + dx * 200, this.y + dy * 200, 26, 25, 0xfff27a);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) this.lineDamage(this.x, this.y, this.x + dx * 200, this.y + dy * 200, 26, 25, 0xfff27a, true);
       this.gs.sfx('zap');
     }
     // Rasenshuriken : shuriken de vent lancé sur l'ennemi le plus proche, qui

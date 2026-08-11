@@ -98,6 +98,12 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     // entrée
     this.setScale(this.baseScale * 0.2).setAlpha(0);
     scene.tweens.add({ targets: this, scaleX: this.baseScale, scaleY: this.baseScale, alpha: 1, duration: 500, ease: 'Back.easeOut' });
+    // Voltaïr : prévient d'emblée que la magie ne l'atteint pas.
+    if (def.magicImmune) {
+      scene.time.delayedCall(700, () => {
+        if (this.alive) this.speak('La magie n’a aucun effet sur moi !');
+      });
+    }
   }
 
   /** Flammes noires d'Amaterasu superposées au boss tant que la Brûlure Noire brûle. */
@@ -700,6 +706,10 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   applyStatus(status: Element, duration: number): void {
+    // Voltaïr : immunité magique → aucun statut élémentaire (feu/gel/poison/choc)
+    // ne s'applique. Seules les altérations physiques neutres (marque/saignement)
+    // passent encore. Les DoT élémentaires sont donc entièrement annulés.
+    if (this.def.magicImmune && status !== 'mark' && status !== 'bleed') return;
     const now = performance.now();
     const dur = status === 'freeze' ? duration * 0.4 : duration; // résistance
     if (status !== 'mark' && status !== 'bleed' && status !== 'blackburn') {
@@ -723,8 +733,23 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   // ---------- IEnemyLike ----------
-  takeDamage(amount: number, _fx: number, _fy: number, opts?: { silent?: boolean; crit?: boolean }): void {
+  private lastImmuneAt = 0;
+  takeDamage(amount: number, _fx: number, _fy: number, opts?: { silent?: boolean; crit?: boolean; magic?: boolean }): void {
     if (!this.alive) return;
+    // Voltaïr : la MAGIE n'a aucun effet sur lui (Spécial, foudre, éléments).
+    // Les dégâts magiques sont totalement annulés ; un « IMMUNISÉ » ponctuel le signale.
+    if (this.def.magicImmune && opts?.magic) {
+      if (!opts?.silent) {
+        const now = performance.now();
+        this.gs.juice.flash(this, 50, 0xb0c8ff);
+        this.gs.juice.burst(this.x, this.y - 20, 0xd8e0ff, 3, 80, 0.5);
+        if (now - this.lastImmuneAt > 550) {
+          this.lastImmuneAt = now;
+          this.gs.juice.popText(this.x, this.y - this.displayHeight * 0.75, 'IMMUNISÉ', '#b0c8ff', 15);
+        }
+      }
+      return;
+    }
     // Invincible tant que ses pilônes de glace tiennent (Glacior).
     if (this.gs.bossInvincible()) {
       if (!opts?.silent) {

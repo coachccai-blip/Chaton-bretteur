@@ -19,8 +19,9 @@ export type DashFlag = 'shock' | 'burst' | 'clone' | 'water' | 'thunder6' | 'kun
 /** Helpers de combat exposés par GameScene aux boons (effets actifs). */
 export interface ICombatScene {
   lightningChain(x: number, y: number, damage: number, jumps: number): void;
-  slashWave(x: number, y: number, dx: number, dy: number, damage: number): void;
-  explosionAt(x: number, y: number, radius: number, damage: number): void;
+  slashWave(x: number, y: number, dx: number, dy: number, damage: number, magic?: boolean): void;
+  /** `magic` : dégâts annulés par les boss immunisés (Voltaïr). */
+  explosionAt(x: number, y: number, radius: number, damage: number, magic?: boolean): void;
   shieldWave(x: number, y: number, radius: number, damage: number): void;
   timeSlow(ms: number, factor: number): void;
   domainPulse(damage: number, radius: number): void;
@@ -84,7 +85,7 @@ export interface IPlayerContext {
 export interface IEnemyLike {
   x: number;
   y: number;
-  takeDamage(amount: number, fromX: number, fromY: number, opts?: { silent?: boolean; crit?: boolean }): void;
+  takeDamage(amount: number, fromX: number, fromY: number, opts?: { silent?: boolean; crit?: boolean; magic?: boolean }): void;
   applyStatus(status: Element, duration: number): void;
   isAlive(): boolean;
   isBoss?: boolean;

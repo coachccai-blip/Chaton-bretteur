@@ -543,7 +543,7 @@ export const POWERS: PowerDef[] = [
         const t = nearest(p, p.px(), p.py(), 300);
         if (!t) return;
         p.combat.lightningChain(t.x, t.y, 35, 2);
-        p.combat.explosionAt(t.x, t.y, 90, 35);
+        p.combat.explosionAt(t.x, t.y, 90, 35, true); // Marteau de Thor = foudre → magique
       });
     },
   },

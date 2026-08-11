@@ -724,8 +724,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
   }
 
   // ---------------- IEnemyLike ----------------
-  takeDamage(amount: number, fromX: number, fromY: number, opts?: { silent?: boolean; crit?: boolean }): void {
+  takeDamage(amount: number, fromX: number, fromY: number, opts?: { silent?: boolean; crit?: boolean; magic?: boolean }): void {
     if (!this.alive) return;
+    // (opts.magic n'affecte que les boss immunisés — un monstre normal encaisse tout.)
     if (this.statuses.mark) amount = Math.round(amount * 1.3); // Marque (Haki)
     if (performance.now() < this.shieldedUntil) {
       amount = Math.round(amount * 0.5); // protégé par un Gardien

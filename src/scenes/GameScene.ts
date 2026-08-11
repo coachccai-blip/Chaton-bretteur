@@ -68,6 +68,7 @@ interface FriendlyShot {
   immobilizeMs?: number;
   knockback?: number;
   color?: number;
+  magic?: boolean; // onde spectrale du Spécial (Getsuga) = magique → annulée par Voltaïr
 }
 interface Hazard {
   x: number; y: number; r: number; type: HazardType;
@@ -1902,7 +1903,8 @@ export class GameScene extends Phaser.Scene {
       if (!target) break;
       struck.add(target);
       target.applyStatus('shock', 2200);
-      target.takeDamage(Math.round(damage * (j === 0 ? 1 : 0.7)), cx, cy);
+      // Foudre (Foudre d'Elektor) = attaque MAGIQUE → annulée par Voltaïr.
+      target.takeDamage(Math.round(damage * (j === 0 ? 1 : 0.7)), cx, cy, { magic: true });
       this.juice.burst(target.x, target.y, 0x9fe6ff, 8, 160, 1);
       cx = target.x; cy = target.y;
     }
@@ -2041,7 +2043,7 @@ export class GameScene extends Phaser.Scene {
       this.juice.spiral(tx, ty, 0xbff7f6, radius);
       this.juice.ring(tx, ty, radius, 0xdfffff, 320);
       this.juice.ring(tx, ty, radius * 0.6, 0x8fe8ff, 260);
-      this.explosionAt(tx, ty, radius, damage);
+      this.explosionAt(tx, ty, radius, damage, true); // Rasenshuriken = Spécial → magique
       this.sfx('rasengan');
       this.juice.shake(220, 0.01);
       this.tweens.add({ targets: shu, scale: 3.4, alpha: 0, angle: shu.angle + 180, duration: 260, onComplete: () => shu.destroy() });
@@ -2092,12 +2094,12 @@ export class GameScene extends Phaser.Scene {
   private _kojiVfxAt = 0;
 
   /** Onde tranchante (Getsuga / clone) : projectile allié qui transperce. */
-  slashWave(x: number, y: number, dx: number, dy: number, damage: number): void {
+  slashWave(x: number, y: number, dx: number, dy: number, damage: number, magic = false): void {
     const len = Math.hypot(dx, dy) || 1;
     const nx = dx / len, ny = dy / len;
     const s = this.add.sprite(x, y, 'orb_big').setDepth(18).setTint(0x9fe6ff);
     s.setScale(2.4, 0.9).setRotation(Math.atan2(ny, nx));
-    this.friendlyShots.push({ sprite: s, vx: nx * 520, vy: ny * 520, damage, dieAt: performance.now() + 700, hit: new Set(), pierce: true });
+    this.friendlyShots.push({ sprite: s, vx: nx * 520, vy: ny * 520, damage, dieAt: performance.now() + 700, hit: new Set(), pierce: true, magic });
     this.sfx('sword');
   }
 
@@ -2364,20 +2366,20 @@ export class GameScene extends Phaser.Scene {
         if (!e.isAlive()) continue;
         const t = Phaser.Math.Clamp((e.x - player.x) * nx + (e.y - player.y) * ny, 0, 900);
         const px = player.x + nx * t, py = player.y + ny * t;
-        if (Math.hypot(e.x - px, e.y - py) <= 45) e.takeDamage(dmgPerTick, player.x, player.y);
+        if (Math.hypot(e.x - px, e.y - py) <= 45) e.takeDamage(dmgPerTick, player.x, player.y, { magic: true });
       }
       this.juice.shake(60, 0.004);
     } });
   }
 
   /** Grande explosion (Megumin / Rasengan). */
-  explosionAt(x: number, y: number, radius: number, damage: number): void {
+  explosionAt(x: number, y: number, radius: number, damage: number, magic = false): void {
     this.juice.ring(x, y, radius, 0xffa53a, 360);
     this.juice.burst(x, y, 0xffd24a, 22, 260, 1.8);
     this.juice.shake(240, 0.012);
     this.sfx('special');
     for (const e of this.getTargets()) {
-      if (e.isAlive() && Phaser.Math.Distance.Between(x, y, e.x, e.y) <= radius) e.takeDamage(Math.round(damage), x, y);
+      if (e.isAlive() && Phaser.Math.Distance.Between(x, y, e.x, e.y) <= radius) e.takeDamage(Math.round(damage), x, y, { magic });
     }
   }
 
@@ -2557,7 +2559,7 @@ export class GameScene extends Phaser.Scene {
         if (sh.hit.has(e) || !e.isAlive()) continue;
         if (Phaser.Math.Distance.Between(sh.sprite.x, sh.sprite.y, e.x, e.y) < 30) {
           sh.hit.add(e);
-          e.takeDamage(Math.round(sh.damage), sh.sprite.x, sh.sprite.y);
+          e.takeDamage(Math.round(sh.damage), sh.sprite.x, sh.sprite.y, { magic: sh.magic });
           this.juice.burst(sh.sprite.x, sh.sprite.y, sh.color ?? 0x9fe6ff, 5, 120, 0.8);
           const anyE = e as unknown as { applySlow?: (f: number, ms: number) => void; body?: Phaser.Physics.Arcade.Body };
           if (sh.immobilizeMs && anyE.applySlow) anyE.applySlow(0.05, sh.immobilizeMs);

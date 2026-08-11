@@ -58,6 +58,8 @@ export interface BossDef {
   contactDamage: number;
   auraColor: number;
   level: number; // niveau fictif affiché (Sylvaan 10 → Gorbak 20 → Ignis 35 → Mortis 50 → Glacior 70 → Voltaïr 85 → Néantis 99 → BIG BOSS 999)
+  /** Immunité TOTALE aux dégâts magiques (Spécial, éléments, foudre…). Voltaïr. */
+  magicImmune?: boolean;
   phases: BossPhase[];
 }
 
@@ -195,6 +197,9 @@ export const BOSSES: Record<string, BossDef> = {
   rapace: {
     id: 'rapace', name: 'Voltaïr', title: 'le Panda de Foudre', sprite: 'rapace',
     hp: 20000, scale: 0.82, contactDamage: 24, auraColor: 0xb0c8ff, level: 85,
+    // Maître de la foudre : la MAGIE n'a aucun effet sur lui (Spécial, éléments,
+    // éclairs annulés). Seules les attaques PHYSIQUES le blessent.
+    magicImmune: true,
     phases: [
       { hpFrac: 1.0, speed: 175, moves: [
         { type: 'arrowRain', telegraph: 640, cooldown: 2600, count: 9, radius: 46, damage: 20, color: 0xb0c8ff },
