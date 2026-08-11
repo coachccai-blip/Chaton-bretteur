@@ -40,9 +40,8 @@ jobs:
         run: npm run build
 
       - name: Configurer GitHub Pages
+        # Prérequis (une seule fois) : Réglages → Pages → Source = « GitHub Actions ».
         uses: actions/configure-pages@v5
-        with:
-          enablement: true # active Pages (source « GitHub Actions ») si besoin
 
       - name: Téléverser l'artefact du site
         uses: actions/upload-pages-artifact@v3
