@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, RENDER_SCALE } from '../config/game';
 import { label, iconBadge } from '../ui/theme';
 import { glyphTexture } from '../art/icons';
+import { heroTex } from '../systems/heroSprite';
 import type { GameScene } from './GameScene';
 import type { PowerDef } from '../config/powers';
 import { RARITY_COLORS, RARITY_NAMES } from '../config/powers';
@@ -88,7 +89,7 @@ export class UIScene extends Phaser.Scene {
 
     // Compteur de Retombées Félines restantes (logo = chaton) près des pièces,
     // en tout petit (≈ taille de la pièce).
-    this.reviveIcon = this.add.sprite(GAME_WIDTH - 208, 27, 'cat').setDepth(2).setVisible(false);
+    this.reviveIcon = this.add.sprite(GAME_WIDTH - 208, 27, heroTex(this)).setDepth(2).setVisible(false);
     this.reviveIcon.setScale(22 / Math.max(this.reviveIcon.width, this.reviveIcon.height));
     this.reviveText = label(this, GAME_WIDTH - 196, 26, '', 14, '#eaf4ff', 0).setDepth(3).setVisible(false);
     this.onRevives(this.gs.reviveLeft());

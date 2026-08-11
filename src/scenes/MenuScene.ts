@@ -4,6 +4,7 @@ import { button, label, panel } from '../ui/theme';
 import { AudioManager } from '../systems/AudioManager';
 import { SaveSystem } from '../systems/SaveSystem';
 import { HERO_ART_COMP } from '../art/heroesHD';
+import { heroTex, heroScale, heroIsArt } from '../systems/heroSprite';
 import { canInstall, hasNativePrompt, isIOS, onInstallAvailable, promptInstall } from '../systems/pwa';
 import type { Btn } from '../ui/theme';
 
@@ -24,10 +25,13 @@ export class MenuScene extends Phaser.Scene {
     });
 
     // héros (taille réduite + abaissé pour dégager le sous-titre au-dessus du casque)
-    const cat = this.add.sprite(GAME_WIDTH / 2, 278, 'cat').setScale(3.2 * HERO_ART_COMP);
+    const cat = this.add.sprite(GAME_WIDTH / 2, 262, heroTex(this)).setScale(heroScale(this, 2.5 * HERO_ART_COMP));
     this.tweens.add({ targets: cat, y: 266, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    const sword = this.add.sprite(GAME_WIDTH / 2 + 52, 278, 'sword').setScale(1.6).setRotation(0.4);
-    this.tweens.add({ targets: sword, rotation: 0.7, y: 266, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    // L'illustration inclut déjà les épées : on n'ajoute le sprite d'épée qu'en pixel art.
+    if (!heroIsArt(this)) {
+      const sword = this.add.sprite(GAME_WIDTH / 2 + 52, 278, 'sword').setScale(1.6).setRotation(0.4);
+      this.tweens.add({ targets: sword, rotation: 0.7, y: 266, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
 
     // titre
     label(this, GAME_WIDTH / 2, 90, 'CHATON', 52, '#f4e9c1');

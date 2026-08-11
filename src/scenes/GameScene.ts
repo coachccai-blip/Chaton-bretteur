@@ -23,6 +23,7 @@ import { Trap, type TrapType } from '../entities/Trap';
 import { randomLayout, type Rect } from '../config/roomLayouts';
 import { PROPS } from '../art/environment';
 import { HERO_ART_COMP } from '../art/heroesHD';
+import { heroTex, heroScale } from '../systems/heroSprite';
 import type { IEnemyLike } from '../config/types';
 import type { PowerDef } from '../config/powers';
 
@@ -2464,7 +2465,7 @@ export class GameScene extends Phaser.Scene {
   /** Clone cosmétique qui frappe (utilisé si besoin). */
   spawnClone(ms: number): void {
     if (!this.player) return;
-    const ghost = this.add.sprite(this.player.x - 30, this.player.y, 'cat').setAlpha(0.5).setTint(0x9fe6ff).setDepth(19).setScale(0.9 * HERO_ART_COMP);
+    const ghost = this.add.sprite(this.player.x - 30, this.player.y, heroTex(this)).setAlpha(0.5).setTint(0x9fe6ff).setDepth(19).setScale(heroScale(this, 0.9 * HERO_ART_COMP));
     const ev = this.time.addEvent({
       delay: 600, loop: true, callback: () => {
         if (!this.player) return;

@@ -5,6 +5,7 @@ import type { PlayerStats } from '../config/game';
 import type { IPlayerContext, IEnemyLike, ICombatScene, OnHitFn, OnKillFn, VoidFn, SpecialFlag, DashFlag, BuffMods, HitInfo } from '../config/types';
 import { HERO_ART_COMP } from '../art/heroesHD';
 import { HERO_ART_TEST } from '../config/game';
+import { heroTex, heroScale } from '../systems/heroSprite';
 
 /** Portée d'auto-visée : au-delà, l'attaque suit la visée manuelle/déplacement. */
 const AUTO_AIM_RANGE = 260;
@@ -642,7 +643,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       return;
     }
     if (!this.kageClone) {
-      this.kageClone = this.gs.add.sprite(this.x, this.y, 'kage_bunshin').setDepth(19).setAlpha(0.7).setData('baseScale', 1);
+      // Ombre du héros : illustration teintée sombre (mode test) sinon 'kage_bunshin'.
+      const art = heroTex(this.gs) === 'hero_art';
+      const sc = art ? heroScale(this.gs, HERO_SCALE * 1.25 * 0.9) : 1;
+      this.kageClone = this.gs.add.sprite(this.x, this.y, art ? 'hero_art' : 'kage_bunshin')
+        .setDepth(19).setAlpha(0.7).setScale(sc).setData('baseScale', sc);
+      if (art) this.kageClone.setTint(0x2a1a45);
       this.kageNextAt = now + 500;
     }
     const c = this.kageClone;
@@ -665,7 +671,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       return;
     }
     while (this.miniClones.length < 2) {
-      const s = this.gs.add.sprite(this.x, this.y, 'cat').setDepth(19).setScale(0.55 * HERO_ART_COMP).setAlpha(0.9).setTint(0x9fe6ff).setData('baseScale', 0.55 * HERO_ART_COMP);
+      const sc = heroScale(this.gs, 0.55 * HERO_ART_COMP);
+      const s = this.gs.add.sprite(this.x, this.y, heroTex(this.gs)).setDepth(19).setScale(sc).setAlpha(0.9).setTint(0x9fe6ff).setData('baseScale', sc);
       this.miniClones.push(s);
     }
     this.miniAngle += 0.02;
@@ -681,7 +688,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     const wantShadow = (this.mods.kageClone || 0) > 0;
     if (wantShadow) {
       while (this.miniShadows.length < 2) {
-        const s = this.gs.add.sprite(this.x, this.y, 'kage_bunshin').setDepth(18).setScale(0.5).setAlpha(0.5).setData('baseScale', 0.5);
+        const art = heroTex(this.gs) === 'hero_art';
+        const sc = art ? heroScale(this.gs, HERO_SCALE * 1.25 * 0.5) : 0.5;
+        const s = this.gs.add.sprite(this.x, this.y, art ? 'hero_art' : 'kage_bunshin')
+          .setDepth(18).setScale(sc).setAlpha(0.5).setData('baseScale', sc);
+        if (art) s.setTint(0x2a1a45);
         this.miniShadows.push(s);
       }
       for (let i = 0; i < 2; i++) {

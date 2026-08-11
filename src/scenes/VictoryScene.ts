@@ -6,6 +6,7 @@ import { SaveSystem, formatTime } from '../systems/SaveSystem';
 import { DIFFICULTIES } from '../config/difficulty';
 import { AudioManager } from '../systems/AudioManager';
 import { HERO_ART_COMP } from '../art/heroesHD';
+import { heroTex, heroScale, heroIsArt } from '../systems/heroSprite';
 
 export class VictoryScene extends Phaser.Scene {
   constructor() { super('Victory'); }
@@ -23,10 +24,12 @@ export class VictoryScene extends Phaser.Scene {
       tint: [0xf4c430, 0x6ad46a, 0x59a8ff, 0xff6b6b], blendMode: 'ADD',
     });
 
-    const cat = this.add.sprite(GAME_WIDTH / 2, 150, 'cat').setScale(5 * HERO_ART_COMP);
+    const cat = this.add.sprite(GAME_WIDTH / 2, 150, heroTex(this)).setScale(heroScale(this, 5 * HERO_ART_COMP));
     this.tweens.add({ targets: cat, angle: { from: -6, to: 6 }, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    const sword = this.add.sprite(GAME_WIDTH / 2 + 70, 130, 'sword').setScale(2.4).setRotation(-0.6);
-    this.tweens.add({ targets: sword, rotation: -0.9, duration: 700, yoyo: true, repeat: -1 });
+    if (!heroIsArt(this)) { // l'illustration inclut déjà les épées
+      const sword = this.add.sprite(GAME_WIDTH / 2 + 70, 130, 'sword').setScale(2.4).setRotation(-0.6);
+      this.tweens.add({ targets: sword, rotation: -0.9, duration: 700, yoyo: true, repeat: -1 });
+    }
 
     label(this, GAME_WIDTH / 2, 250, 'VICTOIRE !', 44, '#f4c430');
     label(this, GAME_WIDTH / 2, 292, 'Le Roi des Monstres est vaincu.', 18, '#f4e9c1');
