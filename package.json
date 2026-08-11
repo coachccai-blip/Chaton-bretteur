@@ -1,0 +1,19 @@
+{
+  "name": "chaton-bretteur",
+  "version": "1.0.0",
+  "description": "Chaton de guerre — roguelite d'action top-down (Phaser 3 + Vite + TypeScript). Graphismes pixel art générés par code.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "gen:icons": "node scripts/gen-icons.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2"
+  },
+  "dependencies": {
+    "phaser": "^3.80.1"
+  }
+}
