@@ -245,7 +245,7 @@ export const BOSSES: Record<string, BossDef> = {
         // Reflets Ténébreux — invoque 2 clones du héros (boons aléatoires, ½ PV du boss)
         { type: 'summonClones', telegraph: 820, cooldown: 14000, summonCount: 2, say: 'Deviens ce que tu combats.' },
         // ZA WARUDO — fige le joueur (le boss continue d'agir). duration = durée du gel.
-        { type: 'timestopBoss', telegraph: 700, cooldown: 11000, duration: 2400, say: 'ZA WARUDO !!!' },
+        { type: 'timestopBoss', telegraph: 700, cooldown: 11000, duration: 2400, say: 'Zharu warudo !!!' },
       ]},
       { hpFrac: 0.5, speed: 220, tint: 0xd05aff, moves: [
         // 5. Gravité Renversée — glyphes + invocation de Doppelchats
@@ -262,7 +262,7 @@ export const BOSSES: Record<string, BossDef> = {
         // Chœur des Reflets — l'armée de doubles ténébreux au climax
         { type: 'summonClones', telegraph: 700, cooldown: 15000, summonCount: 2 },
         // ZA WARUDO plus fréquent au climax
-        { type: 'timestopBoss', telegraph: 600, cooldown: 9000, duration: 2600, say: 'ZA WARUDO !!!' },
+        { type: 'timestopBoss', telegraph: 600, cooldown: 9000, duration: 2600, say: 'Zharu warudo !!!' },
       ]},
     ],
   },
