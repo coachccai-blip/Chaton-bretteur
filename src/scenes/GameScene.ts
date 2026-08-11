@@ -11,6 +11,7 @@ import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { Boss } from '../entities/Boss';
 import { Pylon } from '../entities/Pylon';
+import { BlackHole } from '../entities/BlackHole';
 import { Projectile } from '../entities/Projectile';
 import { JuiceManager } from '../systems/JuiceManager';
 import { InputManager } from '../systems/InputManager';
@@ -109,6 +110,8 @@ export class GameScene extends Phaser.Scene {
   boss: Boss | null = null;
   private bossOverlap?: Phaser.Physics.Arcade.Collider;
   private bossPylons: Pylon[] = []; // pilônes d'invincibilité de Glacior
+  private blackHole: BlackHole | null = null; // trou noir de Néantis (1 max)
+  private nextBlackHoleAt = 0; // prochaine apparition programmée (toutes les 5 s)
   // Round final : le boss réapparaît ENRAGÉ en 3 exemplaires simultanés.
   private rageBosses: Boss[] = [];
   private rageActive = false;
@@ -874,6 +877,7 @@ export class GameScene extends Phaser.Scene {
     const list: IEnemyLike[] = [];
     for (const e of this.activeEnemies) if (e.isAlive()) list.push(e);
     for (const p of this.bossPylons) if (p.isAlive()) list.push(p);
+    if (this.blackHole?.isAlive()) list.push(this.blackHole); // trou noir de Néantis (destructible)
     if (this.boss?.isAlive()) list.push(this.boss);
     for (const rb of this.rageBosses) if (rb !== this.boss && rb.isAlive()) list.push(rb);
     return list;
@@ -903,6 +907,61 @@ export class GameScene extends Phaser.Scene {
     for (const p of this.bossPylons) p.destroy();
     this.bossPylons = [];
     this.pylonBeamGfx?.clear();
+    // nettoie aussi le trou noir de Néantis (objets d'arène de boss).
+    this.clearBlackHole();
+  }
+
+  private clearBlackHole(): void {
+    if (this.blackHole) { this.blackHole.destroy(); this.blackHole = null; }
+    this.nextBlackHoleAt = 0;
+  }
+
+  /** Un Néantis (boss ou clone enragé) est-il vivant sur la map ? */
+  private neantisActive(): boolean {
+    if (this.boss?.isAlive() && this.boss.def.id === 'reflet') return true;
+    return this.rageBosses.some((rb) => rb.isAlive() && rb.def.id === 'reflet');
+  }
+
+  /** Néantis : fait apparaître un trou noir toutes les 5 s (1 max) qui aspire le
+   *  joueur, et l'aspire chaque frame tant qu'il n'est pas détruit. */
+  private updateNeantis(now: number): void {
+    if (!this.neantisActive() || !this.combatActive) { if (this.blackHole) this.clearBlackHole(); return; }
+    if (this.nextBlackHoleAt === 0) this.nextBlackHoleAt = now + 5000; // premier trou 5 s après le début
+    // trou détruit → reprogramme le suivant 5 s plus tard
+    if (this.blackHole && !this.blackHole.isAlive()) { this.blackHole = null; this.nextBlackHoleAt = now + 5000; }
+    if (!this.blackHole && now >= this.nextBlackHoleAt) this.spawnBlackHole();
+
+    // Aspiration : happe le joueur vers le trou (écrase son déplacement).
+    const bh = this.blackHole, p = this.player;
+    if (bh?.isAlive() && p && !p.dead) {
+      const dx = bh.x - p.x, dy = bh.y - p.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const body = p.body as Phaser.Physics.Arcade.Body;
+      if (dist > bh.pullRadius) body.setVelocity((dx / dist) * 480, (dy / dist) * 480); // aspiration TRÈS forte
+      else body.setVelocity((dx / dist) * 20, (dy / dist) * 20); // retenu au bord
+      // traînée d'aspiration (particules happées vers le centre)
+      if (Math.floor(now / 90) % 2 === 0) {
+        const a = Math.random() * Math.PI * 2, r = 70 + Math.random() * 40;
+        this.juice.burst(bh.x + Math.cos(a) * r, bh.y + Math.sin(a) * r, 0xc850f0, 1, 20, 0.5);
+      }
+    }
+  }
+
+  private spawnBlackHole(): void {
+    const neantis = (this.boss?.isAlive() && this.boss.def.id === 'reflet') ? this.boss
+      : this.rageBosses.find((rb) => rb.isAlive() && rb.def.id === 'reflet');
+    if (!neantis) return;
+    const A = ARENA, m = 96;
+    const corners = [
+      { x: A.x + m, y: A.y + m + 24 },
+      { x: A.x + A.w - m, y: A.y + m + 24 },
+      { x: A.x + m, y: A.y + A.h - m },
+      { x: A.x + A.w - m, y: A.y + A.h - m },
+    ];
+    const c = corners[Math.floor(Math.random() * corners.length)];
+    this.blackHole = new BlackHole(this, c.x, c.y, Math.round(neantis.maxHp * 0.5));
+    this.juice.popText(WORLD_WIDTH / 2, ARENA.y + 90, 'TROU NOIR : DÉTRUIS-LE POUR TE LIBÉRER !', '#c850f0', 20);
+    this.sfx('timestop');
   }
 
   /** Lasers bleus animés reliant chaque pilône vivant au(x) Glacior : montre
@@ -2409,6 +2468,44 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * ZA WARUDO de NÉANTIS (≠ The World du héros) : fige le JOUEUR (ni déplacement,
+   * ni attaque, armes orbitales stoppées) tandis que Néantis continue d'agir.
+   * Horloge ROUGE dédiée + bords d'écran rouges + bruitage d'horloge.
+   */
+  bossTimeStop(ms: number): void {
+    if (!this.player || this.player.dead) return;
+    this.player.freeze(ms);
+    this.sfx('clockstop');
+    this.juice.shake(220, 0.009);
+    const cx = WORLD_WIDTH / 2, cy = WORLD_HEIGHT / 2;
+
+    // bords d'écran ROUGES (vignette teintée) pendant tout l'effet
+    const edge = this.add.image(cx, cy, 'vignette').setTint(0xff1a1a).setDepth(41).setAlpha(0)
+      .setDisplaySize(WORLD_WIDTH, WORLD_HEIGHT);
+    this.tweens.add({ targets: edge, alpha: 0.9, duration: 160 });
+
+    // voile rouge sombre par-dessus l'arène
+    const veil = this.add.rectangle(cx, cy, WORLD_WIDTH, WORLD_HEIGHT, 0x2a0006, 0).setDepth(40);
+    this.tweens.add({ targets: veil, alpha: 0.32, duration: 160 });
+
+    // ondes de choc rouges + horloge ROUGE pixel-art qui pulse/tourne au centre
+    for (let i = 0; i < 3; i++) this.time.delayedCall(i * 90, () => this.juice.ring(cx, cy, 320, 0xff2a2a, 420));
+    const clock = this.add.image(cx, cy, 'boss_clock').setDepth(43).setScale(0).setAlpha(0.96);
+    this.tweens.add({ targets: clock, scale: 2.6, duration: 260, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: clock, angle: 18, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const halo = this.add.image(cx, cy, 'light').setTint(0xff2a2a).setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(42).setScale(2.4).setAlpha(0.5);
+    this.tweens.add({ targets: halo, alpha: 0.25, scale: 3, duration: 600, yoyo: true, repeat: -1 });
+
+    this.time.delayedCall(ms, () => {
+      this.tweens.killTweensOf(clock); this.tweens.killTweensOf(halo);
+      this.tweens.add({ targets: [edge, veil, clock, halo], alpha: 0, duration: 220, onComplete: () => {
+        edge.destroy(); veil.destroy(); clock.destroy(); halo.destroy();
+      } });
+    });
+  }
+
   /** THE WORLD — arrêt du temps : animation complète (désaturation, horloge, ondes). */
   timeSlow(ms: number, factor: number): void {
     this.enemyTimeScale = factor;
@@ -2438,7 +2535,8 @@ export class GameScene extends Phaser.Scene {
     }
     this.tweens.add({ targets: rays, alpha: 0, duration: 500, onComplete: () => rays.destroy() });
 
-    // horloge qui s'arrête
+    // horloge qui s'arrête — RESTE visible pendant TOUTE la durée de l'effet :
+    // balayage initial rapide des aiguilles, puis tic-tac lent jusqu'à la fin.
     const clock = this.add.graphics().setDepth(43);
     const drawClock = (hand: number) => {
       clock.clear();
@@ -2449,13 +2547,17 @@ export class GameScene extends Phaser.Scene {
       clock.lineStyle(5, 0xff5a8a, 1); clock.lineBetween(cx, cy, cx + Math.cos(hand) * 42, cy + Math.sin(hand) * 42);
       clock.lineStyle(4, 0xf4c430, 1); clock.lineBetween(cx, cy, cx + Math.cos(hand * 1.6) * 30, cy + Math.sin(hand * 1.6) * 30);
     };
-    this.tweens.addCounter({ from: -Math.PI / 2, to: Math.PI * 2, duration: 350, ease: 'Cubic.easeOut', onUpdate: (tw) => drawClock(tw.getValue() ?? 0) });
+    let clockHand = -Math.PI / 2;
+    this.tweens.addCounter({ from: -Math.PI / 2, to: Math.PI * 2, duration: 350, ease: 'Cubic.easeOut', onUpdate: (tw) => { clockHand = tw.getValue() ?? 0; drawClock(clockHand); } });
+    // maintien : redessine l'horloge chaque frame (tic-tac lent) tant que l'effet dure
+    const clockTicker = this.time.addEvent({ delay: 40, loop: true, callback: () => { clockHand += 0.03; drawClock(clockHand); } });
 
     // tinte les ennemis figés
     const frozen = this.getTargets();
     frozen.forEach((e) => (e as unknown as Phaser.GameObjects.Sprite).setTint?.(0x8a7fb0));
 
     this.time.delayedCall(ms, () => {
+      clockTicker.remove();
       this.tweens.add({ targets: [veil], alpha: 0, duration: 200, onComplete: () => veil.destroy() });
       this.tweens.add({ targets: clock, alpha: 0, duration: 200, onComplete: () => clock.destroy() });
       pglow.destroy();
@@ -2581,6 +2683,8 @@ export class GameScene extends Phaser.Scene {
     }
     // (Plus d'ouverture automatique des compétences : le joueur clique le bouton.)
     if (this.player && !this.player.dead) this.player.update(time, delta);
+    // Néantis : trou noir aspirant (APRÈS player.update pour écraser le déplacement).
+    this.updateNeantis(now);
 
     // TEST piste B : la lumière suit le héros avec une lente orbite → les reflets et
     // ombres de l'illustration (carte de normales) se déplacent = impression de volume.

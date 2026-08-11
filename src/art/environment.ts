@@ -153,6 +153,82 @@ export function genShieldWave(scene: Phaser.Scene, key = 'shield_wave', size = 6
   });
 }
 
+/**
+ * TROU NOIR de Néantis : disque tourbillonnant violet → noir avec un horizon des
+ * évènements brillant et deux bras spiralés. Rendu pixelisé (tourne en jeu).
+ */
+export function genBlackHole(scene: Phaser.Scene, key = 'blackhole', size = 64): void {
+  canvasTex(scene, key, size, size, (ctx) => {
+    const c = size / 2, px = 4;
+    for (let y = 0; y < size; y += px) {
+      for (let x = 0; x < size; x += px) {
+        const dx = (x + px / 2 - c) / c, dy = (y + px / 2 - c) / c;
+        const d = Math.hypot(dx, dy);
+        if (d > 1) continue;
+        const ang = Math.atan2(dy, dx);
+        const swirl = Math.sin(ang * 2 - d * 8); // deux bras spiralés
+        let col: string;
+        if (d < 0.13) col = '#040108';                                   // cœur (singularité)
+        else if (d < 0.22) col = swirl > -0.1 ? '#f0d0ff' : '#c890f0';   // horizon brillant
+        else if (d < 0.42) col = swirl > 0.15 ? '#c850f0' : '#7a1eb8';
+        else if (d < 0.66) col = swirl > 0.0 ? '#8a2ec8' : '#4a1088';
+        else if (d < 0.86) col = swirl > -0.2 ? '#360e64' : '#20083c';
+        else col = swirl > 0.3 ? '#4a1888' : '#140628';
+        ctx.fillStyle = col;
+        ctx.fillRect(x, y, px, px);
+      }
+    }
+  });
+}
+
+/**
+ * Horloge ROUGE du « ZA WARUDO » de Néantis (distincte de l'horloge crème/rose du
+ * héros) : cadran rouge sang, graduations, deux aiguilles. Tourne/pulse en jeu.
+ */
+export function genBossClock(scene: Phaser.Scene, key = 'boss_clock', size = 64): void {
+  canvasTex(scene, key, size, size, (ctx) => {
+    const c = size / 2, px = 4;
+    for (let y = 0; y < size; y += px) {
+      for (let x = 0; x < size; x += px) {
+        const dx = (x + px / 2 - c) / c, dy = (y + px / 2 - c) / c;
+        const d = Math.hypot(dx, dy);
+        if (d > 1) continue;
+        let col: string;
+        if (d > 0.9) col = '#ff2a2a';       // anneau externe rouge vif
+        else if (d > 0.8) col = '#8a0000';  // anneau interne sombre
+        else col = '#2a0406';               // cadran presque noir-rouge
+        ctx.fillStyle = col;
+        ctx.fillRect(x, y, px, px);
+      }
+    }
+    // graduations (12)
+    ctx.fillStyle = '#ff6a6a';
+    for (let t = 0; t < 12; t++) {
+      const a = (t / 12) * Math.PI * 2;
+      const x = Math.round((c + Math.cos(a) * c * 0.82) / px) * px;
+      const y = Math.round((c + Math.sin(a) * c * 0.82) / px) * px;
+      ctx.fillRect(x, y, px, px);
+    }
+    // aiguille des heures
+    ctx.fillStyle = '#ff9a9a';
+    for (let t = 0; t < 0.5; t += 0.06) {
+      const x = Math.round((c + Math.cos(-0.7) * c * t) / px) * px;
+      const y = Math.round((c + Math.sin(-0.7) * c * t) / px) * px;
+      ctx.fillRect(x, y, px, px);
+    }
+    // aiguille des minutes
+    ctx.fillStyle = '#ffd0d0';
+    for (let t = 0; t < 0.74; t += 0.05) {
+      const x = Math.round((c + Math.cos(-2.3) * c * t) / px) * px;
+      const y = Math.round((c + Math.sin(-2.3) * c * t) / px) * px;
+      ctx.fillRect(x, y, px, px);
+    }
+    // pivot central
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(c - px, c - px, px * 2, px * 2);
+  });
+}
+
 /** Vignette (bords sombres, centre transparent). */
 export function genVignette(scene: Phaser.Scene, key: string, w = 960, h = 540): void {
   canvasTex(scene, key, w, h, (ctx) => {

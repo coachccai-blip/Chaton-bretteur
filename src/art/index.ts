@@ -4,7 +4,7 @@ import { CAT, SWORD, KATANA, MERCHANT_CAT, HAMMER, WATER_WAVE, SUSANOO, KAGE_BUN
 import { GLYPHS } from './icons';
 import { genCritter, MONSTER_RECIPES } from './critters';
 import { genHeroCat, genBossGorbak, genBossIgnis, genBossGlacior, genBossSylvaan, genBossMortis, genBossVoltair, genBossNeantis, genBossMilitaire } from './heroesHD';
-import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, genShieldWave, MINE, FIREBALL, ICE_SHARD, FROST, SPARK_FIRE, SPARK_FROST, SPARK_POISON, ICE_STALACTITE, ICE_PYLON, BLACK_FLAME, MUD_BLOB, MUD_SPLAT, TORNADO, FIRE_TORNADO, BOOMERANG, CAT_PAW, COMBAT_NET, LIGHTNING_BLUE, ANGEL_WINGS, MINE_BOSS, GRENADE, MISSILE, EXPLOSION, TURRET, TANK, TANK_MISSILE, GATLING_BULLET, MATERIAL_ART, RED_AURA } from './environment';
+import { genRadialLight, genVignette, genSoftShadow, genProps, genTrapBase, genSpikes, genPool, genFloorThemed, genWallThemed, genShieldWave, genBlackHole, genBossClock, MINE, FIREBALL, ICE_SHARD, FROST, SPARK_FIRE, SPARK_FROST, SPARK_POISON, ICE_STALACTITE, ICE_PYLON, BLACK_FLAME, MUD_BLOB, MUD_SPLAT, TORNADO, FIRE_TORNADO, BOOMERANG, CAT_PAW, COMBAT_NET, LIGHTNING_BLUE, ANGEL_WINGS, MINE_BOSS, GRENADE, MISSILE, EXPLOSION, TURRET, TANK, TANK_MISSILE, GATLING_BULLET, MATERIAL_ART, RED_AURA } from './environment';
 import { ZONES } from '../config/worlds';
 
 let generated = false;
@@ -50,6 +50,8 @@ export function generateAll(scene: Phaser.Scene): void {
   genSprite(scene, ICE_PYLON); // pilône d'invincibilité (Glacior)
   genSprite(scene, BLACK_FLAME); // flamme noire d'Amaterasu (Brûlure Noire)
   genShieldWave(scene, 'shield_wave'); // onde circulaire du boon Ricochet du Bouclier
+  genBlackHole(scene, 'blackhole'); // trou noir de Néantis (aspiration)
+  genBossClock(scene, 'boss_clock'); // horloge rouge du « ZA WARUDO » de Néantis
   genSprite(scene, SPARK_FIRE);   // particule de feu (boons de brûlure sur l'épée)
   genSprite(scene, SPARK_FROST);  // particule de gel
   genSprite(scene, SPARK_POISON); // particule de poison

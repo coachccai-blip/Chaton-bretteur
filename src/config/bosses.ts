@@ -15,7 +15,8 @@ export type BossMoveType =
   | 'grenades'     // lance des grenades qui explosent (boss final)
   | 'missileRain'  // pluie de missiles télégraphiés (boss final)
   | 'summonBoss'   // invoque un écho enragé d'un boss déjà vaincu (boss final)
-  | 'summonClones'; // Néantis : invoque des reflets ténébreux du héros (boons aléatoires)
+  | 'summonClones' // Néantis : invoque des reflets ténébreux du héros (boons aléatoires)
+  | 'timestopBoss'; // Néantis : « ZA WARUDO » ROUGE — fige le joueur (pas le boss)
 
 export interface BossMove {
   type: BossMoveType;
@@ -243,6 +244,8 @@ export const BOSSES: Record<string, BossDef> = {
         { type: 'arrowRain', telegraph: 600, cooldown: 2600, count: 10, radius: 46, damage: 22, color: 0x59d9ff },
         // Reflets Ténébreux — invoque 2 clones du héros (boons aléatoires, ½ PV du boss)
         { type: 'summonClones', telegraph: 820, cooldown: 14000, summonCount: 2, say: 'Deviens ce que tu combats.' },
+        // ZA WARUDO — fige le joueur (le boss continue d'agir). duration = durée du gel.
+        { type: 'timestopBoss', telegraph: 700, cooldown: 11000, duration: 2400, say: 'ZA WARUDO !!!' },
       ]},
       { hpFrac: 0.5, speed: 220, tint: 0xd05aff, moves: [
         // 5. Gravité Renversée — glyphes + invocation de Doppelchats
@@ -258,6 +261,8 @@ export const BOSSES: Record<string, BossDef> = {
         { type: 'teleport', telegraph: 300, cooldown: 1800 },
         // Chœur des Reflets — l'armée de doubles ténébreux au climax
         { type: 'summonClones', telegraph: 700, cooldown: 15000, summonCount: 2 },
+        // ZA WARUDO plus fréquent au climax
+        { type: 'timestopBoss', telegraph: 600, cooldown: 9000, duration: 2600, say: 'ZA WARUDO !!!' },
       ]},
     ],
   },

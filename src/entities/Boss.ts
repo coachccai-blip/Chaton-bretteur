@@ -372,6 +372,7 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
     else if (t === 'summon') this.gs.sfx('bosscast');
     else if (t === 'crossBeams' || t === 'lineSweep') this.gs.sfx('zap');
     else if (t === 'teleport') this.gs.sfx('timestop');
+    else if (t === 'timestopBoss') { /* bruitage d'horloge joué par gs.bossTimeStop */ }
     else this.gs.sfx('bossshot'); // aimedBurst / fan / ringShot / spiral / arrowRain
     // En dual-cast (sort secondaire), on ne touche PAS au flag `busy` : le boss
     // reste occupé par son sort principal, le secondaire ne fait que son effet.
@@ -473,6 +474,14 @@ export class Boss extends Phaser.Physics.Arcade.Sprite implements IEnemyLike {
         this.gs.summonShadowClones(m.summonCount ?? 2, Math.round(this.maxHp * 0.5));
         this.gs.juice.ring(this.x, this.y, 110, 0xd05aff, 420);
         done(260);
+        break;
+      }
+      case 'timestopBoss': {
+        // ZA WARUDO ROUGE : fige le JOUEUR (pas le boss). Néantis reprend vite ses
+        // actions (done court) pour continuer à bouger/attaquer pendant le gel.
+        this.gs.juice.burst(this.x, this.y - this.displayHeight * 0.4, 0xff2a2a, 14, 220, 1.4);
+        this.gs.bossTimeStop(m.duration ?? 2400);
+        done(300);
         break;
       }
       case 'charge': {

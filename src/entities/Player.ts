@@ -51,6 +51,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   private aim = new Phaser.Math.Vector2(0, 1);
   private bobT = 0;
   slowFactor = 1; // réduit par les hazards (marais)
+  private frozenUntil = 0; // ZA WARUDO ennemi (Néantis) : héros figé jusqu'à cette date
 
   // hooks de pouvoirs
   private onHitFns: OnHitFn[] = [];
@@ -264,6 +265,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
   update(time: number, dt: number): void {
     if (this.dead) return;
     const now = performance.now();
+    // ZA WARUDO de Néantis : le héros est FIGÉ — ni déplacement, ni attaque, et
+    // les armes orbitales cessent de tourner (updateOrbitBlades n'est pas appelé).
+    // Néantis, lui, continue d'agir (enemyTimeScale inchangé).
+    if (now < this.frozenUntil) {
+      (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      if (this.heroArt) this.heroArt.setPosition(this.x, this.y + 4).setFlipX(this.facing < 0);
+      this.updateSword(now); // épées tenues, immobiles
+      return;
+    }
     const input = this.gs.controls;
     const move = input.getMove();
     this.aim = input.getAim(this.x, this.y, move);
@@ -1091,6 +1101,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     this.dealDamage(e, this.stats.dashDamage, false);
     if (this.dashFlags.has('shock')) e.applyStatus('shock', 2200);
   }
+
+  /** ZA WARUDO de Néantis : fige le héros `ms` (ni déplacement, ni attaque, armes
+   *  orbitales stoppées). L'attaque du BOSS, distincte du Spécial « The World » du
+   *  héros (qui, lui, fige les ennemis via enemyTimeScale). */
+  freeze(ms: number): void {
+    if (this.dead) return;
+    this.frozenUntil = Math.max(this.frozenUntil, performance.now() + ms);
+    (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+  }
+  isFrozen(): boolean { return performance.now() < this.frozenUntil; }
 
   // ---------- dégâts subis ----------
   takeDamage(amount: number, fromX = this.x, fromY = this.y): void {

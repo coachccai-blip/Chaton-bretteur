@@ -88,6 +88,13 @@ class Audio {
       case 'door': this.blip(520, 0.12, 'sine', 0.16, 260); this.blip(780, 0.12, 'sine', 0.12, 200); break;
       case 'fountain': [523, 659, 880].forEach((n, i) => setTimeout(() => this.blip(n, 0.18, 'sine', 0.16), i * 70)); break;
       case 'timestop': this.blip(180, 0.7, 'sawtooth', 0.28, -120); this.blip(90, 0.9, 'sine', 0.22, -40); this.noise(0.2, 0.12); break;
+      // ZA WARUDO de Néantis : tic-tac d'horloge (3 ticks nets) + résonance grave arrêtée.
+      case 'clockstop':
+        this.blip(1600, 0.05, 'square', 0.14, -300);
+        setTimeout(() => this.blip(1600, 0.05, 'square', 0.14, -300), 150);
+        setTimeout(() => this.blip(1600, 0.05, 'square', 0.14, -300), 300);
+        this.blip(70, 0.9, 'sine', 0.26, -20); this.noise(0.22, 0.1);
+        break;
       case 'zap': this.blip(900, 0.06, 'square', 0.16, -400); this.noise(0.05, 0.1); break;
       case 'reaction': this.blip(300, 0.2, 'sawtooth', 0.22, 500); this.noise(0.12, 0.14); break;
       case 'spike': this.blip(220, 0.08, 'square', 0.14, 180); this.noise(0.06, 0.1); break;
