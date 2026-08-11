@@ -15,6 +15,8 @@ export interface PowerDef {
   /** dieu / source (habillage manga/anime) affiché sur la carte. */
   god?: string;
   repeatable?: boolean;
+  /** Cumulable mais plafonné : ne peut être obtenu que `maxStacks` fois au total. */
+  maxStacks?: number;
   locked?: boolean;
   /** carte de repli (PV max / soin) : appliquée mais NON enregistrée comme boon. */
   fallback?: boolean;
@@ -106,8 +108,8 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'wilix_rollerblade', name: 'Wilix Rollerblade', god: 'Patineur Cosmique', category: 'attack', rarity: 'epic', icon: 'lightning', repeatable: true,
-    description: 'Triple le nombre d’armes en orbite et accélère leur rotation de +300%. Inutile seul — combo avec Le Marteau de Thor et La 3ᵉ Lame de Zoro.',
-    apply(p) { p.mods.orbitMult = (p.mods.orbitMult || 1) * 3; p.mods.orbitSpeedMult = (p.mods.orbitSpeedMult || 1) * 4; },
+    description: 'Double le nombre d’armes en orbite et accélère leur rotation de +200%. Inutile seul — combo avec Le Marteau de Thor et La 3ᵉ Lame de Zoro.',
+    apply(p) { p.mods.orbitMult = (p.mods.orbitMult || 1) * 2; p.mods.orbitSpeedMult = (p.mods.orbitSpeedMult || 1) * 3; },
   },
   {
     id: 'swords_dance', name: 'Danse-Lames', god: 'Dresseur', category: 'attack', rarity: 'common', icon: 'sword', repeatable: true,
@@ -473,8 +475,8 @@ export const POWERS: PowerDef[] = [
   //  ÉPIQUES (15)
   // ============================================================
   {
-    id: 'foudre_elektor', name: 'Foudre d’Elektor', god: 'Dieu de la Foudre', category: 'divine', rarity: 'epic', icon: 'lightning', repeatable: true,
-    description: 'Les coups appliquent CHOC. 35% de chance d’un éclair qui chaîne sur 3 ennemis.',
+    id: 'foudre_elektor', name: 'Foudre d’Elektor', god: 'Dieu de la Foudre', category: 'divine', rarity: 'epic', icon: 'lightning', repeatable: true, maxStacks: 3,
+    description: 'Les coups appliquent CHOC. 35% de chance d’un éclair qui chaîne sur 3 ennemis. (max 3 fois)',
     apply(p) {
       p.addOnHit((e) => {
         e.applyStatus('shock', 2500);
@@ -502,8 +504,8 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'ora_ora', name: 'ORA ORA ORA !', god: 'Poing Stellaire', category: 'divine', rarity: 'epic', icon: 'fist', repeatable: true,
-    description: '+2 coups supplémentaires par frappe, matérialisés par des lignes d’attaque roses. Les clones et ombres en profitent aussi.',
-    apply(p) { p.stats.extraHits += 2; },
+    description: '+1 coup supplémentaire par frappe (cumulable), matérialisé par une ligne d’attaque rose. Les clones et ombres en profitent aussi.',
+    apply(p) { p.stats.extraHits += 1; },
   },
   {
     id: 'bankai', name: 'Bankai', god: 'Libération', category: 'divine', rarity: 'epic', icon: 'rage', repeatable: true,

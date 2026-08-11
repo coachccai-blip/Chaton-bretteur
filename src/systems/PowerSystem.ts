@@ -10,12 +10,15 @@ import { RunState } from './RunState';
 export function rollChoices(count: number, luck: number, minRarity: Rarity = 'common'): PowerDef[] {
   const takenIds = new Set(RunState.powers.map((p) => p.id));
   const minRank = RARITY_RANK[minRarity];
+  const countOf = (id: string) => RunState.powers.filter((p) => p.id === id).length;
 
   // Tous les pouvoirs sont accessibles dès le départ (plus de déblocage « Arsenal »).
   const eligible = POWERS.filter((p) => {
     // boons CUMULABLES (repeatable) : peuvent réapparaître pour se stacker ;
     // boons UNIQUES : jamais deux fois.
     if (!p.repeatable && takenIds.has(p.id)) return false;
+    // cumulable PLAFONNÉ : retiré une fois maxStacks obtenus (ex. Foudre d'Elektor ×3).
+    if (p.repeatable && p.maxStacks && countOf(p.id) >= p.maxStacks) return false;
     if (RARITY_RANK[p.rarity] < minRank) return false; // rareté minimale
     return true;
   });
