@@ -4,7 +4,8 @@ import { button, label, panel } from '../ui/theme';
 import { AudioManager } from '../systems/AudioManager';
 import { SaveSystem } from '../systems/SaveSystem';
 import { HERO_ART_COMP } from '../art/heroesHD';
-import { canInstall, hasNativePrompt, isIOS, promptInstall } from '../systems/pwa';
+import { canInstall, hasNativePrompt, isIOS, onInstallAvailable, promptInstall } from '../systems/pwa';
+import type { Btn } from '../ui/theme';
 
 export class MenuScene extends Phaser.Scene {
   constructor() { super('Menu'); }
@@ -54,20 +55,37 @@ export class MenuScene extends Phaser.Scene {
     AudioManager.startMusic('menu');
   }
 
+  private installBtn?: Btn;
+
   /**
-   * Bouton « Installer le jeu » : uniquement sur mobile, si l'app n'est pas déjà
-   * installée. Android/Chromium → prompt natif en un clic ; iOS → instructions.
+   * Bouton « Installer le jeu » : sur mobile ET sur PC (app de bureau via
+   * Chrome/Edge). Android & desktop Chromium → prompt natif en un clic ; iOS →
+   * instructions. L'événement d'installation arrive souvent APRÈS l'ouverture du
+   * menu (surtout desktop) : on s'abonne pour ajouter le bouton dès qu'il est prêt.
    */
   private buildInstallButton(): void {
-    if (!canInstall()) return;
-    const b = button(this, GAME_WIDTH / 2, 486, 250, 44, '📲  Installer le jeu', () => {
-      AudioManager.resume(); AudioManager.play('ui');
-      if (hasNativePrompt()) {
-        promptInstall().then((r) => { if (r === 'accepted') b.container.destroy(); });
-      } else if (isIOS()) {
-        this.showIOSInstallHelp();
-      }
-    }, { fill: 0x1f3d2a, border: 0x6ad46a, textColor: '#c7f2d0', size: 17 });
+    const add = () => {
+      if (this.installBtn || !canInstall()) return;
+      const b = button(this, GAME_WIDTH / 2, 486, 250, 44, '📲  Installer le jeu', () => {
+        AudioManager.resume(); AudioManager.play('ui');
+        if (hasNativePrompt()) {
+          promptInstall().then((r) => {
+            if (r === 'accepted') { this.installBtn?.container.destroy(); this.installBtn = undefined; }
+          });
+        } else if (isIOS()) {
+          this.showIOSInstallHelp();
+        }
+      }, { fill: 0x1f3d2a, border: 0x6ad46a, textColor: '#c7f2d0', size: 17 });
+      this.installBtn = b;
+    };
+    add();
+    // pas encore installable (prompt pas encore émis, fréquent sur desktop) : on
+    // écoute et on ajoute le bouton dès qu'il devient disponible.
+    if (!this.installBtn) {
+      const off = onInstallAvailable(() => add());
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, off);
+      this.events.once(Phaser.Scenes.Events.DESTROY, off);
+    }
   }
 
   /** Instructions d'installation iOS (pas d'API : « Ajouter à l'écran d'accueil »). */

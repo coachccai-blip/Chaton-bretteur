@@ -18,12 +18,25 @@ interface BeforeInstallPromptEvent extends Event {
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 let installed = false;
 
+// Abonnés notifiés quand l'installation devient possible : `beforeinstallprompt`
+// arrive souvent APRÈS l'ouverture du menu (surtout sur desktop), donc le menu
+// s'abonne pour afficher le bouton dès qu'il est disponible.
+type Listener = () => void;
+const availabilityListeners = new Set<Listener>();
+
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeinstallprompt', (e: Event) => {
     e.preventDefault(); // on garde la main : l'installation se déclenche via notre bouton
     deferredPrompt = e as BeforeInstallPromptEvent;
+    availabilityListeners.forEach((l) => { try { l(); } catch { /* isolé */ } });
   });
   window.addEventListener('appinstalled', () => { installed = true; deferredPrompt = null; });
+}
+
+/** S'abonne à « l'installation est devenue disponible ». Renvoie la fonction de désabonnement. */
+export function onInstallAvailable(cb: Listener): () => void {
+  availabilityListeners.add(cb);
+  return () => availabilityListeners.delete(cb);
 }
 
 /** L'app tourne-t-elle déjà en mode installé (standalone) ? */
@@ -53,13 +66,14 @@ export function isMobile(): boolean {
 export function hasNativePrompt(): boolean { return !!deferredPrompt; }
 
 /**
- * Faut-il proposer le bouton « Installer » ? Uniquement sur mobile, si l'app
- * n'est pas déjà installée, et si soit un prompt natif est prêt, soit on est sur
- * iOS (où l'on montrera des instructions).
+ * Faut-il proposer le bouton « Installer » ? Si l'app n'est pas déjà installée et
+ * que soit un prompt natif est prêt (Android ET desktop Chromium → app de bureau),
+ * soit on est sur iOS (où l'on montrera des instructions). Sur les navigateurs
+ * desktop sans support d'installation (Firefox, Safari), aucun prompt → pas de
+ * bouton, ce qui est correct.
  */
 export function canInstall(): boolean {
   if (installed || isStandalone()) return false;
-  if (!isMobile()) return false;
   return hasNativePrompt() || isIOS();
 }
 
