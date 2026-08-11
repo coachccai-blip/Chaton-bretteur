@@ -507,8 +507,8 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'bankai', name: 'Bankai', god: 'Libération', category: 'divine', rarity: 'epic', icon: 'rage', repeatable: true,
-    description: 'Sous 35% de PV, ta rage explose : +60% de dégâts.',
-    apply(p) { p.stats.rageBelow = Math.max(p.stats.rageBelow, 0.35); p.stats.rageDamageMult *= 1.6; },
+    description: 'Sous 35 PV, ta rage explose : +60% de dégâts (cumulable avec Porte de la Vie).',
+    apply(p) { p.stats.rageBelow = Math.max(p.stats.rageBelow, 35); p.stats.rageDamageMult *= 1.6; },
   },
   {
     id: 'combo_master', name: 'Maître du Combo', god: 'Chasseur de Démons', category: 'attack', rarity: 'epic', icon: 'combo',
@@ -661,9 +661,9 @@ export const POWERS: PowerDef[] = [
   },
   {
     id: 'gear_fifth', name: 'Kaf Gear V', god: 'Guerrier Libéré', category: 'divine', rarity: 'legendary', icon: 'rage',
-    description: 'ÉVEIL SOUTENU : tant que tes PV sont ≤ 40%, dégâts +80%, vitesse +20%, dégâts subis -40%.',
+    description: 'ÉVEIL SOUTENU : tant que tes PV sont ≤ 40, dégâts +80%, vitesse +20%, dégâts subis -40%.',
     apply(p) {
-      // Buff maintenu en continu sous 40% PV (géré par le Player via mods.kafGear).
+      // Buff maintenu en continu sous 40 PV (seuil plat, géré par le Player via mods.kafGear).
       p.mods.kafGear = 1;
       p.mods.transformDmg = 1.8; p.mods.transformSpd = 1.2;
       p.mods.transformScale = 1.5; p.mods.transformColor = 0xfff2a0;

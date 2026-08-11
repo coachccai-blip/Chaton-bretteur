@@ -86,7 +86,7 @@ export const PLAYER_BASE = {
   instakillChance: 0, // chance d'éliminer un non-boss (Poing de Saitama)
   armorPen: 0, // ignore une fraction de l'armure ennemie (non utilisé côté ennemi, réservé)
   dodgeChance: 0, // chance d'esquive auto (Sharingan)
-  rageBelow: 0, // seuil de PV (fraction) déclenchant la rage (Bankai)
+  rageBelow: 0, // seuil de PV PLAT déclenchant la rage (Bankai) : rage si hp < rageBelow
   rageDamageMult: 1, // multiplicateur de dégâts en rage
   // --- extensions catalogue 100 pouvoirs ---
   healReceivedMult: 1, // Ration de Sasha, Éclat de Pierre Rouge (soins reçus)

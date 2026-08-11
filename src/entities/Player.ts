@@ -372,9 +372,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       this.gs.juice.burst(this.x, this.y, this.mods.transformColor || 0xffffff, 24, 260, 1.8);
       this.gs.sfx(this.mods.transformSfx === 2 ? 'toon' : 'special');
     }
-    // Kaf Gear V : buff SOUTENU tant que les PV sont ≤ 40% (pas une seule fois).
+    // Kaf Gear V : buff SOUTENU tant que les PV sont ≤ 40 (seuil PLAT, cumulable avec Porte de la Vie).
     if (this.mods.kafGear) {
-      const on = !this.dead && this.hpFrac() <= 0.40;
+      const on = !this.dead && this.hp <= 40;
       if (on) {
         // rafraîchi en continu (fenêtre courte) : reste actif sous 40% PV
         this.addBuff('kafgear', 300, { dmg: this.mods.transformDmg || 1.8, spd: this.mods.transformSpd || 1.2 });
@@ -978,7 +978,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       return;
     }
     const isCrit = Math.random() < this.stats.critChance;
-    const rage = this.hpFrac() < this.stats.rageBelow ? this.stats.rageDamageMult : 1;
+    const rage = this.hp < this.stats.rageBelow ? this.stats.rageDamageMult : 1; // Bankai : seuil de PV PLAT
     let dmg = baseDmg * (isCrit ? this.stats.critMult : 1) * rage * this.extraDamageMult();
     if (finisher) dmg *= 1.15;
     if (info?.first) dmg *= this.stats.firstComboMult; // Vitesse Extrême

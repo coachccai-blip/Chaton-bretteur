@@ -129,7 +129,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   roi: {
     id: 'roi', name: 'Mortis', title: 'l’Archimage Mort-vivant', sprite: 'archimage',
-    hp: 5000, scale: 0.82, contactDamage: 20, auraColor: 0xb26bff, level: 50,
+    hp: 15000, scale: 0.82, contactDamage: 20, auraColor: 0xb26bff, level: 50,
     phases: [
       { hpFrac: 1.0, speed: 140, moves: [
         { type: 'summon', telegraph: 700, cooldown: 6000, summonId: 'zombie', summonCount: 2 },
@@ -159,7 +159,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   leviathan: {
     id: 'leviathan', name: 'Glacior', title: 'le Léviathan des Abysses', sprite: 'leviathan',
-    hp: 10000, scale: 0.82, contactDamage: 22, auraColor: 0x7fdcff, level: 70,
+    hp: 30000, scale: 0.82, contactDamage: 22, auraColor: 0x7fdcff, level: 70,
     phases: [
       { hpFrac: 1.0, speed: 160, moves: [
         // 0. Pilônes de Glace — invoqués au spawn, rendent Glacior invincible (damage = PV/pilône)
@@ -223,7 +223,7 @@ export const BOSSES: Record<string, BossDef> = {
   // =============================================================
   reflet: {
     id: 'reflet', name: 'Néantis', title: 'le Reflet Noir', sprite: 'reflet',
-    hp: 100000, scale: 0.82, contactDamage: 26, auraColor: 0xd05aff, level: 99,
+    hp: 300000, scale: 0.82, contactDamage: 26, auraColor: 0xd05aff, level: 99,
     phases: [
       { hpFrac: 1.0, speed: 150, moves: [
         // 1. Combo Miroir — charge d'estoc

@@ -215,7 +215,7 @@ export class GameScene extends Phaser.Scene {
     // le reste de la scène n'est pas assombri.
     if (HERO_ART_TEST) {
       this.lights.enable().setAmbientColor(0xacacac);
-      this.heroLight = this.lights.addLight(this.player.x, this.player.y - 45, 360, 0xfff2d8, 2.0);
+      this.heroLight = this.lights.addLight(this.player.x, this.player.y - 45, 360, 0xfff2d8, 1.0);
     }
 
     // collisions murs. Le joueur traverse les OBSTACLES pendant un dash
