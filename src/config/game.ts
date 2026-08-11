@@ -14,6 +14,14 @@ export const GAME_HEIGHT = 540;
 export const RENDER_SCALE = 2;
 
 /**
+ * TEST (piste B) : remplace le sprite pixel-art du héros par l'illustration
+ * `hero_art.png` éclairée dynamiquement (Phaser Light2D + carte de normales).
+ * Purement visuel — la physique/hitbox du héros reste inchangée. Mettre à false
+ * pour revenir au pixel art d'origine.
+ */
+export const HERO_ART_TEST = true;
+
+/**
  * Dimensions du MONDE de jeu (plus grandes que le canvas) : la caméra de la
  * scène de jeu est dézoomée (0.8) pour afficher tout ce monde, ce qui donne
  * ~20% d'espace de jeu en plus et un personnage 20% plus petit à l'écran.

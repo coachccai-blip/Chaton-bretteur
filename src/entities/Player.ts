@@ -4,6 +4,7 @@ import { ARENA_RECT } from '../scenes/GameScene';
 import type { PlayerStats } from '../config/game';
 import type { IPlayerContext, IEnemyLike, ICombatScene, OnHitFn, OnKillFn, VoidFn, SpecialFlag, DashFlag, BuffMods, HitInfo } from '../config/types';
 import { HERO_ART_COMP } from '../art/heroesHD';
+import { HERO_ART_TEST } from '../config/game';
 
 /** Portée d'auto-visée : au-delà, l'attaque suit la visée manuelle/déplacement. */
 const AUTO_AIM_RANGE = 260;
@@ -114,7 +115,29 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
 
     this.swordR = scene.add.sprite(x, y, 'sword').setOrigin(0.5, 0.85).setDepth(21).setScale(0.9);
     this.swordL = scene.add.sprite(x, y, 'sword').setOrigin(0.5, 0.85).setDepth(21).setScale(0.9).setFlipX(true);
+
+    // TEST piste B : on masque le pixel-art (corps + épées) et on superpose
+    // l'illustration éclairée dynamiquement. La physique (this) reste active mais
+    // invisible → hitbox et gameplay strictement identiques.
+    if (HERO_ART_TEST && scene.textures.exists('hero_art')) {
+      this.setVisible(false);
+      this.swordR.setVisible(false);
+      this.swordL.setVisible(false);
+      const tex = scene.textures.get('hero_art');
+      tex.setFilter(Phaser.Textures.FilterMode.LINEAR); // rendu lissé (pas crénelé)
+      const artH = tex.getSourceImage().height || 434;
+      // Cale la hauteur sur l'ANCIEN héros pixel (texture 'cat' × HERO_SCALE), un
+      // poil plus grand (+25%) pour la présence — footprint cohérent avec le jeu.
+      const catTexH = scene.textures.get('cat').getSourceImage().height || 216;
+      const displayH = catTexH * HERO_SCALE * 1.25;
+      this.heroArt = scene.add.sprite(x, y, 'hero_art')
+        .setOrigin(0.5, 0.9).setDepth(20).setScale(displayH / artH);
+      this.heroArt.setPipeline('Light2D'); // éclairé par les lumières de la scène
+    }
   }
+
+  /** TEST piste B : sprite illustration superposé (éclairé Light2D). */
+  private heroArt?: Phaser.GameObjects.Sprite;
 
   // ---------- IPlayerContext ----------
   heal(amount: number): void {
@@ -259,6 +282,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
       this.facing = move.x > 0 ? 1 : -1;
     }
     this.setFlipX(this.facing < 0);
+    // TEST piste B : l'illustration suit le héros (position, orientation, invuln blink).
+    if (this.heroArt) {
+      this.heroArt.setPosition(this.x, this.y + 4).setFlipX(this.facing < 0)
+        .setAlpha(this.isInvulnerable() && Math.floor(now / 80) % 2 === 0 ? 0.4 : 1);
+    }
 
     // déplacement (bloqué pendant le dash)
     const body = this.body as Phaser.Physics.Arcade.Body;
@@ -1150,7 +1178,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
     // La boucle update() s'arrête à la mort : on nettoie ici les VFX persistants
     // (armes orbitales, Susanoo, clone d'ombre) pour qu'ils ne restent pas figés.
     this.clearPersistentVfx();
-    this.gs.tweens.add({ targets: [this, this.swordR, this.swordL], alpha: 0, angle: 90, duration: 800 });
+    const dyingTargets: Phaser.GameObjects.GameObject[] = [this, this.swordR, this.swordL];
+    if (this.heroArt) dyingTargets.push(this.heroArt);
+    this.gs.tweens.add({ targets: dyingTargets, alpha: 0, angle: 90, duration: 800 });
     this.gs.onPlayerDead();
   }
 
@@ -1169,6 +1199,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite implements IPlayerConte
 
   destroy(fromScene?: boolean): void {
     this.swordR?.destroy(); this.swordL?.destroy();
+    this.heroArt?.destroy(); this.heroArt = undefined;
     this.clearPersistentVfx();
     super.destroy(fromScene);
   }

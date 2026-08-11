@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT, WORLD_ZOOM, RENDER_SCALE, COLORS, REWARDS } from '../config/game';
+import { GAME_WIDTH, GAME_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT, WORLD_ZOOM, RENDER_SCALE, COLORS, REWARDS, HERO_ART_TEST } from '../config/game';
 import { ZONES, type ZoneDef } from '../config/worlds';
 import { ENEMIES } from '../config/enemies';
 import { BOSSES } from '../config/bosses';
@@ -152,6 +152,7 @@ export class GameScene extends Phaser.Scene {
   private friendlyShots: FriendlyShot[] = [];
   private souls: Soul[] = [];
   private materialPickups: { sprite: Phaser.GameObjects.Sprite; matId: string }[] = [];
+  private heroLight?: Phaser.GameObjects.Light; // TEST piste B : lumière du héros
 
   constructor() { super('Game'); }
 
@@ -207,6 +208,14 @@ export class GameScene extends Phaser.Scene {
     const stats = SaveSystem.computeBaseStats();
     this.reviveCharges = SaveSystem.reviveCharges();
     this.player = new Player(this, WORLD_WIDTH / 2, ARENA.y + ARENA.h / 2, stats);
+
+    // TEST piste B : éclairage dynamique (Light2D) qui met en relief l'illustration
+    // du héros (via sa carte de normales). Seul le héros est sur le pipeline Light2D ;
+    // le reste de la scène n'est pas assombri.
+    if (HERO_ART_TEST) {
+      this.lights.enable().setAmbientColor(0xacacac);
+      this.heroLight = this.lights.addLight(this.player.x, this.player.y - 45, 360, 0xfff2d8, 2.0);
+    }
 
     // collisions murs. Le joueur traverse les OBSTACLES pendant un dash
     // (les bords d'arène restent infranchissables via les world bounds).
@@ -2569,6 +2578,14 @@ export class GameScene extends Phaser.Scene {
     }
     // (Plus d'ouverture automatique des compétences : le joueur clique le bouton.)
     if (this.player && !this.player.dead) this.player.update(time, delta);
+
+    // TEST piste B : la lumière suit le héros avec une lente orbite → les reflets et
+    // ombres de l'illustration (carte de normales) se déplacent = impression de volume.
+    if (this.heroLight && this.player) {
+      const a = time * 0.0016;
+      this.heroLight.x = this.player.x + Math.cos(a) * 70;
+      this.heroLight.y = this.player.y - 48 + Math.sin(a) * 40;
+    }
 
     // ambiance : lumière + ombres portées
     if (this.player) {
